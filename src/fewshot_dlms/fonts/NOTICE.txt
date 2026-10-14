@@ -1,0 +1,6 @@
+The four .otf files in this directory are unmodified copies of TeX Gyre Pagella 2.501 (GUST e-foundry;
+CTAN fonts/tex-gyre), the Palatino-like typeface of the paper. They are redistributed under the GUST Font
+License (GUST-FONT-LICENSE.txt), an instance of the LaTeX Project Public License 1.3c (LPPL-1.3c.txt).
+MANIFEST-TeX-Gyre-Pagella.txt is the manifest of the font family. They are not covered by this
+repository's MIT license. src/fewshot_dlms/figstyle.py registers them with matplotlib so that the figures
+render the same on every machine.
