@@ -22,8 +22,10 @@ FAM = LIST_REPORT[0]
 # The first report family of the 24-slot layout used by the M x J grid, as the authors froze it
 # (function c030; its 12-slot layout is FAM["meta"]["master_placement"]).
 C030_LAYOUT_24 = [
-    "D1", "D5", "D6", "D7", "D2", "T1", "T2", "D8", "D9", "T3", "D10", "D3",
-    "T4", "T5", "D11", "T6", "T7", "D12", "D13", "D14", "D15", "D16", "D4", "T8",
+    "D1", "D5", "D6", "D7", "D2", "T1",
+    "T2", "D8", "D9", "T3", "D10", "D3",
+    "T4", "T5", "D11", "T6", "T7", "D12",
+    "D13", "D14", "D15", "D16", "D4", "T8",
 ]
 
 
@@ -48,6 +50,13 @@ def tiny_family():
 def slots(episode):
     """The record labels of an active episode, in prompt order."""
     return [entry["slot"] for entry in episode["entries"]]
+
+
+def test_fake_adapter_tokens_never_collide_with_the_mask():
+    adapter = FakeAdapter()
+    tokens = adapter.encode("[1, 2] \u00e9\u20ac")
+    assert max(tokens) < adapter.mask_id
+    assert adapter.decode(tokens + [adapter.mask_id] + tokens, mask="#") == "[1, 2] \u00e9\u20ac#[1, 2] \u00e9\u20ac"
 
 
 # ---------------------------------------------------------------------------------------------

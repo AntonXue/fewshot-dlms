@@ -5,21 +5,31 @@ class FakeAdapter:
     """A stand-in for a model adapter: byte-level tokenizer, fixed mask id, short chat markers.
 
     It has the token-level interface that `canvas.build_canvas` needs from a real adapter:
-    `encode`, `mask_id` and the four chat-framing methods. Every character is its own token (its
-    character code), so a test can read a canvas back as text with `decode`. The mask id 256 lies
-    outside the byte range, so it can never collide with a real token.
+    `encode`, `mask_id` and the four chat-framing methods. A token is one byte of the UTF-8 text,
+    so plain ASCII text has one token per character and a test can read a canvas back as text with
+    `decode`. Byte values are 0..255, so the mask id 256 can never collide with a text token.
     """
 
     name = "fake"
     mask_id = 256
 
     def encode(self, text):
-        """One token per character: the character code."""
-        return [ord(character) for character in text]
+        """The UTF-8 bytes of the text, one token per byte."""
+        return list(text.encode("utf-8"))
 
     def decode(self, ids, mask="_"):
         """Read token ids back as text, writing `mask` for every mask token."""
-        return "".join(mask if token == self.mask_id else chr(token) for token in ids)
+        pieces = []
+        pending = bytearray()
+        for token in ids:
+            if token == self.mask_id:
+                pieces.append(bytes(pending).decode("utf-8", errors="replace"))
+                pieces.append(mask)
+                pending = bytearray()
+            else:
+                pending.append(token)
+        pieces.append(bytes(pending).decode("utf-8", errors="replace"))
+        return "".join(pieces)
 
     def chat_header(self, instruction):
         """Everything before the first record: a header marker and the instruction."""

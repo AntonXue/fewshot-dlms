@@ -5,9 +5,10 @@ reproduce a frozen result with this repository's own code, without downloading a
 
 Figure 5 (multi-target, M = 4 demonstrations, J = 2 targets) writes, per model,
 
-  fig5/<model>_M4_J2.jsonl           the first two complete pool records of the report families,
-                                     copied unchanged (K = 16 candidates each, with token ids and
-                                     both log-likelihoods ell1 and ell0)
+  fig5/<model>_M4_J2.jsonl           the first two complete pool records of the report families
+                                     (K = 16 candidates each, with token ids and both
+                                     log-likelihoods ell1 and ell0), copied with the run metadata
+                                     (host, gpu_env, wall_time) removed and nothing else changed
   fig5/expected_<model>_M4_J2.json   the authors' own per-family numbers (A_target, A_all, ess,
                                      max_w at beta = 0 and beta = 0.5), copied from the families.csv
                                      of the same run
@@ -34,6 +35,8 @@ M = 4
 J = 2
 BETAS = ("0.0", "0.5")  # as written in families.csv: ordinary sampling and the common strength
 METRICS = ("A_target", "A_all", "ess", "max_w")
+# Keys of a pool record that describe the machine and the moment of the run, not the result.
+RUN_METADATA = ("host", "gpu_env", "wall_time")
 
 # One entry per fixture: its file stem, the model name in families.csv, and the pool file in the run.
 FIG5_FIXTURES = [
@@ -41,22 +44,24 @@ FIG5_FIXTURES = [
 ]
 
 
-def first_complete_lines(pool_path: Path, n: int) -> list[str]:
-    """The stored lines of the first complete record of each family, for the first `n` families.
+def first_complete_records(pool_path: Path, n: int) -> list[dict]:
+    """The first complete record of each family, for the first `n` families, without run metadata.
 
     A record is complete when it has all K candidates. Pool files are appended to by parallel
     workers, so lines are not in manifest order; the episode ids (list_easy_fam:report:000, ...)
-    sort in manifest order. Lines are returned exactly as stored.
+    sort in manifest order. Apart from the keys in RUN_METADATA, every record is returned as stored
+    (same keys in the same order).
     """
-    line_of_family = {}
+    record_of_family = {}
     with pool_path.open(encoding="utf-8") as handle:
         for line in handle:
             if not line.strip():
                 continue
             record = json.loads(line)
-            if len(record["candidates"]) == K and record["episode_id"] not in line_of_family:
-                line_of_family[record["episode_id"]] = line.rstrip("\n")
-    return [line_of_family[episode_id] for episode_id in sorted(line_of_family)[:n]]
+            if len(record["candidates"]) == K and record["episode_id"] not in record_of_family:
+                record_of_family[record["episode_id"]] = record
+    records = [record_of_family[episode_id] for episode_id in sorted(record_of_family)[:n]]
+    return [{key: value for key, value in record.items() if key not in RUN_METADATA} for record in records]
 
 
 def authors_numbers(families_csv: Path, model: str, episode_ids: list[str]) -> dict:
@@ -79,8 +84,7 @@ def extract_fig5(src: Path, dest: Path) -> None:
     out_dir = dest / "fig5"
     out_dir.mkdir(parents=True, exist_ok=True)
     for fixture in FIG5_FIXTURES:
-        lines = first_complete_lines(src / fixture["pool"], N_FAMILIES)
-        records = [json.loads(line) for line in lines]
+        records = first_complete_records(src / fixture["pool"], N_FAMILIES)
         episode_ids = [record["episode_id"] for record in records]
         expected = {
             "model": fixture["model"],
@@ -90,7 +94,9 @@ def extract_fig5(src: Path, dest: Path) -> None:
             "protocol_hash": records[0]["protocol_hash"],
             "families": authors_numbers(src / "analysis" / "families.csv", fixture["model"], episode_ids),
         }
-        (out_dir / f"{fixture['stem']}.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        with (out_dir / f"{fixture['stem']}.jsonl").open("w", encoding="utf-8") as handle:
+            for record in records:
+                handle.write(json.dumps(record) + "\n")
         with (out_dir / f"expected_{fixture['stem']}.json").open("w", encoding="utf-8") as handle:
             json.dump(expected, handle, indent=2)
             handle.write("\n")

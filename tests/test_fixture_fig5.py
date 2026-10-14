@@ -60,6 +60,11 @@ def test_fixture_holds_two_complete_families(records, expected):
         assert (record["M"], record["J"]) == (expected["M"], expected["J"]) == (4, 2)
 
 
+def test_fixture_carries_no_run_metadata(records):
+    for record in records:
+        assert not {"host", "gpu_env", "wall_time"} & set(record)
+
+
 def test_metrics_match_the_authors_run(records, expected):
     for record in records:
         for beta, authors in expected["families"][record["episode_id"]].items():

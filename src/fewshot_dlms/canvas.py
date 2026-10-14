@@ -1,4 +1,4 @@
-# ported from editdiff/experiments/multimodel/mm_common.py, experiments/sec42_mj/mj_worker.py and experiments/example_tilting/et_common.py @ d276fa6
+# ported from editdiff/experiments/multimodel/mm_common.py, experiments/sec42_mj/mj_worker.py, experiments/sec42_mj/mj_build.py::extend and experiments/example_tilting/et_common.py @ d276fa6
 """From a frozen family to the canvas a diffusion language model fills in.
 
 A family (see data.py) holds an instruction, 16 ordered demonstrations D1..D16 and 8 ordered targets
@@ -31,8 +31,14 @@ from dataclasses import dataclass
 import hashlib
 import random
 
-# The published layout (meta.master_placement) places D1..D4 and T1..T8 on 12 slots.
+# A family has 16 demonstrations and 8 targets. The published layout (meta.master_placement) places only
+# D1..D4 and T1..T8 on 12 slots; the M x J grid extends it to all 16 demonstrations on 24 slots.
+N_DEMOS = 16
+N_TARGETS = 8
 BASE_DEMOS = 4
+BASE_SLOTS = BASE_DEMOS + N_TARGETS  # 12
+N_NEW_DEMOS = N_DEMOS - BASE_DEMOS  # 12: D5..D16
+N_SLOTS = N_DEMOS + N_TARGETS  # 24
 
 # Seed of the extension to 16 demonstrations that the M x J grid (Figure 5) uses.
 GRID_PLACEMENT_SEED = "mtfsp-20261011-mj-placement-v1"
@@ -64,6 +70,12 @@ def _seed_from(*parts):
     return int(hashlib.sha256(text.encode("utf-8")).hexdigest()[:16], 16)
 
 
+def _is_published_layout(layout):
+    """True for a 12-slot layout that starts with D1 and holds each of D1..D4 and T1..T8 once."""
+    expected = [f"D{i}" for i in range(1, BASE_DEMOS + 1)] + [f"T{j}" for j in range(1, N_TARGETS + 1)]
+    return layout[:1] == ["D1"] and sorted(layout) == sorted(expected)
+
+
 def extend_layout(base_layout, function_id):
     """The 24-slot master layout of the M x J grid, from the published 12-slot layout.
 
@@ -73,23 +85,18 @@ def extend_layout(base_layout, function_id):
     from the result gives back the published layout, and a cell (M, J) of the grid is the 24-slot layout
     with D(M+1)..D16 and T(J+1)..T8 removed and nothing else moved.
     """
-    is_published = (
-        len(base_layout) == 12
-        and base_layout[0] == "D1"
-        and sorted(base_layout) == sorted([f"D{i}" for i in range(1, 5)] + [f"T{j}" for j in range(1, 9)])
-    )
-    if not is_published:
-        raise ValueError(f"not a published 12-slot layout: {base_layout}")
+    if not _is_published_layout(base_layout):
+        raise ValueError(f"not a published {BASE_SLOTS}-slot layout: {base_layout}")
 
     rng = random.Random(_seed_from(GRID_PLACEMENT_SEED, function_id))
-    new_demo_slots = set(rng.sample(range(1, 24), 12))
+    new_demo_slots = set(rng.sample(range(1, N_SLOTS), N_NEW_DEMOS))
     base_records = iter(base_layout)
-    next_demo = BASE_DEMOS
+    last_demo = BASE_DEMOS
     layout = []
-    for slot in range(24):
+    for slot in range(N_SLOTS):
         if slot in new_demo_slots:
-            next_demo += 1
-            layout.append(f"D{next_demo}")
+            last_demo += 1
+            layout.append(f"D{last_demo}")
         else:
             layout.append(next(base_records))
     return layout
@@ -199,6 +206,7 @@ def build_canvas(adapter, family, M, J, lengths, placement="interleaved"):
     sites = []
     E = []
     gold = []
+    target_index = 0  # which target comes next; targets appear in the order T1..TJ
     for entry in episode["entries"]:
         ids.extend(adapter.encode(f"Input: {entry['input']}\nOutput:"))
         if entry["role"] == "demo":
@@ -206,10 +214,11 @@ def build_canvas(adapter, family, M, J, lengths, placement="interleaved"):
             E.extend(range(len(ids), len(ids) + len(output_ids)))
             ids.extend(output_ids)
         else:
-            length = int(lengths[len(sites)])
+            length = int(lengths[target_index])
             sites.append(list(range(len(ids), len(ids) + length)))
             ids.extend([adapter.mask_id] * length)
             gold.append(entry["output"])
+            target_index += 1
         ids.extend(adapter.encode("\n\n"))
     ids.extend(adapter.encode(adapter.chat_end()))
 
