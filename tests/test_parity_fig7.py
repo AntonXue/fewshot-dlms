@@ -69,11 +69,11 @@ def run_analyze(root, pools, out, *extra):
 
 
 @pytest.fixture(scope="module")
-def java(artifacts):
-    """The fetched Java artifacts: pools/, judging/, length/, zero_demo/."""
-    path = artifacts / "java"
+def java(artifact_root):
+    """The fetched Java artifacts: pools/, judging/, length/, zero_demo/ (the java group alone is enough)."""
+    path = artifact_root / "java"
     if not (path / "pools").exists():
-        pytest.skip("Java artifacts not fetched: run `python -m fewshot_dlms.fetch pools java`")
+        pytest.skip("Java artifacts not fetched: run `python -m fewshot_dlms.fetch java`")
     return path
 
 
