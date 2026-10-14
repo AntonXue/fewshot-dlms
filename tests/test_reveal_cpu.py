@@ -53,9 +53,71 @@ class Recorder(Toy):
         return super().logits(batch_ids, positions)
 
 
+class Neighbour(Toy):
+    """A context-dependent model: the token at a position follows the token to its left, l.
+
+    It is l with probability 0.4, l + 1 with 0.3, l + 2 with 0.2 and l + 3 with 0.1 (mod 4); a
+    masked left neighbour counts as l = 0. Revealed tokens therefore change every later factor.
+    """
+
+    def logits(self, batch_ids, positions):
+        base = torch.tensor([0.4, 0.3, 0.2, 0.1])
+        rows = []
+        for ids, where in zip(batch_ids.tolist(), positions):
+            left = ids[where[0] - 1]
+            shift = 0 if left == MASK else left
+            probs = torch.cat([torch.roll(base, shift), torch.tensor([1e-9])])
+            rows.append(torch.log(probs).expand(len(where), 5))
+        return torch.stack(rows)
+
+
+class Announced(Toy):
+    """The unigram model, logging begin_reveal and logits calls in the order they happen."""
+
+    def __init__(self):
+        super().__init__()
+        self.events = []
+
+    def begin_reveal(self, order):
+        self.events.append(("begin_reveal", list(order)))
+
+    def logits(self, batch_ids, positions):
+        self.events.append(("logits", positions[0][0]))
+        return super().logits(batch_ids, positions)
+
+
 def canvas():
     """Two target sites, [2, 3] and [5]; one demonstration-output position, 1."""
     return Canvas(ids=[0, 1, 4, 4, 2, 4], sites=[[2, 3], [5]], E=[1], gold=["", ""], meta={})
+
+
+def reference_sample(model, cv, K, seed, allowed):
+    """The authors' draw order, written out for one canvas: one generator for the whole call; at each
+    step the candidates are grouped by the tokens they revealed so far, in order of first appearance,
+    and each group gets one multinomial call whose draws go to its members in candidate order."""
+    generator = torch.Generator().manual_seed(seed)
+    order = sorted(position for site in cv.sites for position in site)
+    traces = [[] for _ in range(K)]
+    for step, position in enumerate(order):
+        groups = {}
+        for k in range(K):
+            groups.setdefault(tuple(traces[k]), []).append(k)
+        for prefix, members in groups.items():
+            ids = list(cv.ids)
+            for revealed, token in zip(order, prefix):
+                ids[revealed] = token
+            logits = model.logits(torch.tensor([ids]), [[position]])[0, 0]
+            logits = logits.masked_fill(~allowed, float("-inf"))
+            probs = torch.log_softmax(logits, -1).exp()
+            draws = torch.multinomial(probs, len(members), replacement=True, generator=generator).tolist()
+            for k, token in zip(members, draws):
+                traces[k].append(token)
+    return traces
+
+
+def flat(infill):
+    """The tokens of an infill in reveal order (the sites of these canvases are in ascending order)."""
+    return [token for site in infill.toks for token in site]
 
 
 def test_logprob_of_sample_matches_sampler():
@@ -151,3 +213,56 @@ def test_candidates_on_different_canvases_follow_their_own_order():
     )
     assert [len(trace) for trace in traces] == [3, 2, 3]
     assert [len(terms) for terms in logprobs] == [3, 2, 3]
+
+
+# ---------------------------------------------------------------------------------------------
+# Support masking, the seeded draw order and the begin_reveal hook
+# ---------------------------------------------------------------------------------------------
+
+ALLOW_123 = torch.tensor([False, True, True, True, False])  # excludes id 0 and the mask
+
+
+def zero_canvas():
+    """Like canvas(), but the left neighbour of each site is token 0, so id 0 is the likeliest there."""
+    return Canvas(ids=[0, 0, 4, 4, 0, 4], sites=[[2, 3], [5]], E=[1], gold=["", ""], meta={})
+
+
+def test_excluded_ids_are_never_drawn():
+    unrestricted = sample_fixed_order(Neighbour(), zero_canvas(), K=200, seed=0, support=None)
+    restricted = sample_fixed_order(Neighbour(), zero_canvas(), K=200, seed=0, support=ALLOW_123)
+    assert any(0 in flat(x) for x in unrestricted)
+    assert not any(0 in flat(x) for x in restricted)
+
+
+def test_scores_are_renormalised_over_the_support():
+    # Position 2: left 0, so p = (0.4, 0.3, 0.2, 0.1); without id 0 token 1 has 0.3 / 0.6.
+    # Position 3: left 1, so p = (0.1, 0.4, 0.3, 0.2); token 2 has 0.3 / 0.9. Position 5: as position 2.
+    infill = [[1, 2], [1]]
+    total, per = logprob_fixed_order(Neighbour(), zero_canvas(), infill, hide_E=False, support=ALLOW_123)
+    expected = [np.log(0.3 / 0.6), np.log(0.3 / 0.9), np.log(0.3 / 0.6)]
+    assert np.allclose(per, expected, atol=1e-6)
+    assert np.isclose(total, sum(expected), atol=1e-6)
+
+
+def test_draws_follow_the_authors_order():
+    allowed = Neighbour().support("ordinary")
+    for seed in (0, 7):
+        infills = sample_fixed_order(Neighbour(), canvas(), K=12, seed=seed, chunk=5)
+        assert [flat(x) for x in infills] == reference_sample(Neighbour(), canvas(), 12, seed, allowed)
+
+
+def test_another_seed_draws_other_tokens():
+    a = sample_fixed_order(Neighbour(), canvas(), K=12, seed=0)
+    b = sample_fixed_order(Neighbour(), canvas(), K=12, seed=1)
+    assert [flat(x) for x in a] != [flat(x) for x in b]
+
+
+def test_begin_reveal_is_called_once_before_the_first_forward_pass():
+    sampler = Announced()
+    sample_fixed_order(sampler, canvas(), K=3, seed=0)
+    scorer = Announced()
+    logprob_fixed_order(scorer, canvas(), [[0, 1], [2]], hide_E=True)
+    for model in (sampler, scorer):
+        assert model.events[0] == ("begin_reveal", [2, 3, 5])
+        assert [name for name, _ in model.events].count("begin_reveal") == 1
+        assert [where for name, where in model.events[1:]][:1] == [2]

@@ -131,11 +131,15 @@ def site_sums(canvas, terms):
 def reveal(adapter, contexts, orders, which, allowed, generator=None, forced=None, chunk=16):
     """Fixed-order decoding of n = len(which) candidates at once (sampling or scoring).
 
-    Candidate k is revealed on the token sequence contexts[u], u = which[k], in the order orders[u].
-    There is one context in Figures 4, 5 and 7; Section 4.3 gives each target-length allocation its
-    own. At step s, candidate k's factor is the log-softmax over `allowed` (a boolean mask over the
-    vocabulary, or None for all tokens) at position orders[u][s] of contexts[u] with the candidate's
-    first s tokens written at orders[u][:s].
+    Candidate k is revealed on the token sequence contexts[ctx], ctx = which[k], in the order
+    orders[ctx]. There is one context in Figures 4, 5 and 7; Section 4.3 gives each target-length
+    allocation its own. At step s, candidate k's factor is the log-softmax over `allowed` (a boolean
+    mask over the vocabulary, or None for all tokens) at position orders[ctx][s] of contexts[ctx]
+    with the candidate's first s tokens written at orders[ctx][:s].
+
+    Before the first forward pass the adapter is told the reveal order, once:
+    adapter.begin_reveal(orders[0]). With several contexts the first target position is the same in
+    all of them (only the target lengths differ), so orders[0] stands for every context.
 
     Sampling (forced=None): every candidate draws its next token from its factor.
     Scoring (forced = n token lists in reveal order): the given tokens are written in instead.
@@ -151,12 +155,13 @@ def reveal(adapter, contexts, orders, which, allowed, generator=None, forced=Non
     sampling = forced is None
     traces = [[] for _ in range(n)] if sampling else [list(trace) for trace in forced]
     logprobs = [[] for _ in range(n)]
-    for step in range(max(len(orders[u]) for u in set(which))):
+    adapter.begin_reveal(orders[0])
+    for step in range(max(len(orders[ctx]) for ctx in set(which))):
         groups = {}
         for k in range(n):
-            u = which[k]
-            if step < len(orders[u]):
-                groups.setdefault((u, tuple(traces[k][:step])), []).append(k)
+            ctx = which[k]
+            if step < len(orders[ctx]):
+                groups.setdefault((ctx, tuple(traces[k][:step])), []).append(k)
         keys = list(groups)
         step_logprobs = _factor_logprobs(adapter, contexts, orders, keys, step, allowed, chunk)
         for row, key in enumerate(keys):
@@ -182,8 +187,8 @@ def _factor_logprobs(adapter, contexts, orders, keys, step, allowed, chunk):
     of fp32 log-probs per key.
     """
     by_length = {}
-    for i, (u, _) in enumerate(keys):
-        by_length.setdefault(len(contexts[u]), []).append(i)
+    for i, (ctx, _) in enumerate(keys):
+        by_length.setdefault(len(contexts[ctx]), []).append(i)
     rows = [None] * len(keys)
     for indices in by_length.values():
         for start in range(0, len(indices), chunk):
@@ -191,9 +196,9 @@ def _factor_logprobs(adapter, contexts, orders, keys, step, allowed, chunk):
             canvases = []
             positions = []
             for i in batch:
-                u, revealed = keys[i]
-                canvases.append(_fill(contexts[u], orders[u][:step], revealed))
-                positions.append([orders[u][step]])
+                ctx, revealed = keys[i]
+                canvases.append(_fill(contexts[ctx], orders[ctx][:step], revealed))
+                positions.append([orders[ctx][step]])
             logits = adapter.counted_logits(torch.tensor(canvases, dtype=torch.long), positions)
             for j, i in enumerate(batch):
                 rows[i] = logits[j, 0]
@@ -217,7 +222,7 @@ def _fill(ids, positions, tokens):
 
 
 def _in_reveal_order(canvas, toks):
-    """An infill as one token list in reveal order, from per-site lists or a flat list already in that order."""
+    """An infill as one token list in reveal order, from per-site lists or a flat list in that order."""
     order = reveal_order(canvas)
     if all(isinstance(site_toks, (list, tuple)) for site_toks in toks):
         lengths = [len(site_toks) for site_toks in toks]
@@ -252,6 +257,9 @@ class Adapter:
     A subclass loads a pinned checkpoint (`model_id` at `revision`) and implements `logits` and the
     four chat methods. A subclass that keeps its Hugging Face tokenizer in `tok` and sets `V` and
     `control_ids` gets `encode`, `decode`, `marker_ids` and `support` from here.
+
+    The loop calls `begin_reveal(order)` once per reveal, before its first `logits` call. It does
+    nothing here; an adapter whose attention depends on where the targets start overrides it.
     """
 
     name: str = ""  # short name in records and file names, e.g. "llada", "nemotron_pt", "dqwen"
@@ -295,6 +303,15 @@ class Adapter:
     def chat_end(self):
         """Ends the assistant turn."""
         raise NotImplementedError
+
+    def begin_reveal(self, order):
+        """Hook called once before a reveal's first forward pass, with its reveal order. No-op here.
+
+        `order` lists the target positions in reveal order, so order[0] is the first target position.
+        Nemotron in prefix/tail mode takes order[0] as the start of its bidirectional block and keeps
+        it for every step of the reveal, under P1 and P0 alike.
+        """
+        return None
 
     def logits(self, batch_ids, positions):
         """The model's logits at chosen positions of each canvas: the one model-specific piece.
