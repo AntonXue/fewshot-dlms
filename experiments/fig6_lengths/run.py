@@ -27,8 +27,9 @@ Records go to <out>/<model>/list_easy_fam_M4_J{J}_<condition>.jsonl (condition =
 delta0, delta+1, delta+2), one JSON line per family, appended as families finish. Every record carries the protocol_hash
 of its pool (pool_config: model, revision, condition, J, K, chunk, head, rules). A rerun with the same protocol skips the
 families already in the file, so an interrupted run resumes; a file that holds records of another protocol (another K,
-head, ...) is refused with exit status 2, so that analyze.py never reads two protocols as one pool. A family that fails
-is reported and retried on the next run; the run then exits with status 1. <out>/<model>/manifest_<hash>.json holds the
+head, ...) is refused with exit status 2, so that analyze.py never reads two protocols as one pool; so is a learned run
+without its head file (fetch heads). A family that fails (head, canvas or sampling) is reported and retried on the next
+run; the run then exits with status 1. <out>/<model>/manifest_<hash>.json holds the
 run's configuration, the hash of every pool, every seed, and the library and GPU versions. analyze.py reads the pools.
 
     python experiments/fig6_lengths/run.py --model llada --mode learned --J 1,2,4,8 --out artifacts/reruns/fig6
@@ -347,6 +348,9 @@ def main():
     head_sha = None
     if args.mode == "learned":
         head_path = args.head or f"artifacts/heads/{BACKBONE_OF_ADAPTER[args.model]}.pt"
+        if not Path(head_path).is_file():
+            print(f"no length head at {head_path}; run: python -m fewshot_dlms.fetch heads", file=sys.stderr)
+            sys.exit(2)
         head_sha = sha256_file(head_path)
     adapter_cls, _ = adapter_class(args.model)
     config = run_config(args, adapter_cls.model_id, adapter_cls.revision, head_sha)
@@ -388,15 +392,15 @@ def main():
         for family in families:
             if family["episode_id"] in done:
                 continue
-            oracle_L = oracle_lengths(adapter, family, J)
-            canvas = build_canvas(adapter, family, M, J, oracle_L)
-            allocations = allocations_of(args.mode, family, J, K, oracle_L, canvas, head, delta)
-            if allocations is None:
-                skipped += 1
-                continue
             try:
+                oracle_L = oracle_lengths(adapter, family, J)
+                canvas = build_canvas(adapter, family, M, J, oracle_L)
+                allocations = allocations_of(args.mode, family, J, K, oracle_L, canvas, head, delta)
+                if allocations is None:
+                    skipped += 1
+                    continue
                 body = run_family(adapter, family, J, K, allocations, args.chunk, audit=written < args.audit_n)
-            except Exception as error:  # one failed family must not stop the pool; it is retried on the next run
+            except Exception as error:  # a failed family (head, canvas, sampling) must not stop the pool; it is retried
                 print(f"FAILED {family['episode_id']} J={J} {condition}: {error}\n{traceback.format_exc()[-1500:]}", flush=True)
                 torch.cuda.empty_cache()
                 failed += 1

@@ -20,6 +20,7 @@ import json
 import re
 import subprocess
 import sys
+import types
 
 import numpy as np
 import pandas as pd
@@ -290,6 +291,47 @@ def test_run_refuses_a_pool_of_another_protocol(root, tmp_path):
     assert result.returncode == 2, result.stderr
     assert str(pool) in result.stderr
     assert "loaded in" not in result.stdout
+
+
+def test_learned_run_without_its_head_names_the_fetch_command(root, tmp_path):
+    """run.py --mode learned exits with status 2 and the fetch command, before it loads a model, when the head file is
+    missing."""
+    command = [sys.executable, str(root / "experiments/fig6_lengths/run.py"), "--model", "llada", "--mode", "learned"]
+    command += ["--head", str(tmp_path / "missing.pt"), "--J", "1", "--families", "1", "--out", str(tmp_path), "--device", "cpu"]
+    result = subprocess.run(command, capture_output=True, text=True, cwd=root)
+    assert result.returncode == 2, result.stderr
+    assert "python -m fewshot_dlms.fetch heads" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert "loaded in" not in result.stdout
+
+
+def test_run_counts_a_family_whose_lengths_fail(root, tmp_path, monkeypatch, capsys):
+    """A family whose lengths or canvas raise (here oracle_lengths) is reported and counted like a failed draw: the
+    others are written and the run exits with status 1 (no model: load and the per-family steps are replaced)."""
+    run = load_module(root, "run")
+    adapter = types.SimpleNamespace(model_id="GSAI-ML/LLaDA-1.5", revision="rev")
+    monkeypatch.setattr(run, "load", lambda name, device: adapter)
+    monkeypatch.setattr(run.torch.cuda, "is_available", lambda: False)
+    monkeypatch.setattr(run.torch.cuda, "empty_cache", lambda: None)
+
+    def lengths(adapter, family, J):
+        if family["episode_id"] == "list_easy_fam:report:001":
+            raise RuntimeError("injected failure")
+        return [1] * J
+
+    body = {"n_unique_alloc": 1, "n_unique": 1, "seconds_gen": 0.0, "checks": None}
+    monkeypatch.setattr(run, "oracle_lengths", lengths)
+    monkeypatch.setattr(run, "build_canvas", lambda *arguments: None)
+    monkeypatch.setattr(run, "run_family", lambda *arguments, **options: body)
+    argv = ["run.py", "--model", "llada", "--mode", "oracle", "--J", "1", "--K", "2", "--families", "3"]
+    monkeypatch.setattr(sys, "argv", [*argv, "--out", str(tmp_path), "--device", "cpu"])
+    with pytest.raises(SystemExit) as exit:
+        run.main()
+    stdout = capsys.readouterr().out
+    assert exit.value.code == 1
+    assert "FAILED list_easy_fam:report:001" in stdout and "failed families: 1" in stdout
+    pool = tmp_path / "llada" / "list_easy_fam_M4_J1_oracle.jsonl"
+    assert [record["episode_id"] for record in read_jsonl(pool)] == ["list_easy_fam:report:000", "list_easy_fam:report:002"]
 
 
 def test_frozen_config_has_no_absolute_paths(root):

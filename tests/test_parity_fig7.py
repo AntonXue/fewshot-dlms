@@ -499,3 +499,16 @@ def test_run_counts_a_failed_unit_and_exits_non_zero(root, tmp_path, monkeypatch
     stdout = capsys.readouterr().out
     assert "RUN_DONE" in stdout
     assert [record[field] for record in read_jsonl(pool)] == written + [seen[1]]
+
+
+@pytest.mark.parametrize("option, group", [("--head", "heads"), ("--head-probs", "java")])
+def test_learned_run_without_its_head_names_the_fetch_command(root, tmp_path, option, group):
+    """run.py --regime learned exits with status 2 and the fetch command, before it loads a model, when the head
+    checkpoint (or the stored predictions) is missing."""
+    command = [sys.executable, str(root / "experiments/fig7_java/run.py"), "--regime", "learned"]
+    command += [option, str(tmp_path / "missing"), "--families", "1", "--out", str(tmp_path), "--device", "cpu"]
+    result = subprocess.run(command, capture_output=True, text=True, cwd=root)
+    assert result.returncode == 2, result.stderr
+    assert f"python -m fewshot_dlms.fetch {group}" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert "loaded in" not in result.stdout

@@ -95,7 +95,8 @@ GPU, one model per process (`--delta` takes a list, written with `=` because it 
     make rerun-fig6        # LLaDA-1.5, J = 1, first 8 families, oracle and learned, then analyze.py --compare
 
 `--K N` replaces K = 64 / J at every J; `--families N` keeps the first N families. The learned mode loads the head
-from `artifacts/heads/<backbone>.pt` (`llada`, `nemotron`, `dqwen`; `--head` to override). LLaDA-1.5's head needs
+from `artifacts/heads/<backbone>.pt` (`llada`, `nemotron`, `dqwen`; `--head` to override); without the file it stops
+before loading the model and names the fetch command (`python -m fewshot_dlms.fetch heads`). LLaDA-1.5's head needs
 flash-attn, which compiles against the installed torch, so install it after the package:
 
     pip install -e .

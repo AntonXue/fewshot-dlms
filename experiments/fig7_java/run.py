@@ -477,7 +477,13 @@ def head_sha_of(args):
     if args.study != "main" or args.regime != "learned":
         return ""
     if args.head_probs:
+        if not Path(args.head_probs).is_file():
+            print(f"no stored head predictions at {args.head_probs}; run: python -m fewshot_dlms.fetch java", file=sys.stderr)
+            sys.exit(2)
         return str(np.load(args.head_probs, allow_pickle=False)["ckpt_sha"])
+    if not Path(args.head).is_file():
+        print(f"no length head at {args.head}; run: python -m fewshot_dlms.fetch heads", file=sys.stderr)
+        sys.exit(2)
     head_sha = file_sha256(args.head)
     if head_sha not in (HEAD_CKPT_SHA, TRAINED_HEAD_CKPT_SHA):
         print(f"warning: {args.head} is not the paper's head C (sha256 {head_sha[:12]}...)", flush=True)
