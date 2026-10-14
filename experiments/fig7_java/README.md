@@ -174,3 +174,7 @@ GPU sampling is statistical in general, so a rerun is judged by whether the froz
 
   The `M1J1` rows are the check; the `all` rows that `--compare` also prints set the frozen value over all 127
   episodes against this 52-episode rerun and do not apply.
+
+- **Note.** On this stack the "inside" verdicts above hold trivially, because the rerun is bit-identical to the frozen
+  pools; `tests/test_resampling_compare.py` checks that `--compare` also reports "outside" when a rerun's mean is far
+  from the frozen one.
