@@ -16,9 +16,12 @@ Run from the repository root:
     python -m fewshot_dlms.fetch                  # the group table; downloads nothing
 
 Each group arrives with `SHA256SUMS` and the data card `README.md`. The fetcher checks the downloaded `SHA256SUMS`
-against the SHA-256 below, then every file present against it, and fails on a mismatch or on a missing file of a
-requested group. `--revision` and `--dest` override the pinned revision and `artifacts/`. While the dataset is
-private, the download needs a Hugging Face login with access (`hf auth login` or `HF_TOKEN`).
+against the SHA-256 below, then every file present against it, and fails on a mismatch (delete the listed files and
+run the fetch again) or on a missing file of a requested group. `--dest` overrides `artifacts/`. `--revision`
+downloads, or with `--check` checks, another dataset revision: the fetcher warns that the check of `SHA256SUMS`
+against the pinned SHA-256 below is skipped, and checks the files against that revision's `SHA256SUMS` only. While
+the dataset is private, the download needs a Hugging Face login with access (`hf auth login` or `HF_TOKEN`); a
+refused login or an unreachable Hub ends the fetch with one line naming the cause and the remedy (exit status 1).
 
 | | |
 |---|---|
