@@ -214,6 +214,10 @@ FIG6_HEAD = {
     "J": 2,
     "n_families": 10,
     "K": 64,  # allocations stored per family (the run drew 64 per family and used the first 64 / J = 32)
+    # SHA-256 of the head as published (artifacts/heads/llada.pt): the authors' final.pt re-saved without the run
+    # directory pickled in its training config (tools/assemble_artifacts.py), tensors identical. The evaluation
+    # records the original file's SHA-256, written as trained_checkpoint_sha256.
+    "published_checkpoint_sha256": "a49355771567e3b091e8a5d79b09aadd460b677af0f850af6d4afe27360e1452",
 }
 
 
@@ -269,7 +273,8 @@ def extract_fig6_head(src: Path, dest: Path) -> None:
             "run": run,
             "backbone": spec["backbone"],
             "lmax": lmax,
-            "checkpoint_sha256": str(predictions["ckpt_sha"]),
+            "checkpoint_sha256": spec["published_checkpoint_sha256"],
+            "trained_checkpoint_sha256": str(predictions["ckpt_sha"]),
         },
         "task": spec["task"],
         "bank": spec["bank"],
