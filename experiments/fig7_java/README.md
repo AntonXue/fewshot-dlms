@@ -55,12 +55,16 @@ episodes, their provenance and licenses are in `data/java/`.
 
 ## The judge
 
-The paper's verdicts were produced by **Claude Sonnet 5.5 running as Claude Code sub-agents**, each call judging
-several packets of different episodes: the main run's 2,089 packets took 272 calls; the ablation's 698 packets
-reused 93 verdicts of the main run (byte-identical packets) and judged 605 in calls of up to five packets of
-different anchors. Before the main run, 46 calibration controls built from the source of 12 episodes (references,
-no-ops, partial edits, swapped arguments, flipped conditions, wrong receivers, harmless comments) were judged one
-packet per call: 46/46 matched their expected verdicts (45/46 when the ablation judged them again).
+The paper's verdicts were produced by **Claude Sonnet 5.5 (`claude-sonnet-5-5`) running as Claude Code (version
+2.1.288) general-purpose sub-agents** with the Read and Write tools, each call judging up to five packets of different
+episodes, with extended thinking enabled (its content was not retained) and no temperature or max-token settings. For
+the main run's 2,089 packets, the package's own records count 272 batched calls (329 in total); a later audit of the
+session transcripts counts 420 batched calls of at most five packets (477 in total); the verdicts themselves are
+unaffected. The ablation's 698 packets reused 93 verdicts of the main run (byte-identical packets) and judged 605 in
+calls of up to five packets of different anchors. Before the main run, 46 calibration controls built from the source
+of 12 episodes (references, no-ops, partial edits, swapped arguments, flipped conditions, wrong receivers, harmless
+comments) were judged one packet per call: 46/46 matched their expected verdicts (45/46 when the ablation judged them
+again).
 The original verdicts ship with the artifacts (`java/judging/verdicts.jsonl`, `java/zero_demo/judging/verdicts.jsonl`)
 and `analyze.py` reads them.
 
@@ -106,23 +110,25 @@ GPU (LLaDA-1.5, about 16 GiB):
     python experiments/fig7_java/run.py --study zero_demo --M 0,1,2 --J 1,2 --out artifacts/reruns/fig7/zero_demo/pools
     make rerun-fig7        # oracle regime, first 8 episodes, then analyze.py with the paper's verdicts and --compare
 
-`--families N` keeps the first N episodes (anchors). `--head-probs artifacts/java/length/s5hc_C_s5final_G4.npz`
-draws the learned lengths from the stored predictions instead of running head C. The two learned runs hash different
+`--families N` keeps the first N episodes (anchors). `--head-probs artifacts/java/length/s5hc_C_s5final_G4.npz` draws
+the learned lengths from the stored predictions instead of running head C. The two learned runs hash different
 checkpoint identities, the stored predictions' `ckpt_sha` (the original checkpoint's SHA-256) against the published
-file's SHA-256 (ARTIFACTS.md), so each refuses the other's pool: give them separate `--out` directories. Records are appended to
-`<out>/pools_<regime>.jsonl` (or `pools_zero_demo.jsonl`) as episodes finish. Each carries its pool's `config_hash`
-(model, revision, regime, K, chunk, head; not the cells selected); an interrupted run resumes after the episodes with
-that hash and, before loading the model, refuses a file holding records of another configuration or the frozen pools
-(exit status 2, naming the file). `<out>/manifest_<hash>.json` holds the configuration, the pool's hash, every seed
-and the library and GPU versions. A failed family is counted and the run exits non-zero.
+file's SHA-256 (ARTIFACTS.md), so each refuses the other's pool: give them separate `--out` directories. Records are
+appended to `<out>/pools_<regime>.jsonl` (or `pools_zero_demo.jsonl`) as episodes finish. Each carries its pool's
+`config_hash` (model, revision, regime, K, chunk, head; not the cells selected); an interrupted run resumes after the
+episodes with that hash and, before loading the model, refuses a file holding records of another configuration or the
+frozen pools (exit status 2, naming the file). `<out>/manifest_<hash>.json` holds the configuration, the pool's hash,
+every seed and the library and GPU versions. A failed family is counted and the run exits non-zero.
 
 ## Runtime
 
-On one H100 NVL in the authors' run: the main run took 2.9 GPU-h (oracle 0.55 h, learned 2.33 h; a learned
-episode has up to 16 canvases), the ablation 0.3 GPU-h. The judge made 329 sub-agent calls for the main run (272
-for the 2,089 report packets, 46 calibration controls, one retry of a malformed reply, ten agreement repeats). The
-ablation judged 605 fresh report packets in calls of up to five packets, and 79 packets more (the 46 controls again,
-6 repeats of them, 7 malformed replies, 20 agreement repeats); its records do not give the number of calls.
+On one H100 NVL in the authors' run: the main run took 2.9 GPU-h (oracle 0.55 h, learned 2.33 h; a learned episode has
+up to 16 canvases), the ablation 0.3 GPU-h. The judge's sub-agent calls for the main run: the package's own records
+count 272 batched calls for the 2,089 report packets (329 in total, with 46 calibration controls, one retry of a
+malformed reply and ten agreement repeats); a later audit of the session transcripts counts 420 batched calls of at most
+five packets (477 in total); the verdicts themselves are unaffected. The ablation judged 605 fresh report packets in
+calls of up to five packets, and 79 packets more (the 46 controls again, 6 repeats of them, 7 malformed replies, 20
+agreement repeats); its records do not give the number of calls.
 
 ## Fidelity
 

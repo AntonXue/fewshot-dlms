@@ -10,13 +10,17 @@ the packet shows no reference answer, length regime, guidance weight, reward or 
 rubric_r1.md (verbatim from the paper's run) and answers with a JSON verdict per target and a joint verdict:
 "correct" only if every target is correct, "incorrect" if any is, else "uncertain".
 
-The paper's verdicts were produced by Claude Sonnet 5.5 running as Claude Code sub-agents (several packets of
-different episodes per sub-agent call, 2,089 packets in 272 calls; the 46 calibration controls one per call, 46/46
-matching their expected verdicts). This script calls the Anthropic API instead (model claude-sonnet-5-5 by default, one packet per call,
-rubric r1 as the system prompt). It is a re-implementation of the instrument, not a replay: an API call is not a
-Claude Code sub-agent, and LLM verdicts vary between calls, so re-judging is approximate. The original verdicts
-ship with the artifacts (java/judging/verdicts.jsonl) and analyze.py reads them by default. The pools of the
-zero-demonstration ablation (run.py --study zero_demo) are not re-judged: its verdicts ship with the artifacts
+The paper's verdicts were produced by Claude Sonnet 5.5 (claude-sonnet-5-5) running as Claude Code (version 2.1.288)
+general-purpose sub-agents with the Read and Write tools: up to five packets of different episodes per call,
+extended thinking enabled (its content not retained), no temperature or max-token settings. For the main run's 2,089
+packets the package's own records count 272 batched calls (329 in total); a later audit of the session transcripts
+counts 420 batched calls of at most five packets (477 in total); the verdicts themselves are unaffected. The 46
+calibration controls were judged one per call, 46/46 matching their expected verdicts. This script calls the
+Anthropic API instead (model claude-sonnet-5-5 by default, one packet per call, rubric r1 as the system prompt). It
+is a re-implementation of the instrument, not a replay: an API call is not a Claude Code sub-agent, and LLM verdicts
+vary between calls, so re-judging is approximate. The original verdicts ship with the artifacts
+(java/judging/verdicts.jsonl) and analyze.py reads them by default. The pools of the zero-demonstration ablation
+(run.py --study zero_demo) are not re-judged: its verdicts ship with the artifacts
 (java/zero_demo/judging/verdicts.jsonl), and judge.py exits with status 2 on its pool files.
 
 Packet identity. The cache key of a packet is the first 20 hex digits of
