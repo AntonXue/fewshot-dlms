@@ -14,6 +14,8 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install (CPU torch)
-        run: pip install -e ".[dev]" --extra-index-url https://download.pytorch.org/whl/cpu
+        run: pip install -e ".[dev,data]" --extra-index-url https://download.pytorch.org/whl/cpu
+      - name: Rebuild SST-2 and MIT Movie text from the public sources
+        run: python data/benchmarks/build.py
       - name: Test
         run: make test

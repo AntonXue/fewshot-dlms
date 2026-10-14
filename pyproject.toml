@@ -17,6 +17,7 @@ dependencies = [
 [project.optional-dependencies]
 judge = ["anthropic>=0.40"]
 dev = ["pytest>=8"]
+data = ["datasets>=3"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -24,3 +25,4 @@ where = ["src"]
 [tool.pytest.ini_options]
 markers = ["gpu: needs a CUDA GPU and model weights", "parity: needs fetched artifacts"]
 testpaths = ["tests"]
+pythonpath = ["."]
