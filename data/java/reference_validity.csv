@@ -1,0 +1,159 @@
+episode_id,cell,commit10,helper,flags_gateA,adjudication_verdict,rule,reason,in_A,in_B
+M1J1_chec_21c8e04_isChildNodeTextMatches,M1J1,21c8e04bc9,isChildNodeTextMatches,,keep,,,True,True
+M1J1_chec_b142dda_getMessage,M1J1,b142dda472,getMessage,,keep,,,True,True
+M1J1_cio_153a91c_size,M1J1,153a91c127,size,,keep,,,True,True
+M1J1_cio_1e73dd9_exists,M1J1,1e73dd92a2,exists,,keep,,,True,True
+M1J1_cio_269f992_builder,M1J1,269f9921cb,builder,,keep,,,True,True
+M1J1_cio_5035e97_getOutputStream,M1J1,5035e97fa0,getOutputStream,,keep,,,True,True
+M1J1_cio_54858b5_getLastModifiedMillis,M1J1,54858b5f9f,getLastModifiedMillis,,keep,,,True,True
+M1J1_cio_69e3b81_close,M1J1,69e3b819a1,close,,keep,,,True,True
+M1J1_cio_6b0ed87_rethrow,M1J1,6b0ed87f7b,rethrow,,keep,,,True,True
+M1J1_cio_6dd4c08_toSeparator,M1J1,6dd4c0850c,toSeparator,,keep,,,True,True
+M1J1_cio_8b6d496_acceptBaseName,M1J1,8b6d4969ff,acceptBaseName,,keep,,,True,True
+M1J1_cio_8b7c822_setLastModifiedMillis,M1J1,8b7c82225a,setLastModifiedMillis,,keep,,,True,True
+M1J1_cio_a304a37_notify,M1J1,a304a37c7f,notify,,keep,,,True,True
+M1J1_cio_cb6f3aa_current,M1J1,cb6f3aabcf,current,,keep,,,True,True
+M1J1_cio_d269f16_uncheck,M1J1,d269f164b3,uncheck,,keep,,,True,True
+M1J1_cio_d75027d_getLastModifiedTime,M1J1,d75027d357,getLastModifiedTime,,keep,,,True,True
+M1J1_cio_dcf0197_toSuffixFileFilter,M1J1,dcf0197fbb,toSuffixFileFilter,,keep,,,True,True
+M1J1_cio_dd63fa3_rethrow,M1J1,dd63fa3b53,rethrow,,keep,,,True,True
+M1J1_cio_e95c77c_createRandomAccessFile,M1J1,e95c77c48c,createRandomAccessFile,,keep,,,True,True
+M1J1_cio_f448f97_brokenObservableInputStream,M1J1,f448f97af4,brokenObservableInputStream,,keep,,,True,True
+M1J1_clan_426ebb1_nanosToMillis,M1J1,426ebb13ee,nanosToMillis,,keep,,,True,True
+M1J1_clan_5d146cd_createChildBackgroundInitializer,M1J1,5d146cd069,createChildBackgroundInitializer,,keep,,,True,True
+M1J1_clan_5d146cd_getBackgroundInitializerTestImpl,M1J1,5d146cd069,getBackgroundInitializerTestImpl,,keep,,,True,True
+M1J1_clan_bdff802_isNumberFormatParsable,M1J1,bdff802a85,isNumberFormatParsable,,keep,,,True,True
+M1J1_clan_c290aeb_getMethodObject,M1J1,c290aebffa,getMethodObject,,keep,,,True,True
+M1J1_clan_c95ee37_next,M1J1,c95ee37dff,next,,keep,,,True,True
+M1J1_clan_c95ee37_nextAlphabetic,M1J1,c95ee37dff,nextAlphabetic,,keep,,,False,False
+M1J1_clan_c95ee37_nextAlphanumeric,M1J1,c95ee37dff,nextAlphanumeric,,keep,,,False,False
+M1J1_clan_c95ee37_nextAscii,M1J1,c95ee37dff,nextAscii,,keep,,,False,False
+M1J1_clan_c95ee37_nextGraph,M1J1,c95ee37dff,nextGraph,,keep,,,False,False
+M1J1_clan_c95ee37_nextNumeric,M1J1,c95ee37dff,nextNumeric,,keep,,,False,False
+M1J1_clan_c95ee37_nextPrint,M1J1,c95ee37dff,nextPrint,,keep,,,False,False
+M1J1_clan_c95ee37_randomDouble,M1J1,c95ee37dff,randomDouble,,keep,,,False,False
+M1J1_clan_c95ee37_randomFloat,M1J1,c95ee37dff,randomFloat,,keep,,,False,False
+M1J1_clan_c95ee37_randomInt,M1J1,c95ee37dff,randomInt,,keep,,,False,False
+M1J1_clan_c95ee37_randomLong,M1J1,c95ee37dff,randomLong,,keep,,,False,False
+M1J1_clan_c95ee37_secure,M1J1,c95ee37dff,secure,gold_not_inferable_tokens_absent,keep,R1-derivable,absent token randomDouble follows the demonstrated nextX -> secure().randomX renaming (demo nextBytes -> randomBytes),False,True
+M1J1_gson_08174e2_assertNonFiniteDoublesExceptions,M1J1,08174e2019,assertNonFiniteDoublesExceptions,,keep,,,True,True
+M1J1_gson_08174e2_assertNonFiniteFloatsExceptions,M1J1,08174e2019,assertNonFiniteFloatsExceptions,,keep,,,False,False
+M1J1_gson_08174e2_assertNonFiniteNumbersExceptions,M1J1,08174e2019,assertNonFiniteNumbersExceptions,,keep,,,False,False
+M1J1_gson_46ab704_assertExcludesField,M1J1,46ab704221,assertExcludesField,,keep,,,True,True
+M1J1_gson_46ab704_assertIncludesField,M1J1,46ab704221,assertIncludesField,,keep,,,False,False
+M1J1_gson_810e356_isTestingProGuard,M1J1,810e356059,isTestingProGuard,,keep,R1-standard-api,absent token assumeFalse is the JUnit counterpart of assumeTrue present in the old text,True,True
+M1J1_guav_c28e652_shouldHaveKnownHashes,M1J1,c28e65234e,shouldHaveKnownHashes,,keep,,,True,True
+M1J1_hert_477af09_genericPollDataFunction,M1J1,477af0959f,genericPollDataFunction,gold_not_inferable_tokens_absent,keep,R1-derivable,absent token metricDataToRealTimeStorageLock follows the demonstrated field-naming pattern (metricDataToPersistentLock); passing the old lock4 field is an acceptable alternative,False,True
+M1J1_hert_c4fa738_getBytes,M1J1,c4fa738d65,getBytes,,keep,,,True,True
+M1J1_hert_f10e5db_dispatchJobInCache,M1J1,f10e5dbd06,dispatchJobInCache,,keep,,,True,True
+M1J1_hibo_4b33d0d_staticDetermineDatabaseVersion,M1J1,4b33d0d067,staticDetermineDatabaseVersion,,keep,,,True,True
+M1J1_hibo_800a3f0_instantiateGeneratorBean,M1J1,800a3f0738,instantiateGeneratorBean,,keep,,,True,True
+M1J1_hibo_afca931_queryCacheLayout,M1J1,afca93158e,queryCacheLayout,,keep,,,True,True
+M1J1_hibs_9cd4135_updateTail,M1J1,9cd4135b36,updateTail,,keep,,,True,True
+M1J1_hibs_a4d2e5b_appendIndentIfNecessary,M1J1,a4d2e5b39b,appendIndentIfNecessary,,keep,,,True,True
+M1J1_hibs_c46066d_getOrmPropertyMetadataFromThisType,M1J1,c46066ddc2,getOrmPropertyMetadataFromThisType,,keep,,,True,True
+M1J1_hibs_f7c9efb_initDataSimple,M1J1,f7c9efb791,initDataSimple,,keep,,,True,True
+M1J1_jadx_d4ce969_execJadxCli,M1J1,d4ce969fb7,execJadxCli,,keep,,,True,True
+M1J1_java_339d45a_assertEqualsStringIgnoringEol,M1J1,339d45a569,assertEqualsStringIgnoringEol,,keep,,,True,True
+M1J1_java_a73aba7_assertCompilationFails,M1J1,a73aba7b8c,assertCompilationFails,,keep,,,False,False
+M1J1_java_a73aba7_assertOneRecordDeclaration,M1J1,a73aba7b8c,assertOneRecordDeclaration,,keep,,,True,True
+M1J1_java_b22ebb2_createSolver,M1J1,b22ebb29ab,createSolver,,keep,,,True,True
+M1J1_jun4_2adef6f_getInjectionType,M1J1,2adef6f30c,getInjectionType,,keep,R1-nonessential,absent tokens belong to the developer's optional switch/default-throw rewrite; an if/else rewrite with the helper preserves behaviour,True,True
+M1J1_jun4_2db6394_failAfter50Ms,M1J1,2db6394288,failAfter50Ms,,keep,R1-derivable,absent literal 'test timed out after 50 milliseconds' is the old literal with 100 -> 50 as the helper name states,True,True
+M1J1_jun4_2db6394_run,M1J1,2db6394288,run,,keep,,,False,False
+M1J1_jun5_e07cbb6_output,M1J1,e07cbb6162,output,,keep,,,True,True
+M1J1_jun5_f95d4e8_format,M1J1,f95d4e8b09,format,,keep,,,True,True
+M1J1_pmd_18f393d_parseAndTypeResolveForClass15,M1J1,18f393da3c,parseAndTypeResolveForClass15,,keep,,,True,True
+M1J1_pmd_30b7628_getExplicitTypeNode,M1J1,30b76285e3,getExplicitTypeNode,,keep,,,True,True
+M1J1_pmd_b25c16f_assertWarningsWithFoo,M1J1,b25c16f94d,assertWarningsWithFoo,gold_not_inferable_tokens_absent,exclude,R1,gold inlines the string contents of constants TEST9/TEST10 that the commit deleted; the literal text is absent from the prompt and no behaviour-preserving rewrite can name the deleted constants,False,False
+M1J1_shen_34aeade_defaultUser,M1J1,34aeadeac6,defaultUser,,keep,,,True,True
+M1J1_zxin_3909ebe_verifyMinimalEncoding,M1J1,3909ebe294,verifyMinimalEncoding,expectation_change_in_gold(zxing),exclude,R2,demonstration (testMinimalEncoder5) and target golds change the asserted expected encoding strings; the commit bundles an encoder behaviour change with the extraction,False,False
+M1J2_chec_21c8e04_isChildNodeTextMatches,M1J2,21c8e04bc9,isChildNodeTextMatches,,keep,,,True,True
+M1J2_cio_1e73dd9_exists,M1J2,1e73dd92a2,exists,,keep,,,True,True
+M1J2_cio_269f992_builder,M1J2,269f9921cb,builder,,keep,,,True,True
+M1J2_cio_5035e97_getOutputStream,M1J2,5035e97fa0,getOutputStream,,keep,,,True,True
+M1J2_cio_6b0ed87_rethrow,M1J2,6b0ed87f7b,rethrow,,keep,,,True,True
+M1J2_cio_8b7c822_setLastModifiedMillis,M1J2,8b7c82225a,setLastModifiedMillis,,keep,,,True,True
+M1J2_cio_cb6f3aa_current,M1J2,cb6f3aabcf,current,,keep,,,True,True
+M1J2_cio_d269f16_uncheck,M1J2,d269f164b3,uncheck,,keep,,,True,True
+M1J2_cio_d75027d_getLastModifiedTime,M1J2,d75027d357,getLastModifiedTime,,keep,,,True,True
+M1J2_cio_dd63fa3_rethrow,M1J2,dd63fa3b53,rethrow,,keep,,,True,True
+M1J2_cio_e95c77c_createRandomAccessFile,M1J2,e95c77c48c,createRandomAccessFile,,keep,,,True,True
+M1J2_cio_f448f97_brokenObservableInputStream,M1J2,f448f97af4,brokenObservableInputStream,,keep,,,True,True
+M1J2_clan_5d146cd_createChildBackgroundInitializer,M1J2,5d146cd069,createChildBackgroundInitializer,,keep,,,True,True
+M1J2_clan_5d146cd_getBackgroundInitializerTestImpl,M1J2,5d146cd069,getBackgroundInitializerTestImpl,,keep,,,True,True
+M1J2_clan_bdff802_isNumberFormatParsable,M1J2,bdff802a85,isNumberFormatParsable,,keep,,,True,True
+M1J2_clan_c290aeb_getMethodObject,M1J2,c290aebffa,getMethodObject,,keep,,,True,True
+M1J2_clan_c95ee37_next,M1J2,c95ee37dff,next,,keep,,,True,True
+M1J2_clan_c95ee37_randomLong,M1J2,c95ee37dff,randomLong,,keep,,,False,False
+M1J2_clan_c95ee37_secure,M1J2,c95ee37dff,secure,gold_not_inferable_tokens_absent,keep,R1-derivable,absent token randomDouble follows the demonstrated nextX -> secure().randomX renaming (demo nextBytes -> randomBytes),False,True
+M1J2_gson_810e356_isTestingProGuard,M1J2,810e356059,isTestingProGuard,gold_not_inferable_tokens_absent,keep,R1-standard-api,absent token assumeFalse is the JUnit counterpart of assumeTrue present in the old text,False,True
+M1J2_hert_477af09_genericPollDataFunction,M1J2,477af0959f,genericPollDataFunction,gold_not_inferable_tokens_absent,keep,R1-derivable,absent token metricDataToRealTimeStorageLock follows the demonstrated field-naming pattern (metricDataToPersistentLock); passing the old lock4 field is an acceptable alternative,False,True
+M1J2_jadx_d4ce969_execJadxCli,M1J2,d4ce969fb7,execJadxCli,,keep,,,True,True
+M1J2_java_a73aba7_assertCompilationFails,M1J2,a73aba7b8c,assertCompilationFails,,keep,,,False,False
+M1J2_java_a73aba7_assertOneRecordDeclaration,M1J2,a73aba7b8c,assertOneRecordDeclaration,,keep,,,True,True
+M1J2_java_b22ebb2_createSolver,M1J2,b22ebb29ab,createSolver,,keep,,,True,True
+M1J2_jun4_2adef6f_getInjectionType,M1J2,2adef6f30c,getInjectionType,gold_not_inferable_tokens_absent,keep,R1-nonessential,absent tokens belong to the developer's optional switch/default-throw rewrite; an if/else rewrite with the helper preserves behaviour,False,True
+M1J2_jun4_2db6394_failAfter50Ms,M1J2,2db6394288,failAfter50Ms,gold_not_inferable_tokens_absent,keep,R1-derivable,absent literal 'test timed out after 50 milliseconds' is the old literal with 100 -> 50 as the helper name states,False,True
+M1J2_jun4_2db6394_run,M1J2,2db6394288,run,gold_not_inferable_tokens_absent,exclude,R1,"target t2 gold needs the new classes DelegateStatement/FastStatement, absent from the prompt",False,False
+M1J2_jun5_e07cbb6_output,M1J2,e07cbb6162,output,,keep,,,True,True
+M1J2_jun5_f95d4e8_format,M1J2,f95d4e8b09,format,,keep,,,True,True
+M1J2_pmd_18f393d_parseAndTypeResolveForClass15,M1J2,18f393da3c,parseAndTypeResolveForClass15,,keep,,,True,True
+M1J2_pmd_b25c16f_assertWarningsWithFoo,M1J2,b25c16f94d,assertWarningsWithFoo,gold_not_inferable_tokens_absent,exclude,R1,gold inlines the string contents of constants TEST9/TEST10 that the commit deleted; the literal text is absent from the prompt and no behaviour-preserving rewrite can name the deleted constants,False,False
+M1J2_zxin_3909ebe_verifyMinimalEncoding,M1J2,3909ebe294,verifyMinimalEncoding,gold_not_inferable_tokens_absent;expectation_change_in_gold(zxing),exclude,R2,demonstration (testMinimalEncoder5) and target golds change the asserted expected encoding strings; the commit bundles an encoder behaviour change with the extraction,False,False
+M2J1_chec_21c8e04_isChildNodeTextMatches,M2J1,21c8e04bc9,isChildNodeTextMatches,,keep,,,True,True
+M2J1_cio_1e73dd9_exists,M2J1,1e73dd92a2,exists,,keep,,,True,True
+M2J1_cio_269f992_builder,M2J1,269f9921cb,builder,,keep,,,True,True
+M2J1_cio_5035e97_getOutputStream,M2J1,5035e97fa0,getOutputStream,,keep,,,True,True
+M2J1_cio_6b0ed87_rethrow,M2J1,6b0ed87f7b,rethrow,,keep,,,True,True
+M2J1_cio_8b7c822_setLastModifiedMillis,M2J1,8b7c82225a,setLastModifiedMillis,,keep,,,True,True
+M2J1_cio_cb6f3aa_current,M2J1,cb6f3aabcf,current,,keep,,,True,True
+M2J1_cio_d269f16_uncheck,M2J1,d269f164b3,uncheck,,keep,,,True,True
+M2J1_cio_d75027d_getLastModifiedTime,M2J1,d75027d357,getLastModifiedTime,,keep,,,True,True
+M2J1_cio_dd63fa3_rethrow,M2J1,dd63fa3b53,rethrow,,keep,,,True,True
+M2J1_cio_e95c77c_createRandomAccessFile,M2J1,e95c77c48c,createRandomAccessFile,,keep,,,True,True
+M2J1_cio_f448f97_brokenObservableInputStream,M2J1,f448f97af4,brokenObservableInputStream,,keep,,,True,True
+M2J1_clan_5d146cd_createChildBackgroundInitializer,M2J1,5d146cd069,createChildBackgroundInitializer,,keep,,,True,True
+M2J1_clan_5d146cd_getBackgroundInitializerTestImpl,M2J1,5d146cd069,getBackgroundInitializerTestImpl,,keep,,,True,True
+M2J1_clan_bdff802_isNumberFormatParsable,M2J1,bdff802a85,isNumberFormatParsable,,keep,,,True,True
+M2J1_clan_c290aeb_getMethodObject,M2J1,c290aebffa,getMethodObject,,keep,,,True,True
+M2J1_clan_c95ee37_next,M2J1,c95ee37dff,next,,keep,,,True,True
+M2J1_clan_c95ee37_randomLong,M2J1,c95ee37dff,randomLong,,keep,,,False,False
+M2J1_clan_c95ee37_secure,M2J1,c95ee37dff,secure,gold_not_inferable_tokens_absent,keep,R1-derivable,absent token randomDouble follows the demonstrated nextX -> secure().randomX renaming (demo nextBytes -> randomBytes),False,True
+M2J1_gson_810e356_isTestingProGuard,M2J1,810e356059,isTestingProGuard,,keep,R1-standard-api,absent token assumeFalse is the JUnit counterpart of assumeTrue present in the old text,True,True
+M2J1_hert_477af09_genericPollDataFunction,M2J1,477af0959f,genericPollDataFunction,gold_not_inferable_tokens_absent,keep,R1-derivable,absent token metricDataToRealTimeStorageLock follows the demonstrated field-naming pattern (metricDataToPersistentLock); passing the old lock4 field is an acceptable alternative,False,True
+M2J1_jadx_d4ce969_execJadxCli,M2J1,d4ce969fb7,execJadxCli,,keep,,,True,True
+M2J1_java_a73aba7_assertCompilationFails,M2J1,a73aba7b8c,assertCompilationFails,,keep,,,False,False
+M2J1_java_a73aba7_assertOneRecordDeclaration,M2J1,a73aba7b8c,assertOneRecordDeclaration,,keep,,,True,True
+M2J1_java_b22ebb2_createSolver,M2J1,b22ebb29ab,createSolver,,keep,,,True,True
+M2J1_jun4_2adef6f_getInjectionType,M2J1,2adef6f30c,getInjectionType,,keep,R1-nonessential,absent tokens belong to the developer's optional switch/default-throw rewrite; an if/else rewrite with the helper preserves behaviour,True,True
+M2J1_jun4_2db6394_failAfter50Ms,M2J1,2db6394288,failAfter50Ms,,keep,R1-derivable,absent literal 'test timed out after 50 milliseconds' is the old literal with 100 -> 50 as the helper name states,True,True
+M2J1_jun4_2db6394_run,M2J1,2db6394288,run,,keep,,,False,False
+M2J1_jun5_e07cbb6_output,M2J1,e07cbb6162,output,,keep,,,True,True
+M2J1_jun5_f95d4e8_format,M2J1,f95d4e8b09,format,,keep,,,True,True
+M2J1_pmd_18f393d_parseAndTypeResolveForClass15,M2J1,18f393da3c,parseAndTypeResolveForClass15,,keep,,,True,True
+M2J1_pmd_b25c16f_assertWarningsWithFoo,M2J1,b25c16f94d,assertWarningsWithFoo,gold_not_inferable_tokens_absent,exclude,R1,gold inlines the string contents of constants TEST9/TEST10 that the commit deleted; the literal text is absent from the prompt and no behaviour-preserving rewrite can name the deleted constants,False,False
+M2J1_zxin_3909ebe_verifyMinimalEncoding,M2J1,3909ebe294,verifyMinimalEncoding,expectation_change_in_gold(zxing),exclude,R2,demonstration (testMinimalEncoder5) and target golds change the asserted expected encoding strings; the commit bundles an encoder behaviour change with the extraction,False,False
+M2J2_chec_21c8e04_isChildNodeTextMatches,M2J2,21c8e04bc9,isChildNodeTextMatches,,keep,,,True,True
+M2J2_cio_1e73dd9_exists,M2J2,1e73dd92a2,exists,,keep,,,True,True
+M2J2_cio_269f992_builder,M2J2,269f9921cb,builder,,keep,,,True,True
+M2J2_cio_5035e97_getOutputStream,M2J2,5035e97fa0,getOutputStream,,keep,,,True,True
+M2J2_cio_6b0ed87_rethrow,M2J2,6b0ed87f7b,rethrow,,keep,,,True,True
+M2J2_cio_d269f16_uncheck,M2J2,d269f164b3,uncheck,,keep,,,True,True
+M2J2_clan_5d146cd_createChildBackgroundInitializer,M2J2,5d146cd069,createChildBackgroundInitializer,,keep,,,True,True
+M2J2_clan_5d146cd_getBackgroundInitializerTestImpl,M2J2,5d146cd069,getBackgroundInitializerTestImpl,,keep,,,True,True
+M2J2_clan_bdff802_isNumberFormatParsable,M2J2,bdff802a85,isNumberFormatParsable,,keep,,,True,True
+M2J2_clan_c95ee37_next,M2J2,c95ee37dff,next,,keep,,,True,True
+M2J2_clan_c95ee37_secure,M2J2,c95ee37dff,secure,gold_not_inferable_tokens_absent,keep,R1-derivable,absent token randomDouble follows the demonstrated nextX -> secure().randomX renaming (demo nextBytes -> randomBytes),False,True
+M2J2_gson_810e356_isTestingProGuard,M2J2,810e356059,isTestingProGuard,gold_not_inferable_tokens_absent,keep,R1-standard-api,absent token assumeFalse is the JUnit counterpart of assumeTrue present in the old text,False,True
+M2J2_hert_477af09_genericPollDataFunction,M2J2,477af0959f,genericPollDataFunction,gold_not_inferable_tokens_absent,keep,R1-derivable,absent token metricDataToRealTimeStorageLock follows the demonstrated field-naming pattern (metricDataToPersistentLock); passing the old lock4 field is an acceptable alternative,False,True
+M2J2_jadx_d4ce969_execJadxCli,M2J2,d4ce969fb7,execJadxCli,,keep,,,True,True
+M2J2_java_a73aba7_assertCompilationFails,M2J2,a73aba7b8c,assertCompilationFails,,keep,,,False,False
+M2J2_java_a73aba7_assertOneRecordDeclaration,M2J2,a73aba7b8c,assertOneRecordDeclaration,,keep,,,True,True
+M2J2_jun4_2db6394_failAfter50Ms,M2J2,2db6394288,failAfter50Ms,gold_not_inferable_tokens_absent,keep,R1-derivable,absent literal 'test timed out after 50 milliseconds' is the old literal with 100 -> 50 as the helper name states,False,True
+M2J2_jun4_2db6394_run,M2J2,2db6394288,run,gold_not_inferable_tokens_absent,exclude,R1,"target t2 gold needs the new classes DelegateStatement/FastStatement, absent from the prompt",False,False
+M2J2_jun5_e07cbb6_output,M2J2,e07cbb6162,output,,keep,,,True,True
+M2J2_jun5_f95d4e8_format,M2J2,f95d4e8b09,format,,keep,,,True,True
+M2J2_pmd_18f393d_parseAndTypeResolveForClass15,M2J2,18f393da3c,parseAndTypeResolveForClass15,,keep,,,True,True
+M2J2_pmd_b25c16f_assertWarningsWithFoo,M2J2,b25c16f94d,assertWarningsWithFoo,gold_not_inferable_tokens_absent,exclude,R1,gold inlines the string contents of constants TEST9/TEST10 that the commit deleted; the literal text is absent from the prompt and no behaviour-preserving rewrite can name the deleted constants,False,False
+M2J2_zxin_3909ebe_verifyMinimalEncoding,M2J2,3909ebe294,verifyMinimalEncoding,gold_not_inferable_tokens_absent;expectation_change_in_gold(zxing),exclude,R2,demonstration (testMinimalEncoder5) and target golds change the asserted expected encoding strings; the commit bundles an encoder behaviour change with the extraction,False,False

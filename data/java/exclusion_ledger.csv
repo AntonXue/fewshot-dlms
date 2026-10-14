@@ -1,0 +1,76 @@
+episode_id,cell,commit10,helper,manifest,reason
+M1J1_clan_c95ee37_nextAlphabetic,M1J1,c95ee37dff,nextAlphabetic,A,dedupe_gateA
+M1J1_clan_c95ee37_nextAlphabetic,M1J1,c95ee37dff,nextAlphabetic,B,dropped:R4 same-file unit kept next
+M1J1_clan_c95ee37_nextAlphanumeric,M1J1,c95ee37dff,nextAlphanumeric,A,dedupe_gateA
+M1J1_clan_c95ee37_nextAlphanumeric,M1J1,c95ee37dff,nextAlphanumeric,B,dropped:R4 same-file unit kept next
+M1J1_clan_c95ee37_nextAscii,M1J1,c95ee37dff,nextAscii,A,dedupe_gateA
+M1J1_clan_c95ee37_nextAscii,M1J1,c95ee37dff,nextAscii,B,dropped:R4 same-file unit kept next
+M1J1_clan_c95ee37_nextGraph,M1J1,c95ee37dff,nextGraph,A,dedupe_gateA
+M1J1_clan_c95ee37_nextGraph,M1J1,c95ee37dff,nextGraph,B,dropped:R4 same-file unit kept next
+M1J1_clan_c95ee37_nextNumeric,M1J1,c95ee37dff,nextNumeric,A,dedupe_gateA
+M1J1_clan_c95ee37_nextNumeric,M1J1,c95ee37dff,nextNumeric,B,dropped:R4 same-file unit kept next
+M1J1_clan_c95ee37_nextPrint,M1J1,c95ee37dff,nextPrint,A,dedupe_gateA
+M1J1_clan_c95ee37_nextPrint,M1J1,c95ee37dff,nextPrint,B,dropped:R4 same-file unit kept next
+M1J1_clan_c95ee37_randomDouble,M1J1,c95ee37dff,randomDouble,A,dedupe_gateA
+M1J1_clan_c95ee37_randomDouble,M1J1,c95ee37dff,randomDouble,B,dropped:R4 same-file unit kept secure
+M1J1_clan_c95ee37_randomFloat,M1J1,c95ee37dff,randomFloat,A,dedupe_gateA
+M1J1_clan_c95ee37_randomFloat,M1J1,c95ee37dff,randomFloat,B,dropped:R4 same-file unit kept secure
+M1J1_clan_c95ee37_randomInt,M1J1,c95ee37dff,randomInt,A,dedupe_gateA
+M1J1_clan_c95ee37_randomInt,M1J1,c95ee37dff,randomInt,B,dropped:R4 same-file unit kept secure
+M1J1_clan_c95ee37_randomLong,M1J1,c95ee37dff,randomLong,A,dedupe_gateA
+M1J1_clan_c95ee37_randomLong,M1J1,c95ee37dff,randomLong,B,dropped:R4 same-file unit kept secure
+M1J1_clan_c95ee37_secure,M1J1,c95ee37dff,secure,A,flag:gold_not_inferable_tokens_absent
+M1J1_gson_08174e2_assertNonFiniteFloatsExceptions,M1J1,08174e2019,assertNonFiniteFloatsExceptions,A,dedupe_gateA
+M1J1_gson_08174e2_assertNonFiniteFloatsExceptions,M1J1,08174e2019,assertNonFiniteFloatsExceptions,B,dropped:R4 same-file unit kept assertNonFiniteDoublesExceptions
+M1J1_gson_08174e2_assertNonFiniteNumbersExceptions,M1J1,08174e2019,assertNonFiniteNumbersExceptions,A,dedupe_gateA
+M1J1_gson_08174e2_assertNonFiniteNumbersExceptions,M1J1,08174e2019,assertNonFiniteNumbersExceptions,B,dropped:R4 same-file unit kept assertNonFiniteDoublesExceptions
+M1J1_gson_46ab704_assertIncludesField,M1J1,46ab704221,assertIncludesField,A,dedupe_gateA
+M1J1_gson_46ab704_assertIncludesField,M1J1,46ab704221,assertIncludesField,B,dropped:R4 same-file unit kept assertExcludesField
+M1J1_hert_477af09_genericPollDataFunction,M1J1,477af0959f,genericPollDataFunction,A,flag:gold_not_inferable_tokens_absent
+M1J1_java_a73aba7_assertCompilationFails,M1J1,a73aba7b8c,assertCompilationFails,A,dedupe_gateA
+M1J1_java_a73aba7_assertCompilationFails,M1J1,a73aba7b8c,assertCompilationFails,B,dropped:R4 same-file unit kept assertOneRecordDeclaration
+M1J1_jun4_2db6394_run,M1J1,2db6394288,run,A,dedupe_gateA
+M1J1_jun4_2db6394_run,M1J1,2db6394288,run,B,dropped:R4 same-file unit kept failAfter50Ms
+M1J1_pmd_b25c16f_assertWarningsWithFoo,M1J1,b25c16f94d,assertWarningsWithFoo,A,flag:gold_not_inferable_tokens_absent
+M1J1_pmd_b25c16f_assertWarningsWithFoo,M1J1,b25c16f94d,assertWarningsWithFoo,B,excluded:R1:gold inlines the string contents of constants TEST9/TEST10 that the commit deleted; the literal text is absent from the prompt and no behaviour-preserving rewrite can name the deleted constants
+M1J1_zxin_3909ebe_verifyMinimalEncoding,M1J1,3909ebe294,verifyMinimalEncoding,A,flag:expectation_change_in_gold(zxing)
+M1J1_zxin_3909ebe_verifyMinimalEncoding,M1J1,3909ebe294,verifyMinimalEncoding,B,excluded:R2:demonstration (testMinimalEncoder5) and target golds change the asserted expected encoding strings; the commit bundles an encoder behaviour change with the extraction
+M1J2_clan_c95ee37_randomLong,M1J2,c95ee37dff,randomLong,A,dedupe_gateA
+M1J2_clan_c95ee37_randomLong,M1J2,c95ee37dff,randomLong,B,dropped:R4 same-file unit kept secure
+M1J2_clan_c95ee37_secure,M1J2,c95ee37dff,secure,A,flag:gold_not_inferable_tokens_absent
+M1J2_gson_810e356_isTestingProGuard,M1J2,810e356059,isTestingProGuard,A,flag:gold_not_inferable_tokens_absent
+M1J2_hert_477af09_genericPollDataFunction,M1J2,477af0959f,genericPollDataFunction,A,flag:gold_not_inferable_tokens_absent
+M1J2_java_a73aba7_assertCompilationFails,M1J2,a73aba7b8c,assertCompilationFails,A,dedupe_gateA
+M1J2_java_a73aba7_assertCompilationFails,M1J2,a73aba7b8c,assertCompilationFails,B,dropped:R4 same-file unit kept assertOneRecordDeclaration
+M1J2_jun4_2adef6f_getInjectionType,M1J2,2adef6f30c,getInjectionType,A,flag:gold_not_inferable_tokens_absent
+M1J2_jun4_2db6394_failAfter50Ms,M1J2,2db6394288,failAfter50Ms,A,flag:gold_not_inferable_tokens_absent
+M1J2_jun4_2db6394_run,M1J2,2db6394288,run,A,flag:gold_not_inferable_tokens_absent
+M1J2_jun4_2db6394_run,M1J2,2db6394288,run,B,"excluded:R1:target t2 gold needs the new classes DelegateStatement/FastStatement, absent from the prompt"
+M1J2_pmd_b25c16f_assertWarningsWithFoo,M1J2,b25c16f94d,assertWarningsWithFoo,A,flag:gold_not_inferable_tokens_absent
+M1J2_pmd_b25c16f_assertWarningsWithFoo,M1J2,b25c16f94d,assertWarningsWithFoo,B,excluded:R1:gold inlines the string contents of constants TEST9/TEST10 that the commit deleted; the literal text is absent from the prompt and no behaviour-preserving rewrite can name the deleted constants
+M1J2_zxin_3909ebe_verifyMinimalEncoding,M1J2,3909ebe294,verifyMinimalEncoding,A,flag:gold_not_inferable_tokens_absent;expectation_change_in_gold(zxing)
+M1J2_zxin_3909ebe_verifyMinimalEncoding,M1J2,3909ebe294,verifyMinimalEncoding,B,excluded:R2:demonstration (testMinimalEncoder5) and target golds change the asserted expected encoding strings; the commit bundles an encoder behaviour change with the extraction
+M2J1_clan_c95ee37_randomLong,M2J1,c95ee37dff,randomLong,A,dedupe_gateA
+M2J1_clan_c95ee37_randomLong,M2J1,c95ee37dff,randomLong,B,dropped:R4 same-file unit kept secure
+M2J1_clan_c95ee37_secure,M2J1,c95ee37dff,secure,A,flag:gold_not_inferable_tokens_absent
+M2J1_hert_477af09_genericPollDataFunction,M2J1,477af0959f,genericPollDataFunction,A,flag:gold_not_inferable_tokens_absent
+M2J1_java_a73aba7_assertCompilationFails,M2J1,a73aba7b8c,assertCompilationFails,A,dedupe_gateA
+M2J1_java_a73aba7_assertCompilationFails,M2J1,a73aba7b8c,assertCompilationFails,B,dropped:R4 same-file unit kept assertOneRecordDeclaration
+M2J1_jun4_2db6394_run,M2J1,2db6394288,run,A,dedupe_gateA
+M2J1_jun4_2db6394_run,M2J1,2db6394288,run,B,dropped:R4 same-file unit kept failAfter50Ms
+M2J1_pmd_b25c16f_assertWarningsWithFoo,M2J1,b25c16f94d,assertWarningsWithFoo,A,flag:gold_not_inferable_tokens_absent
+M2J1_pmd_b25c16f_assertWarningsWithFoo,M2J1,b25c16f94d,assertWarningsWithFoo,B,excluded:R1:gold inlines the string contents of constants TEST9/TEST10 that the commit deleted; the literal text is absent from the prompt and no behaviour-preserving rewrite can name the deleted constants
+M2J1_zxin_3909ebe_verifyMinimalEncoding,M2J1,3909ebe294,verifyMinimalEncoding,A,flag:expectation_change_in_gold(zxing)
+M2J1_zxin_3909ebe_verifyMinimalEncoding,M2J1,3909ebe294,verifyMinimalEncoding,B,excluded:R2:demonstration (testMinimalEncoder5) and target golds change the asserted expected encoding strings; the commit bundles an encoder behaviour change with the extraction
+M2J2_clan_c95ee37_secure,M2J2,c95ee37dff,secure,A,flag:gold_not_inferable_tokens_absent
+M2J2_gson_810e356_isTestingProGuard,M2J2,810e356059,isTestingProGuard,A,flag:gold_not_inferable_tokens_absent
+M2J2_hert_477af09_genericPollDataFunction,M2J2,477af0959f,genericPollDataFunction,A,flag:gold_not_inferable_tokens_absent
+M2J2_java_a73aba7_assertCompilationFails,M2J2,a73aba7b8c,assertCompilationFails,A,dedupe_gateA
+M2J2_java_a73aba7_assertCompilationFails,M2J2,a73aba7b8c,assertCompilationFails,B,dropped:R4 same-file unit kept assertOneRecordDeclaration
+M2J2_jun4_2db6394_failAfter50Ms,M2J2,2db6394288,failAfter50Ms,A,flag:gold_not_inferable_tokens_absent
+M2J2_jun4_2db6394_run,M2J2,2db6394288,run,A,flag:gold_not_inferable_tokens_absent
+M2J2_jun4_2db6394_run,M2J2,2db6394288,run,B,"excluded:R1:target t2 gold needs the new classes DelegateStatement/FastStatement, absent from the prompt"
+M2J2_pmd_b25c16f_assertWarningsWithFoo,M2J2,b25c16f94d,assertWarningsWithFoo,A,flag:gold_not_inferable_tokens_absent
+M2J2_pmd_b25c16f_assertWarningsWithFoo,M2J2,b25c16f94d,assertWarningsWithFoo,B,excluded:R1:gold inlines the string contents of constants TEST9/TEST10 that the commit deleted; the literal text is absent from the prompt and no behaviour-preserving rewrite can name the deleted constants
+M2J2_zxin_3909ebe_verifyMinimalEncoding,M2J2,3909ebe294,verifyMinimalEncoding,A,flag:gold_not_inferable_tokens_absent;expectation_change_in_gold(zxing)
+M2J2_zxin_3909ebe_verifyMinimalEncoding,M2J2,3909ebe294,verifyMinimalEncoding,B,excluded:R2:demonstration (testMinimalEncoder5) and target golds change the asserted expected encoding strings; the commit bundles an encoder behaviour change with the extraction

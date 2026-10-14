@@ -7,6 +7,9 @@ demonstrations and 8 ordered targets.
 List Functions-Easy and SALT ship verbatim. SST-2 and MIT Movie ship without text (ids only); run
 `python data/benchmarks/build.py` once to rebuild their text from the public corpora. The rebuilt
 families are cached in data/benchmarks/_built/ and are checked against data/benchmarks/sha256.json.
+
+The 127 Java helper-propagation episodes of Section 5 ship in data/java/ (see PROVENANCE.md there);
+`load_java_episodes` reads them.
 """
 
 import hashlib
@@ -21,6 +24,7 @@ BANKS = ("dev", "report")
 # The directory is found relative to this file, so the package must be installed from a checkout
 # (`pip install -e .`).
 BENCHMARK_DIR = Path(__file__).resolve().parents[2] / "data" / "benchmarks"
+JAVA_DIR = Path(__file__).resolve().parents[2] / "data" / "java"
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -55,3 +59,16 @@ def load_families(task: str, bank: str = "report") -> list[dict]:
         if path.exists():
             return read_jsonl(path)
     raise FileNotFoundError("run python data/benchmarks/build.py")
+
+
+def load_java_episodes() -> list[dict]:
+    """Return the 127 Java helper-propagation episodes of Section 5, in manifest order.
+
+    Each record has the fields of the authors' frozen manifest (episode_id, cell, M, J, repository,
+    commit, file, helper, demo_sites, target_sites, oracle_lengths, the flags of Appendix C, ...), and
+    the text the canvas is built from: `helper_text`, and for every site in `demos` and
+    `targets_visible` the enclosing method before the commit (`method_before`) with the line range
+    [i1, i2) of the changed span. The reference answers are in `reference["targets"]`. The first
+    argument of `canvas.build_java_canvas` is such a record.
+    """
+    return read_jsonl(JAVA_DIR / "episodes.jsonl")

@@ -1,0 +1,339 @@
+group_id,repository,commit10,file,helper,n_sites_raw,n_sites_G4,cells_G4,exposure
+checkstyle:0f5bce0163:SiteUtil.java:getPropertyClass,checkstyle,0f5bce0163,src/main/java/com/puppycrawl/tools/checkstyle/site/SiteUtil.java,getPropertyClass,0,0,,
+checkstyle:1ca666934f:UnusedLocalVariableCheck.java:getTypeDeclarationNameMatchingCountDiff,checkstyle,1ca666934f,src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/UnusedLocalVariableCheck.java,getTypeDeclarationNameMatchingCountDiff,0,0,,
+checkstyle:1fe182a075:XdocsPagesTest.java:getStringArrayPropertyValue,checkstyle,1fe182a075,src/test/java/com/puppycrawl/tools/checkstyle/internal/XdocsPagesTest.java,getStringArrayPropertyValue,0,0,,
+checkstyle:2126aa1005:InlineConfigParser.java:checkIsXmlConfig,checkstyle,2126aa1005,src/test/java/com/puppycrawl/tools/checkstyle/bdd/InlineConfigParser.java,checkIsXmlConfig,0,0,,
+checkstyle:21c8e04bc9:JavadocMetadataScraper.java:isChildNodeTextMatches,checkstyle,21c8e04bc9,src/main/java/com/puppycrawl/tools/checkstyle/meta/JavadocMetadataScraper.java,isChildNodeTextMatches,4,4,M1J1 M1J2 M2J1 M2J2,INSPECTED_ONLY
+checkstyle:29e5e1210c:LineWrappingHandler.java:checkForAnnotationIndentation,checkstyle,29e5e1210c,src/main/java/com/puppycrawl/tools/checkstyle/checks/indentation/LineWrappingHandler.java,checkForAnnotationIndentation,0,0,,
+checkstyle:3c2249b239:MetadataGeneratorUtilTest.java:getMetaFileName,checkstyle,3c2249b239,src/test/java/com/puppycrawl/tools/checkstyle/meta/MetadataGeneratorUtilTest.java,getMetaFileName,0,0,,
+checkstyle:3c2249b239:TranslationCheckTest.java:isFilenamesEqual,checkstyle,3c2249b239,src/test/java/com/puppycrawl/tools/checkstyle/checks/TranslationCheckTest.java,isFilenamesEqual,0,0,,
+checkstyle:3c2249b239:PropertyCacheFile.java:isResourceChanged,checkstyle,3c2249b239,src/main/java/com/puppycrawl/tools/checkstyle/PropertyCacheFile.java,isResourceChanged,0,0,,
+checkstyle:466a1668f4:RedundantModifierCheck.java:checkConstructorModifiers,checkstyle,466a1668f4,src/main/java/com/puppycrawl/tools/checkstyle/checks/modifier/RedundantModifierCheck.java,checkConstructorModifiers,0,0,,
+checkstyle:4d5c877fce:XdocsPagesTest.java:isKnownPropertyType,checkstyle,4d5c877fce,src/test/java/com/puppycrawl/tools/checkstyle/internal/XdocsPagesTest.java,isKnownPropertyType,0,0,,
+checkstyle:4d5c877fce:XdocsPagesTest.java:getPropertyTypeNameForPatternArray,checkstyle,4d5c877fce,src/test/java/com/puppycrawl/tools/checkstyle/internal/XdocsPagesTest.java,getPropertyTypeNameForPatternArray,0,0,,
+checkstyle:4d5c877fce:XdocsPagesTest.java:getPropertyTypeNameForPattern,checkstyle,4d5c877fce,src/test/java/com/puppycrawl/tools/checkstyle/internal/XdocsPagesTest.java,getPropertyTypeNameForPattern,0,0,,
+checkstyle:4d5c877fce:XdocsPagesTest.java:getPropertyTypeNameForStringArray,checkstyle,4d5c877fce,src/test/java/com/puppycrawl/tools/checkstyle/internal/XdocsPagesTest.java,getPropertyTypeNameForStringArray,0,0,,
+checkstyle:4d5c877fce:XdocsPagesTest.java:getPropertyTypeNameForString,checkstyle,4d5c877fce,src/test/java/com/puppycrawl/tools/checkstyle/internal/XdocsPagesTest.java,getPropertyTypeNameForString,0,0,,
+checkstyle:4d5c877fce:XdocsPagesTest.java:getPropertyTypeNameForIntArray,checkstyle,4d5c877fce,src/test/java/com/puppycrawl/tools/checkstyle/internal/XdocsPagesTest.java,getPropertyTypeNameForIntArray,0,0,,
+checkstyle:50a9a64b6d:FinalClassCheck.java:visitCtor,checkstyle,50a9a64b6d,src/main/java/com/puppycrawl/tools/checkstyle/checks/design/FinalClassCheck.java,visitCtor,0,0,,
+checkstyle:50a9a64b6d:FinalClassCheck.java:visitClass,checkstyle,50a9a64b6d,src/main/java/com/puppycrawl/tools/checkstyle/checks/design/FinalClassCheck.java,visitClass,0,0,,
+checkstyle:77721c4ac3:SuppressWarningsHolder.java:addSuppressions,checkstyle,77721c4ac3,src/main/java/com/puppycrawl/tools/checkstyle/checks/SuppressWarningsHolder.java,addSuppressions,0,0,,
+checkstyle:8129a4f69c:CommonUtil.java:getCheckstyleResource,checkstyle,8129a4f69c,src/main/java/com/puppycrawl/tools/checkstyle/utils/CommonUtil.java,getCheckstyleResource,0,0,,
+checkstyle:9a6ebec25c:AbstractModuleTestSupport.java:findModuleCreationOption,checkstyle,9a6ebec25c,src/test/java/com/puppycrawl/tools/checkstyle/AbstractModuleTestSupport.java,findModuleCreationOption,0,0,,
+checkstyle:a42a3e1733:DefaultConfiguration.java:addProperty,checkstyle,a42a3e1733,src/main/java/com/puppycrawl/tools/checkstyle/DefaultConfiguration.java,addProperty,0,0,,
+checkstyle:a42a3e1733:DefaultConfiguration.java:getProperty,checkstyle,a42a3e1733,src/main/java/com/puppycrawl/tools/checkstyle/DefaultConfiguration.java,getProperty,0,0,,
+checkstyle:a42a3e1733:DefaultConfiguration.java:getPropertyNames,checkstyle,a42a3e1733,src/main/java/com/puppycrawl/tools/checkstyle/DefaultConfiguration.java,getPropertyNames,0,0,,
+checkstyle:b142dda472:RegexpCheck.java:getMessage,checkstyle,b142dda472,src/main/java/com/puppycrawl/tools/checkstyle/checks/regexp/RegexpCheck.java,getMessage,2,2,M1J1,INSPECTED_ONLY
+checkstyle:c7ab422299:AbstractHeaderCheck.java:createCharset,checkstyle,c7ab422299,src/main/java/com/puppycrawl/tools/checkstyle/checks/header/AbstractHeaderCheck.java,createCharset,0,0,,
+checkstyle:cc90b04b02:SummaryJavadocCheck.java:isInlineTagWithName,checkstyle,cc90b04b02,src/main/java/com/puppycrawl/tools/checkstyle/checks/javadoc/SummaryJavadocCheck.java,isInlineTagWithName,0,0,,
+checkstyle:cc90b04b02:SummaryJavadocCheck.java:validateUntaggedSummary,checkstyle,cc90b04b02,src/main/java/com/puppycrawl/tools/checkstyle/checks/javadoc/SummaryJavadocCheck.java,validateUntaggedSummary,0,0,,
+checkstyle:deb11214fd:ParameterNumberCheck.java:isIgnoredOverriddenMethod,checkstyle,deb11214fd,src/main/java/com/puppycrawl/tools/checkstyle/checks/sizes/ParameterNumberCheck.java,isIgnoredOverriddenMethod,0,0,,
+checkstyle:defd358fbe:InlineConfigParser.java:setViolations,checkstyle,defd358fbe,src/test/java/com/puppycrawl/tools/checkstyle/bdd/InlineConfigParser.java,setViolations,0,0,,
+checkstyle:e46f933d31:InlineConfigParser.java:getExpectedMultipleViolationsForSpecificLineAbove,checkstyle,e46f933d31,src/test/java/com/puppycrawl/tools/checkstyle/bdd/InlineConfigParser.java,getExpectedMultipleViolationsForSpecificLineAbove,2,0,,INSPECTED_ONLY
+checkstyle:e662bd96c3:InlineConfigParser.java:parse,checkstyle,e662bd96c3,src/test/java/com/puppycrawl/tools/checkstyle/bdd/InlineConfigParser.java,parse,0,0,,
+checkstyle:ea5b4e6ce5:NeedBracesCheck.java:isSingleLineCaseGroup,checkstyle,ea5b4e6ce5,src/main/java/com/puppycrawl/tools/checkstyle/checks/blocks/NeedBracesCheck.java,isSingleLineCaseGroup,0,0,,
+checkstyle:ebfc50d227:ParameterAssignmentCheck.java:visitParameters,checkstyle,ebfc50d227,src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/ParameterAssignmentCheck.java,visitParameters,0,0,,
+commons-io:010299c218:TestUtils.java:assertEqualContent,commons-io,010299c218,src/test/java/org/apache/commons/io/test/TestUtils.java,assertEqualContent,0,0,,
+commons-io:0be56985e1:FileUtils.java:forceDelete,commons-io,0be56985e1,src/main/java/org/apache/commons/io/FileUtils.java,forceDelete,0,0,,
+commons-io:0cee29aa4c:FileUtils.java:getParentFile,commons-io,0cee29aa4c,src/main/java/org/apache/commons/io/FileUtils.java,getParentFile,0,0,,
+commons-io:0fe519be5f:SuffixFileFilter.java:accept,commons-io,0fe519be5f,src/main/java/org/apache/commons/io/filefilter/SuffixFileFilter.java,accept,0,0,,
+commons-io:12b97b1453:Charsets.java:toCharset,commons-io,12b97b1453,src/main/java/org/apache/commons/io/Charsets.java,toCharset,0,0,,
+commons-io:12dbeafe93:IOSupplier.java:getUnchecked,commons-io,12dbeafe93,src/main/java/org/apache/commons/io/function/IOSupplier.java,getUnchecked,0,0,,
+commons-io:153a91c127:IOExceptionList.java:size,commons-io,153a91c127,src/main/java/org/apache/commons/io/IOExceptionList.java,size,2,2,M1J1,INSPECTED_ONLY
+commons-io:1e73dd92a2:PathUtils.java:exists,commons-io,1e73dd92a2,src/main/java/org/apache/commons/io/file/PathUtils.java,exists,4,4,M1J1 M1J2 M2J1 M2J2,LLADA_DEV
+commons-io:269f9921cb:UnsynchronizedBufferedInputStreamTest.java:builder,commons-io,269f9921cb,src/test/java/org/apache/commons/io/input/UnsynchronizedBufferedInputStreamTest.java,builder,12,8,M1J1 M1J2 M2J1 M2J2,LLADA_DEV+CROSS_MODEL
+commons-io:2f6284a654:PathUtils.java:getPosixFileAttributeView,commons-io,2f6284a654,src/main/java/org/apache/commons/io/file/PathUtils.java,getPosixFileAttributeView,0,0,,
+commons-io:323d376b4a:IOStreams.java:toIOConsumer,commons-io,323d376b4a,src/main/java/org/apache/commons/io/function/IOStreams.java,toIOConsumer,0,0,,
+commons-io:324a2d67a2:WildcardFileFilter.java:accept,commons-io,324a2d67a2,src/main/java/org/apache/commons/io/filefilter/WildcardFileFilter.java,accept,0,0,,
+commons-io:3ac63df5d5:CopyDirectoryVisitor.java:copy,commons-io,3ac63df5d5,src/main/java/org/apache/commons/io/file/CopyDirectoryVisitor.java,copy,0,0,,
+commons-io:4117033f85:IOUtils.java:toString,commons-io,4117033f85,src/main/java/org/apache/commons/io/IOUtils.java,toString,0,0,,
+commons-io:4a514d3306:FileFilterTestCase.java:assertFooBarFileFiltering,commons-io,4a514d3306,src/test/java/org/apache/commons/io/filefilter/FileFilterTestCase.java,assertFooBarFileFiltering,0,0,,
+commons-io:4ea91d20df:TestConstants.java:throwIOException,commons-io,4ea91d20df,src/test/java/org/apache/commons/io/function/TestConstants.java,throwIOException,0,0,,
+commons-io:5035e97fa0:ThresholdingOutputStream.java:getOutputStream,commons-io,5035e97fa0,src/main/java/org/apache/commons/io/output/ThresholdingOutputStream.java,getOutputStream,6,6,M1J1 M1J2 M2J1 M2J2,LLADA_DEV
+commons-io:52f3de5ed6:PathUtils.java:deleteDirectory,commons-io,52f3de5ed6,src/main/java/org/apache/commons/io/file/PathUtils.java,deleteDirectory,0,0,,
+commons-io:54858b5f9f:FileUtilsTestCase.java:getLastModifiedMillis,commons-io,54858b5f9f,src/test/java/org/apache/commons/io/FileUtilsTestCase.java,getLastModifiedMillis,7,2,M1J1,LLADA_DEV+CROSS_MODEL
+commons-io:57313b3ed3:IOUtils.java:closeQuietly,commons-io,57313b3ed3,src/main/java/org/apache/commons/io/IOUtils.java,closeQuietly,0,0,,
+commons-io:62925e3084:PathUtils.java:setDosReadOnly,commons-io,62925e3084,src/main/java/org/apache/commons/io/file/PathUtils.java,setDosReadOnly,0,0,,
+commons-io:6803ac145c:CountingPathVisitor.java:updateDirCounter,commons-io,6803ac145c,src/main/java/org/apache/commons/io/file/CountingPathVisitor.java,updateDirCounter,0,0,,
+commons-io:69e3b819a1:Tailer.java:close,commons-io,69e3b819a1,src/main/java/org/apache/commons/io/input/Tailer.java,close,2,2,M1J1,INSPECTED_ONLY
+commons-io:6b0ed87f7b:BrokenInputStream.java:rethrow,commons-io,6b0ed87f7b,src/main/java/org/apache/commons/io/input/BrokenInputStream.java,rethrow,5,5,M1J1 M1J2 M2J1 M2J2,LLADA_DEV
+commons-io:6dd4c0850c:FilenameUtils.java:toSeparator,commons-io,6dd4c0850c,src/main/java/org/apache/commons/io/FilenameUtils.java,toSeparator,2,2,M1J1,INSPECTED_ONLY
+commons-io:7ecca22f17:WriterOutputStreamTest.java:writeOneAtATime,commons-io,7ecca22f17,src/test/java/org/apache/commons/io/output/WriterOutputStreamTest.java,writeOneAtATime,3,0,,OTHER_MODEL_PRIOR
+commons-io:7ecca22f17:XmlStreamReaderTest.java:testAlternateDefaultEncoding,commons-io,7ecca22f17,src/test/java/org/apache/commons/io/input/XmlStreamReaderTest.java,testAlternateDefaultEncoding,0,0,,
+commons-io:7ecca22f17:ReversedLinesFileReaderTestParamFile.java:testDataIntegrityWithBufferedReader,commons-io,7ecca22f17,src/test/java/org/apache/commons/io/input/ReversedLinesFileReaderTestParamFile.java,testDataIntegrityWithBufferedReader,0,0,,
+commons-io:7ecca22f17:ReaderInputStreamTest.java:testWithBufferedRead,commons-io,7ecca22f17,src/test/java/org/apache/commons/io/input/ReaderInputStreamTest.java,testWithBufferedRead,0,0,,
+commons-io:7ecca22f17:ReaderInputStreamTest.java:testReadZero,commons-io,7ecca22f17,src/test/java/org/apache/commons/io/input/ReaderInputStreamTest.java,testReadZero,0,0,,
+commons-io:8b6d4969ff:NameFileFilter.java:acceptBaseName,commons-io,8b6d4969ff,src/main/java/org/apache/commons/io/filefilter/NameFileFilter.java,acceptBaseName,2,2,M1J1,INSPECTED_ONLY
+commons-io:8b7c82225a:FileUtilsTestCase.java:setLastModifiedMillis,commons-io,8b7c82225a,src/test/java/org/apache/commons/io/FileUtilsTestCase.java,setLastModifiedMillis,3,3,M1J1 M1J2 M2J1,LLADA_DEV
+commons-io:8e26517836:PathUtils.java:isNewer,commons-io,8e26517836,src/main/java/org/apache/commons/io/file/PathUtils.java,isNewer,0,0,,
+commons-io:99e66c05dd:IOUtilsTest.java:testSingleEOL,commons-io,99e66c05dd,src/test/java/org/apache/commons/io/IOUtilsTest.java,testSingleEOL,0,0,,
+commons-io:a304a37c7f:ObservableInputStream.java:notify,commons-io,a304a37c7f,src/main/java/org/apache/commons/io/input/ObservableInputStream.java,notify,2,2,M1J1,INSPECTED_ONLY
+commons-io:a467b03e1b:NullOutputStreamTest.java:process,commons-io,a467b03e1b,src/test/java/org/apache/commons/io/output/NullOutputStreamTest.java,process,0,0,,
+commons-io:b21c2ac400:QueueInputStreamTest.java:newQueueOutputStream,commons-io,b21c2ac400,src/test/java/org/apache/commons/io/input/QueueInputStreamTest.java,newQueueOutputStream,0,0,,
+commons-io:b4caca0c89:UncheckIOTest.java:assertUncheckedIOException,commons-io,b4caca0c89,src/test/java/org/apache/commons/io/UncheckIOTest.java,assertUncheckedIOException,0,0,,
+commons-io:c9ed8dac48:SymbolicLinkFileFilter.java:isSymbolicLink,commons-io,c9ed8dac48,src/main/java/org/apache/commons/io/filefilter/SymbolicLinkFileFilter.java,isSymbolicLink,0,0,,
+commons-io:cb6f3aabcf:PathUtilsTest.java:current,commons-io,cb6f3aabcf,src/test/java/org/apache/commons/io/file/PathUtilsTest.java,current,3,3,M1J1 M1J2 M2J1,LLADA_DEV
+commons-io:cc62ff7473:ObservableInputStreamTest.java:createInputStream,commons-io,cc62ff7473,src/test/java/org/apache/commons/io/input/ObservableInputStreamTest.java,createInputStream,0,0,,
+commons-io:cc62ff7473:MessageDigestInputStreamTest.java:createInputStream,commons-io,cc62ff7473,src/test/java/org/apache/commons/io/input/MessageDigestInputStreamTest.java,createInputStream,0,0,,
+commons-io:cc62ff7473:MessageDigestCalculatingInputStreamTest.java:createInputStream,commons-io,cc62ff7473,src/test/java/org/apache/commons/io/input/MessageDigestCalculatingInputStreamTest.java,createInputStream,0,0,,
+commons-io:d269f164b3:UncheckedFilterReader.java:uncheck,commons-io,d269f164b3,src/main/java/org/apache/commons/io/input/UncheckedFilterReader.java,uncheck,9,9,M1J1 M1J2 M2J1 M2J2,LLADA_DEV
+commons-io:d42b9286eb:FilenameUtils.java:isEmpty,commons-io,d42b9286eb,src/main/java/org/apache/commons/io/FilenameUtils.java,isEmpty,2,0,,INSPECTED_ONLY
+commons-io:d75027d357:PathUtils.java:getLastModifiedTime,commons-io,d75027d357,src/main/java/org/apache/commons/io/file/PathUtils.java,getLastModifiedTime,3,3,M1J1 M1J2 M2J1,LLADA_DEV
+commons-io:dcf0197fbb:FileUtils.java:toSuffixFileFilter,commons-io,dcf0197fbb,src/main/java/org/apache/commons/io/FileUtils.java,toSuffixFileFilter,2,2,M1J1,INSPECTED_ONLY
+commons-io:dd63fa3b53:BrokenWriter.java:rethrow,commons-io,dd63fa3b53,src/main/java/org/apache/commons/io/output/BrokenWriter.java,rethrow,3,3,M1J1 M1J2 M2J1,LLADA_DEV
+commons-io:dea25cad0d:ChunkedWriterTest.java:getOutputStreamWriter,commons-io,dea25cad0d,src/test/java/org/apache/commons/io/output/ChunkedWriterTest.java,getOutputStreamWriter,0,0,,
+commons-io:dea25cad0d:ChunkedOutputStreamTest.java:getByteArrayOutputStream,commons-io,dea25cad0d,src/test/java/org/apache/commons/io/output/ChunkedOutputStreamTest.java,getByteArrayOutputStream,0,0,,
+commons-io:e6a96aa94b:FileUtils.java:copyFile,commons-io,e6a96aa94b,src/main/java/org/apache/commons/io/FileUtils.java,copyFile,0,0,,
+commons-io:e95c77c48c:FileCleaningTrackerTestCase.java:createRandomAccessFile,commons-io,e95c77c48c,src/test/java/org/apache/commons/io/FileCleaningTrackerTestCase.java,createRandomAccessFile,3,3,M1J1 M1J2 M2J1,LLADA_DEV
+commons-io:ee6c5fd16d:IOUtils.java:close,commons-io,ee6c5fd16d,src/main/java/org/apache/commons/io/IOUtils.java,close,0,0,,
+commons-io:f01754e820:FileUtils.java:copyFile,commons-io,f01754e820,src/main/java/org/apache/commons/io/FileUtils.java,copyFile,0,0,,
+commons-io:f448f97af4:ObservableInputStreamTest.java:brokenObservableInputStream,commons-io,f448f97af4,src/test/java/org/apache/commons/io/input/ObservableInputStreamTest.java,brokenObservableInputStream,3,3,M1J1 M1J2 M2J1,LLADA_DEV
+commons-io:f6655cfaf3:PrefixFileFilter.java:accept,commons-io,f6655cfaf3,src/main/java/org/apache/commons/io/filefilter/PrefixFileFilter.java,accept,0,0,,
+commons-lang:2875a65756:StopWatchTest.java:set,commons-lang,2875a65756,src/test/java/org/apache/commons/lang3/time/StopWatchTest.java,set,0,0,,
+commons-lang:426ebb13ee:StopWatch.java:nanosToMillis,commons-lang,426ebb13ee,src/main/java/org/apache/commons/lang3/time/StopWatch.java,nanosToMillis,2,2,M1J1,OTHER_MODEL_PRIOR
+commons-lang:45a955702a:ClassUtils.java:getPrimitiveClass,commons-lang,45a955702a,src/main/java/org/apache/commons/lang3/ClassUtils.java,getPrimitiveClass,0,0,,
+commons-lang:4949adec48:ReflectionDiffBuilder.java:toExcludeFieldNames,commons-lang,4949adec48,src/main/java/org/apache/commons/lang3/builder/ReflectionDiffBuilder.java,toExcludeFieldNames,0,0,,
+commons-lang:4d63091bdc:AtomicInitializer.java:getNoInit,commons-lang,4d63091bdc,src/main/java/org/apache/commons/lang3/concurrent/AtomicInitializer.java,getNoInit,0,0,,
+commons-lang:5d146cd069:BackgroundInitializerTest.java:getBackgroundInitializerTestImpl,commons-lang,5d146cd069,src/test/java/org/apache/commons/lang3/concurrent/BackgroundInitializerTest.java,getBackgroundInitializerTestImpl,16,16,M1J1 M1J2 M2J1 M2J2,LLADA_DEV+CROSS_MODEL
+commons-lang:5d146cd069:MultiBackgroundInitializerTest.java:createChildBackgroundInitializer,commons-lang,5d146cd069,src/test/java/org/apache/commons/lang3/concurrent/MultiBackgroundInitializerTest.java,createChildBackgroundInitializer,10,9,M1J1 M1J2 M2J1 M2J2,LLADA_DEV+CROSS_MODEL
+commons-lang:61ed780118:FastDateParser_TimeZoneStrategyTest.java:testTimeZoneStrategyPattern,commons-lang,61ed780118,src/test/java/org/apache/commons/lang3/time/FastDateParser_TimeZoneStrategyTest.java,testTimeZoneStrategyPattern,0,0,,
+commons-lang:6473663070:Streams.java:streamOf,commons-lang,6473663070,src/main/java/org/apache/commons/lang3/stream/Streams.java,streamOf,0,0,,
+commons-lang:bdff802a85:NumberUtilsTest.java:isNumberFormatParsable,commons-lang,bdff802a85,src/test/java/org/apache/commons/lang3/math/NumberUtilsTest.java,isNumberFormatParsable,4,4,M1J1 M1J2 M2J1 M2J2,LLADA_DEV+CROSS_MODEL
+commons-lang:c290aebffa:MethodUtils.java:getMethodObject,commons-lang,c290aebffa,src/main/java/org/apache/commons/lang3/reflect/MethodUtils.java,getMethodObject,3,3,M1J1 M1J2 M2J1,LLADA_DEV
+commons-lang:c95ee37dff:RandomUtils.java:randomLong,commons-lang,c95ee37dff,src/main/java/org/apache/commons/lang3/RandomUtils.java,randomLong,3,3,M1J1 M1J2 M2J1,LLADA_DEV+CROSS_MODEL
+commons-lang:c95ee37dff:RandomUtils.java:secure,commons-lang,c95ee37dff,src/main/java/org/apache/commons/lang3/RandomUtils.java,secure,11,11,M1J1 M1J2 M2J1 M2J2,LLADA_DEV+CROSS_MODEL
+commons-lang:c95ee37dff:RandomUtils.java:randomInt,commons-lang,c95ee37dff,src/main/java/org/apache/commons/lang3/RandomUtils.java,randomInt,2,2,M1J1,LLADA_DEV+CROSS_MODEL
+commons-lang:c95ee37dff:RandomUtils.java:randomFloat,commons-lang,c95ee37dff,src/main/java/org/apache/commons/lang3/RandomUtils.java,randomFloat,2,2,M1J1,LLADA_DEV+CROSS_MODEL
+commons-lang:c95ee37dff:RandomUtils.java:randomDouble,commons-lang,c95ee37dff,src/main/java/org/apache/commons/lang3/RandomUtils.java,randomDouble,2,2,M1J1,LLADA_DEV+CROSS_MODEL
+commons-lang:c95ee37dff:RandomStringUtils.java:nextPrint,commons-lang,c95ee37dff,src/main/java/org/apache/commons/lang3/RandomStringUtils.java,nextPrint,2,2,M1J1,LLADA_DEV+CROSS_MODEL
+commons-lang:c95ee37dff:RandomStringUtils.java:nextNumeric,commons-lang,c95ee37dff,src/main/java/org/apache/commons/lang3/RandomStringUtils.java,nextNumeric,2,2,M1J1,LLADA_DEV+CROSS_MODEL
+commons-lang:c95ee37dff:RandomStringUtils.java:nextGraph,commons-lang,c95ee37dff,src/main/java/org/apache/commons/lang3/RandomStringUtils.java,nextGraph,2,2,M1J1,LLADA_DEV+CROSS_MODEL
+commons-lang:c95ee37dff:RandomStringUtils.java:nextAscii,commons-lang,c95ee37dff,src/main/java/org/apache/commons/lang3/RandomStringUtils.java,nextAscii,2,2,M1J1,LLADA_DEV+CROSS_MODEL
+commons-lang:c95ee37dff:RandomStringUtils.java:nextAlphanumeric,commons-lang,c95ee37dff,src/main/java/org/apache/commons/lang3/RandomStringUtils.java,nextAlphanumeric,2,2,M1J1,LLADA_DEV+CROSS_MODEL
+commons-lang:c95ee37dff:RandomStringUtils.java:nextAlphabetic,commons-lang,c95ee37dff,src/main/java/org/apache/commons/lang3/RandomStringUtils.java,nextAlphabetic,2,2,M1J1,LLADA_DEV+CROSS_MODEL
+commons-lang:c95ee37dff:RandomStringUtils.java:next,commons-lang,c95ee37dff,src/main/java/org/apache/commons/lang3/RandomStringUtils.java,next,6,6,M1J1 M1J2 M2J1 M2J2,LLADA_DEV+CROSS_MODEL
+gson:08174e2019:JsonWriterTest.java:assertNonFiniteNumbersExceptions,gson,08174e2019,gson/src/test/java/com/google/gson/stream/JsonWriterTest.java,assertNonFiniteNumbersExceptions,2,2,M1J1,OTHER_MODEL_PRIOR
+gson:08174e2019:JsonWriterTest.java:assertNonFiniteDoublesExceptions,gson,08174e2019,gson/src/test/java/com/google/gson/stream/JsonWriterTest.java,assertNonFiniteDoublesExceptions,2,2,M1J1,OTHER_MODEL_PRIOR
+gson:08174e2019:JsonWriterTest.java:assertNonFiniteFloatsExceptions,gson,08174e2019,gson/src/test/java/com/google/gson/stream/JsonWriterTest.java,assertNonFiniteFloatsExceptions,2,2,M1J1,OTHER_MODEL_PRIOR
+gson:46ab704221:ExposeAnnotationExclusionStrategyTest.java:assertIncludesField,gson,46ab704221,gson/src/test/java/com/google/gson/ExposeAnnotationExclusionStrategyTest.java,assertIncludesField,2,2,M1J1,OTHER_MODEL_PRIOR
+gson:46ab704221:ExposeAnnotationExclusionStrategyTest.java:assertExcludesField,gson,46ab704221,gson/src/test/java/com/google/gson/ExposeAnnotationExclusionStrategyTest.java,assertExcludesField,2,2,M1J1,OTHER_MODEL_PRIOR
+gson:46ab704221:ExposeAnnotationExclusionStrategyTest.java:assertIncludesClass,gson,46ab704221,gson/src/test/java/com/google/gson/ExposeAnnotationExclusionStrategyTest.java,assertIncludesClass,0,0,,
+gson:810e356059:ShrinkingIT.java:isTestingProGuard,gson,810e356059,test-shrinker/src/test/java/com/google/gson/it/ShrinkingIT.java,isTestingProGuard,5,5,M1J1 M1J2 M2J1 M2J2,OTHER_MODEL_PRIOR
+guava:62a888101d:GeneratedMonitorTest.java:isLongTimeUnitBased,guava,62a888101d,guava-tests/test/com/google/common/util/concurrent/GeneratedMonitorTest.java,isLongTimeUnitBased,7,0,,INSPECTED_ONLY
+guava:957c37116f:FuturesTest.java:tagged,guava,957c37116f,android/guava-tests/test/com/google/common/util/concurrent/FuturesTest.java,tagged,4,0,,LLADA_DEV+CROSS_MODEL
+guava:c28e65234e:HashingTest.java:shouldHaveKnownHashes,guava,c28e65234e,android/guava-tests/test/com/google/common/hash/HashingTest.java,shouldHaveKnownHashes,2,2,M1J1,INSPECTED_ONLY
+guava:cdc225474e:GeneratedMonitorTest.java:isLongTimeUnitBased,guava,cdc225474e,android/guava-tests/test/com/google/common/util/concurrent/GeneratedMonitorTest.java,isLongTimeUnitBased,7,0,,LLADA_DEV+CROSS_MODEL
+guava:db2e7fe9ad:EnumsTest.java:getClassPathUrls,guava,db2e7fe9ad,android/guava-tests/test/com/google/common/base/EnumsTest.java,getClassPathUrls,0,0,,
+hertzbeat:477af0959f:KafkaCommonDataQueue.java:genericPollDataFunction,hertzbeat,477af0959f,common/src/main/java/org/apache/hertzbeat/common/queue/impl/KafkaCommonDataQueue.java,genericPollDataFunction,4,4,M1J1 M1J2 M2J1 M2J2,OTHER_MODEL_PRIOR
+hertzbeat:5d416e855b:AppController.java:getLang,hertzbeat,5d416e855b,manager/src/main/java/org/apache/hertzbeat/manager/controller/AppController.java,getLang,0,0,,
+hertzbeat:7effbc1f0d:AbstractCollectE2eTest.java:collectMetricsData,hertzbeat,7effbc1f0d,hertzbeat-e2e/hertzbeat-collector-common-e2e/src/test/java/org/apache/hertzbeat/collector/collect/AbstractCollectE2eTest.java,collectMetricsData,0,0,,
+hertzbeat:c4fa738d65:AesUtil.java:getBytes,hertzbeat,c4fa738d65,common/src/main/java/org/apache/hertzbeat/common/util/AesUtil.java,getBytes,2,2,M1J1,OTHER_MODEL_PRIOR
+hertzbeat:f10e5dbd06:ConsistentHash.java:dispatchJobInCache,hertzbeat,f10e5dbd06,manager/src/main/java/org/apache/hertzbeat/manager/scheduler/ConsistentHash.java,dispatchJobInCache,2,2,M1J1,OTHER_MODEL_PRIOR
+hertzbeat:f10e5dbd06:ConsistentHash.java:addVirtualNode,hertzbeat,f10e5dbd06,manager/src/main/java/org/apache/hertzbeat/manager/scheduler/ConsistentHash.java,addVirtualNode,0,0,,
+hibernate-orm:052eb0b78c:EventListenerGroupImpl.java:createListenerArrayForWrite,hibernate-orm,052eb0b78c,hibernate-core/src/main/java/org/hibernate/event/service/internal/EventListenerGroupImpl.java,createListenerArrayForWrite,3,0,,OTHER_MODEL_PRIOR
+hibernate-orm:1fe23ae2ed:EntityFetchJoinedImpl.java:buildEntityAssembler,hibernate-orm,1fe23ae2ed,hibernate-core/src/main/java/org/hibernate/sql/results/graph/entity/internal/EntityFetchJoinedImpl.java,buildEntityAssembler,0,0,,
+hibernate-orm:35f96d6e90:Template.java:handleExtractFunction,hibernate-orm,35f96d6e90,hibernate-core/src/main/java/org/hibernate/sql/Template.java,handleExtractFunction,0,0,,
+hibernate-orm:35f96d6e90:Template.java:isExtractFunction,hibernate-orm,35f96d6e90,hibernate-core/src/main/java/org/hibernate/sql/Template.java,isExtractFunction,0,0,,
+hibernate-orm:35f96d6e90:Template.java:isTrimFunction,hibernate-orm,35f96d6e90,hibernate-core/src/main/java/org/hibernate/sql/Template.java,isTrimFunction,0,0,,
+hibernate-orm:453f0ff074:JtaTransactionCoordinatorImpl.java:getTransactionAdapterPreferringTransactionManager,hibernate-orm,453f0ff074,hibernate-core/src/main/java/org/hibernate/resource/transaction/backend/jta/internal/JtaTransactionCoordinatorImpl.java,getTransactionAdapterPreferringTransactionManager,0,0,,
+hibernate-orm:4781c09d0d:EntityManagerFactoryExtension.java:setupStatementInspector,hibernate-orm,4781c09d0d,hibernate-testing/src/main/java/org/hibernate/testing/orm/junit/EntityManagerFactoryExtension.java,setupStatementInspector,0,0,,
+hibernate-orm:4781c09d0d:EntityManagerFactoryExtension.java:createPersistenceUnitInfo,hibernate-orm,4781c09d0d,hibernate-testing/src/main/java/org/hibernate/testing/orm/junit/EntityManagerFactoryExtension.java,createPersistenceUnitInfo,0,0,,
+hibernate-orm:4781c09d0d:EntityManagerFactoryExtension.java:setJpaComplianceProperties,hibernate-orm,4781c09d0d,hibernate-testing/src/main/java/org/hibernate/testing/orm/junit/EntityManagerFactoryExtension.java,setJpaComplianceProperties,0,0,,
+hibernate-orm:4781c09d0d:BaseJpaOrNativeBootstrapFunctionalTestCase.java:canRollBack,hibernate-orm,4781c09d0d,hibernate-core/src/test/java/org/hibernate/orm/test/exceptionhandling/BaseJpaOrNativeBootstrapFunctionalTestCase.java,canRollBack,0,0,,
+hibernate-orm:4b33d0d067:MetadataAccessTests.java:createRegistryWithMetadataAccessDisabledAndDialect,hibernate-orm,4b33d0d067,hibernate-core/src/test/java/org/hibernate/orm/test/boot/database/metadata/MetadataAccessTests.java,createRegistryWithMetadataAccessDisabledAndDialect,0,0,,
+hibernate-orm:4b33d0d067:SQLServerDialect.java:staticDetermineDatabaseVersion,hibernate-orm,4b33d0d067,hibernate-core/src/main/java/org/hibernate/dialect/SQLServerDialect.java,staticDetermineDatabaseVersion,2,2,M1J1,INSPECTED_ONLY
+hibernate-orm:57cfbb6161:FilterHelper.java:registerEntityNameUsage,hibernate-orm,57cfbb6161,hibernate-core/src/main/java/org/hibernate/internal/FilterHelper.java,registerEntityNameUsage,0,0,,
+hibernate-orm:6c6c92e88d:BasicValue.java:getExplicitJavaType,hibernate-orm,6c6c92e88d,hibernate-core/src/main/java/org/hibernate/mapping/BasicValue.java,getExplicitJavaType,0,0,,
+hibernate-orm:6c6c92e88d:BasicValue.java:javaType,hibernate-orm,6c6c92e88d,hibernate-core/src/main/java/org/hibernate/mapping/BasicValue.java,javaType,0,0,,
+hibernate-orm:72e42817e3:OracleDialectSequenceInformationTest.java:sequenceInformation,hibernate-orm,72e42817e3,hibernate-core/src/test/java/org/hibernate/orm/test/dialect/functional/OracleDialectSequenceInformationTest.java,sequenceInformation,0,0,,
+hibernate-orm:72e42817e3:OracleDialectSequenceInformationTest.java:isSameSequence,hibernate-orm,72e42817e3,hibernate-core/src/test/java/org/hibernate/orm/test/dialect/functional/OracleDialectSequenceInformationTest.java,isSameSequence,0,0,,
+hibernate-orm:72e42817e3:ExtractedDatabaseMetaDataImpl.java:sequenceInformation,hibernate-orm,72e42817e3,hibernate-core/src/main/java/org/hibernate/engine/jdbc/env/internal/ExtractedDatabaseMetaDataImpl.java,sequenceInformation,0,0,,
+hibernate-orm:7b8c403df7:ResultSetReturnImpl.java:endSlowQueryLogging,hibernate-orm,7b8c403df7,hibernate-core/src/main/java/org/hibernate/engine/jdbc/internal/ResultSetReturnImpl.java,endSlowQueryLogging,6,0,,OTHER_MODEL_PRIOR
+hibernate-orm:7b8c403df7:ResultSetReturnImpl.java:getEventManager,hibernate-orm,7b8c403df7,hibernate-core/src/main/java/org/hibernate/engine/jdbc/internal/ResultSetReturnImpl.java,getEventManager,6,0,,OTHER_MODEL_PRIOR
+hibernate-orm:7b8c403df7:ResultSetReturnImpl.java:beginSlowQueryLogging,hibernate-orm,7b8c403df7,hibernate-core/src/main/java/org/hibernate/engine/jdbc/internal/ResultSetReturnImpl.java,beginSlowQueryLogging,5,0,,OTHER_MODEL_PRIOR
+hibernate-orm:7c315fdbfa:AbstractMultiTenancyTest.java:createSettings,hibernate-orm,7c315fdbfa,hibernate-core/src/test/java/org/hibernate/orm/test/multitenancy/AbstractMultiTenancyTest.java,createSettings,0,0,,
+hibernate-orm:800a3f0738:GeneratorBinder.java:instantiateGeneratorBean,hibernate-orm,800a3f0738,hibernate-core/src/main/java/org/hibernate/boot/model/internal/GeneratorBinder.java,instantiateGeneratorBean,3,2,M1J1,INSPECTED_ONLY
+hibernate-orm:8766a8e012:ProcedureParameterImpl.java:getJdbcParamName,hibernate-orm,8766a8e012,hibernate-core/src/main/java/org/hibernate/procedure/internal/ProcedureParameterImpl.java,getJdbcParamName,0,0,,
+hibernate-orm:94b444b4d8:Property.java:getCompositeCascadeStyle,hibernate-orm,94b444b4d8,hibernate-core/src/main/java/org/hibernate/mapping/Property.java,getCompositeCascadeStyle,0,0,,
+hibernate-orm:a20fb5663d:Template.java:lookahead,hibernate-orm,a20fb5663d,hibernate-core/src/main/java/org/hibernate/sql/Template.java,lookahead,0,0,,
+hibernate-orm:a9ac98b364:ManyToManyListBidirectionalTest.java:link,hibernate-orm,a9ac98b364,hibernate-core/src/test/java/org/hibernate/orm/test/mapping/manytomany/ManyToManyListBidirectionalTest.java,link,0,0,,
+hibernate-orm:a9ac98b364:BatchingTest.java:exportSandboxSchema,hibernate-orm,a9ac98b364,hibernate-core/src/test/java/org/hibernate/orm/test/jdbc/internal/BatchingTest.java,exportSandboxSchema,2,0,,INSPECTED_ONLY
+hibernate-orm:ad6f326090:CollectionBinder.java:mappingDefinedAttributeOverrideOnElement,hibernate-orm,ad6f326090,hibernate-core/src/main/java/org/hibernate/boot/model/internal/CollectionBinder.java,mappingDefinedAttributeOverrideOnElement,0,0,,
+hibernate-orm:afca93158e:AbstractEntityPersister.java:queryCacheLayout,hibernate-orm,afca93158e,hibernate-core/src/main/java/org/hibernate/persister/entity/AbstractEntityPersister.java,queryCacheLayout,2,2,M1J1,INSPECTED_ONLY
+hibernate-orm:b53728f727:QueryBinder.java:createQueryDefinition,hibernate-orm,b53728f727,hibernate-core/src/main/java/org/hibernate/boot/model/internal/QueryBinder.java,createQueryDefinition,2,0,,INSPECTED_ONLY
+hibernate-orm:b53728f727:QueryBinder.java:createNamedQueryDefinition,hibernate-orm,b53728f727,hibernate-core/src/main/java/org/hibernate/boot/model/internal/QueryBinder.java,createNamedQueryDefinition,2,0,,INSPECTED_ONLY
+hibernate-orm:c7bd022b07:JdbcValuesResultSetImpl.java:advanceToLast,hibernate-orm,c7bd022b07,hibernate-core/src/main/java/org/hibernate/sql/results/jdbc/internal/JdbcValuesResultSetImpl.java,advanceToLast,0,0,,
+hibernate-orm:cf0ab77cf2:MixedTimingGeneratorsTest.java:generatedBeforeExecution,hibernate-orm,cf0ab77cf2,hibernate-core/src/test/java/org/hibernate/orm/test/idgen/userdefined/MixedTimingGeneratorsTest.java,generatedBeforeExecution,0,0,,
+hibernate-orm:ddeaffc917:CallbacksFactory.java:registerAllCallbacks,hibernate-orm,ddeaffc917,hibernate-core/src/main/java/org/hibernate/jpa/event/internal/CallbacksFactory.java,registerAllCallbacks,0,0,,
+hibernate-orm:e14ead0c0f:Identifier.java:isLegalFirstChar,hibernate-orm,e14ead0c0f,hibernate-core/src/main/java/org/hibernate/boot/model/naming/Identifier.java,isLegalFirstChar,0,0,,
+hibernate-orm:e9513b1db5:SqlSelectionImpl.java:needsResolve,hibernate-orm,e9513b1db5,hibernate-core/src/main/java/org/hibernate/sql/results/internal/SqlSelectionImpl.java,needsResolve,0,0,,
+hibernate-orm:ee00217733:InsertCoordinatorStandard.java:verifyOutcome,hibernate-orm,ee00217733,hibernate-core/src/main/java/org/hibernate/persister/entity/mutation/InsertCoordinatorStandard.java,verifyOutcome,0,0,,
+hibernate-orm:ee00217733:AbstractMutationExecutor.java:execute,hibernate-orm,ee00217733,hibernate-core/src/main/java/org/hibernate/engine/jdbc/mutation/internal/AbstractMutationExecutor.java,execute,0,0,,
+hibernate-orm:f474cacf8a:TypedMetaAttribute.java:isQuery,hibernate-orm,f474cacf8a,tooling/metamodel-generator/src/main/java/org/hibernate/processor/annotation/TypedMetaAttribute.java,isQuery,0,0,,
+hibernate-orm:f556ba9e90:AgroalConnectionProvider.java:extractIsolationAsString,hibernate-orm,f556ba9e90,hibernate-agroal/src/main/java/org/hibernate/agroal/internal/AgroalConnectionProvider.java,extractIsolationAsString,0,0,,
+hibernate-search:0b04d71653:StaticCounters.java:add,hibernate-search,0b04d71653,util/internal/test/src/main/java/org/hibernate/search/util/impl/test/rule/StaticCounters.java,add,0,0,,
+hibernate-search:0c6c0d87a1:DistanceToFieldSearchProjectionTest.java:createExtractContext,hibernate-search,0c6c0d87a1,backend/elasticsearch/src/test/java/org/hibernate/search/backend/elasticsearch/search/projection/impl/DistanceToFieldSearchProjectionTest.java,createExtractContext,2,0,,OTHER_MODEL_PRIOR
+hibernate-search:0f189bd436:FailureContext.java:throwable,hibernate-search,0f189bd436,engine/src/main/java/org/hibernate/search/engine/reporting/FailureContext.java,throwable,0,0,,
+hibernate-search:339a22f55f:LuceneExtensionIT.java:indexDataSet,hibernate-search,339a22f55f,integrationtest/backend/lucene/src/test/java/org/hibernate/search/integrationtest/backend/lucene/LuceneExtensionIT.java,indexDataSet,0,0,,
+hibernate-search:35593714e0:IndexSchemaFilter.java:composeExplicitlyIncludedPaths,hibernate-search,35593714e0,engine/src/main/java/org/hibernate/search/engine/mapper/mapping/building/impl/IndexSchemaFilter.java,composeExplicitlyIncludedPaths,0,0,,
+hibernate-search:3853f803c4:ElasticsearchClientUtils.java:tryGetElasticsearchVersion,hibernate-search,3853f803c4,backend/elasticsearch/src/main/java/org/hibernate/search/backend/elasticsearch/client/impl/ElasticsearchClientUtils.java,tryGetElasticsearchVersion,0,0,,
+hibernate-search:39e046ac17:AbstractMassIndexingFailureIT.java:entityLoading,hibernate-search,39e046ac17,integrationtest/mapper/pojo-base/src/test/java/org/hibernate/search/integrationtest/mapper/pojo/massindexing/AbstractMassIndexingFailureIT.java,entityLoading,0,0,,
+hibernate-search:3e3dc34757:LogChecker.java:processMatching,hibernate-search,3e3dc34757,util/internal/test/common/src/main/java/org/hibernate/search/util/impl/test/rule/log4j/LogChecker.java,processMatching,0,0,,
+hibernate-search:5512dedaa6:ElasticsearchVersion.java:qualifier,hibernate-search,5512dedaa6,backend/elasticsearch/src/main/java/org/hibernate/search/backend/elasticsearch/ElasticsearchVersion.java,qualifier,0,0,,
+hibernate-search:56f06536bb:BatchingExecutorTest.java:createAndStartExecutor,hibernate-search,56f06536bb,engine/src/test/java/org/hibernate/search/engine/backend/orchestration/spi/BatchingExecutorTest.java,createAndStartExecutor,0,0,,
+hibernate-search:63bb8c546d:ElasticsearchDialectFactory.java:createModelDialectElastic,hibernate-search,63bb8c546d,backend/elasticsearch/src/main/java/org/hibernate/search/backend/elasticsearch/dialect/impl/ElasticsearchDialectFactory.java,createModelDialectElastic,0,0,,
+hibernate-search:769be0fb92:TestElasticsearchClient.java:create,hibernate-search,769be0fb92,integrationtest/backend/elasticsearch/src/test/java/org/hibernate/search/integrationtest/backend/elasticsearch/testsupport/util/TestElasticsearchClient.java,create,0,0,,
+hibernate-search:7a3db306af:ElasticsearchIndexSchemaManagerUpdateCustomSettingsIT.java:setupAndUpdateIndex,hibernate-search,7a3db306af,integrationtest/backend/elasticsearch/src/test/java/org/hibernate/search/integrationtest/backend/elasticsearch/schema/management/ElasticsearchIndexSchemaManagerUpdateCustomSettingsIT.java,setupAndUpdateIndex,0,0,,
+hibernate-search:8163c142f6:IndexManagerBuildingStateHolder.java:getDefaultBackendName,hibernate-search,8163c142f6,engine/src/main/java/org/hibernate/search/engine/common/impl/IndexManagerBuildingStateHolder.java,getDefaultBackendName,0,0,,
+hibernate-search:8eae7b49e2:DocumentationSetupHelper.java:testParamsForBothAnnotationsAndProgrammatic,hibernate-search,8eae7b49e2,documentation/src/test/java/org/hibernate/search/documentation/testsupport/DocumentationSetupHelper.java,testParamsForBothAnnotationsAndProgrammatic,0,0,,
+hibernate-search:92b50d26be:BatchingExecutor.java:processBatch,hibernate-search,92b50d26be,engine/src/main/java/org/hibernate/search/engine/backend/orchestration/spi/BatchingExecutor.java,processBatch,0,0,,
+hibernate-search:94c571c53c:AbstractSearchQueryEntityLoadingSingleTypeIT.java:init,hibernate-search,94c571c53c,integrationtest/mapper/orm/src/test/java/org/hibernate/search/integrationtest/mapper/orm/search/loading/AbstractSearchQueryEntityLoadingSingleTypeIT.java,init,0,0,,
+hibernate-search:9cd4135b36:ElasticsearchDefaultWorkSequenceBuilder.java:updateTail,hibernate-search,9cd4135b36,backend/elasticsearch/src/main/java/org/hibernate/search/backend/elasticsearch/orchestration/impl/ElasticsearchDefaultWorkSequenceBuilder.java,updateTail,3,2,M1J1,INSPECTED_ONLY
+hibernate-search:a491e38e17:AbstractSearchQueryEntityLoadingIT.java:getHits,hibernate-search,a491e38e17,integrationtest/mapper/orm/src/test/java/org/hibernate/search/integrationtest/mapper/orm/search/loading/AbstractSearchQueryEntityLoadingIT.java,getHits,0,0,,
+hibernate-search:a4d2e5b39b:ToStringTreeBuilder.java:appendIndentIfNecessary,hibernate-search,a4d2e5b39b,util/common/src/main/java/org/hibernate/search/util/common/impl/ToStringTreeBuilder.java,appendIndentIfNecessary,2,2,M1J1,INSPECTED_ONLY
+hibernate-search:a4d2e5b39b:TypePatternMatcherFactory.java:createExtractingParameterizedTypeMatcher,hibernate-search,a4d2e5b39b,mapper/pojo-base/src/main/java/org/hibernate/search/mapper/pojo/model/typepattern/impl/TypePatternMatcherFactory.java,createExtractingParameterizedTypeMatcher,0,0,,
+hibernate-search:a4d2e5b39b:TypePatternMatcherFactory.java:createExtractingClassTypeMatcher,hibernate-search,a4d2e5b39b,mapper/pojo-base/src/main/java/org/hibernate/search/mapper/pojo/model/typepattern/impl/TypePatternMatcherFactory.java,createExtractingClassTypeMatcher,0,0,,
+hibernate-search:a4d2e5b39b:TypePatternMatcherFactory.java:createExtractingGenericArrayTypeMatcher,hibernate-search,a4d2e5b39b,mapper/pojo-base/src/main/java/org/hibernate/search/mapper/pojo/model/typepattern/impl/TypePatternMatcherFactory.java,createExtractingGenericArrayTypeMatcher,0,0,,
+hibernate-search:a4d2e5b39b:HibernateOrmClassRawTypeModel.java:getPropertyMemberUsingReflectionFromThisType,hibernate-search,a4d2e5b39b,mapper/orm/src/main/java/org/hibernate/search/mapper/orm/model/impl/HibernateOrmClassRawTypeModel.java,getPropertyMemberUsingReflectionFromThisType,0,0,,
+hibernate-search:a4d2e5b39b:HibernateOrmClassRawTypeModel.java:getPropertyMemberUsingHibernateOrmMetadataFromThisType,hibernate-search,a4d2e5b39b,mapper/orm/src/main/java/org/hibernate/search/mapper/orm/model/impl/HibernateOrmClassRawTypeModel.java,getPropertyMemberUsingHibernateOrmMetadataFromThisType,0,0,,
+hibernate-search:b77e41600e:ElasticsearchDialectFactory.java:createProtocolDialectV6,hibernate-search,b77e41600e,backend/elasticsearch/src/main/java/org/hibernate/search/backend/elasticsearch/dialect/impl/ElasticsearchDialectFactory.java,createProtocolDialectV6,0,0,,
+hibernate-search:b77e41600e:ElasticsearchDialectFactory.java:createProtocolDialectV5,hibernate-search,b77e41600e,backend/elasticsearch/src/main/java/org/hibernate/search/backend/elasticsearch/dialect/impl/ElasticsearchDialectFactory.java,createProtocolDialectV5,0,0,,
+hibernate-search:bb500fd954:ReindexOnUpdateIT.java:countBooksByCategory,hibernate-search,bb500fd954,documentation/src/test/java/org/hibernate/search/documentation/mapper/orm/reindexing/reindexonupdate/ReindexOnUpdateIT.java,countBooksByCategory,0,0,,
+hibernate-search:bd746f6ff6:ExpectedLog4jLog.java:eventLevelMatcher,hibernate-search,bd746f6ff6,util/internal/test/src/main/java/org/hibernate/search/util/impl/test/rule/ExpectedLog4jLog.java,eventLevelMatcher,0,0,,
+hibernate-search:be1c35f6db:LuceneFieldAttributesIT.java:loadDocument,hibernate-search,be1c35f6db,integrationtest/backend/lucene/src/test/java/org/hibernate/search/integrationtest/backend/lucene/mapping/LuceneFieldAttributesIT.java,loadDocument,0,0,,
+hibernate-search:c46066ddc2:HibernateOrmClassRawTypeModel.java:getOrmPropertyMetadataFromThisType,hibernate-search,c46066ddc2,mapper/orm/src/main/java/org/hibernate/search/mapper/orm/model/impl/HibernateOrmClassRawTypeModel.java,getOrmPropertyMetadataFromThisType,2,2,M1J1,INSPECTED_ONLY
+hibernate-search:cbb08b0ad3:MassIndexingFailureIT.java:doMassIndexingWithFailure,hibernate-search,cbb08b0ad3,integrationtest/mapper/orm/src/test/java/org/hibernate/search/integrationtest/mapper/orm/massindexing/MassIndexingFailureIT.java,doMassIndexingWithFailure,0,0,,
+hibernate-search:f465d75f6b:AutomaticIndexingSynchronizationStrategyIT.java:testSynchronous,hibernate-search,f465d75f6b,integrationtest/mapper/orm/src/test/java/org/hibernate/search/integrationtest/mapper/orm/automaticindexing/AutomaticIndexingSynchronizationStrategyIT.java,testSynchronous,0,0,,
+hibernate-search:f7c9efb791:LuceneVectorFieldIT.java:initDataSimple,hibernate-search,f7c9efb791,integrationtest/backend/lucene/src/test/java/org/hibernate/search/integrationtest/backend/lucene/vector/LuceneVectorFieldIT.java,initDataSimple,2,2,M1J1,INSPECTED_ONLY
+hibernate-search:fe9d94f587:OutboxPollingCustomEntityMappingIT.java:assertEventUUIDVersion,hibernate-search,fe9d94f587,integrationtest/mapper/orm-coordination-outbox-polling/src/test/java/org/hibernate/search/integrationtest/mapper/orm/coordination/outboxpolling/automaticindexing/OutboxPollingCustomEntityMappingIT.java,assertEventUUIDVersion,3,0,,OTHER_MODEL_PRIOR
+hibernate-search:fee1c5f90c:BackendIndexingWorkExpectations.java:awaitIndexingAssertions,hibernate-search,fee1c5f90c,util/internal/integrationtest/common/src/main/java/org/hibernate/search/util/impl/integrationtest/common/extension/BackendIndexingWorkExpectations.java,awaitIndexingAssertions,0,0,,
+jadx:276ee537e1:BlockProcessor.java:removeFromMethod,jadx,276ee537e1,jadx-core/src/main/java/jadx/core/dex/visitors/blocks/BlockProcessor.java,removeFromMethod,0,0,,
+jadx:276ee537e1:BlockProcessor.java:computeUnreachableFromBlock,jadx,276ee537e1,jadx-core/src/main/java/jadx/core/dex/visitors/blocks/BlockProcessor.java,computeUnreachableFromBlock,0,0,,
+jadx:278e3c2d47:BinaryXMLParser.java:isDeobfCandidateAttr,jadx,278e3c2d47,jadx-core/src/main/java/jadx/core/xmlgen/BinaryXMLParser.java,isDeobfCandidateAttr,0,0,,
+jadx:280f3870a9:BlockUtils.java:getBlockByInsn,jadx,280f3870a9,jadx-core/src/main/java/jadx/core/utils/BlockUtils.java,getBlockByInsn,0,0,,
+jadx:4ef1f3b12b:DexFileLoader.java:loadSingleDex,jadx,4ef1f3b12b,jadx-plugins/jadx-dex-input/src/main/java/jadx/plugins/input/dex/DexFileLoader.java,loadSingleDex,0,0,,
+jadx:54fbbd9524:JavaClass.java:loadLists,jadx,54fbbd9524,jadx-core/src/main/java/jadx/api/JavaClass.java,loadLists,0,0,,
+jadx:75d2e540aa:JadxDecompiler.java:filterClasses,jadx,75d2e540aa,jadx-core/src/main/java/jadx/api/JadxDecompiler.java,filterClasses,0,0,,
+jadx:bb6db25c9d:JCommanderWrapper.java:overrideProperty,jadx,bb6db25c9d,jadx-cli/src/main/java/jadx/cli/JCommanderWrapper.java,overrideProperty,0,0,,
+jadx:c602b3d967:ClassGen.java:addImports,jadx,c602b3d967,jadx-core/src/main/java/jadx/core/codegen/ClassGen.java,addImports,0,0,,
+jadx:c602b3d967:ClassGen.java:addPackage,jadx,c602b3d967,jadx-core/src/main/java/jadx/core/codegen/ClassGen.java,addPackage,0,0,,
+jadx:c93e9eea14:IntegrationTest.java:compileSourceFiles,jadx,c93e9eea14,jadx-core/src/test/java/jadx/tests/api/IntegrationTest.java,compileSourceFiles,0,0,,
+jadx:d1a3935c9e:ResTableBinaryParser.java:readScriptOrVariantChar,jadx,d1a3935c9e,jadx-core/src/main/java/jadx/core/xmlgen/ResTableBinaryParser.java,readScriptOrVariantChar,0,0,,
+jadx:d1a3935c9e:CommonBinaryParser.java:parseStringPoolNoSize,jadx,d1a3935c9e,jadx-core/src/main/java/jadx/core/xmlgen/CommonBinaryParser.java,parseStringPoolNoSize,0,0,,
+jadx:d4ce969fb7:TestInput.java:execJadxCli,jadx,d4ce969fb7,jadx-cli/src/test/java/jadx/cli/TestInput.java,execJadxCli,6,5,M1J1 M1J2 M2J1 M2J2,INSPECTED_ONLY
+jadx:ea0795c8a9:IntegrationTest.java:runDecompiledAutoCheck,jadx,ea0795c8a9,jadx-core/src/test/java/jadx/tests/api/IntegrationTest.java,runDecompiledAutoCheck,0,0,,
+jadx:ea0795c8a9:IntegrationTest.java:runSourceAutoCheck,jadx,ea0795c8a9,jadx-core/src/test/java/jadx/tests/api/IntegrationTest.java,runSourceAutoCheck,0,0,,
+jadx:f5accc8464:ResourcesLoader.java:defaultLoadFile,jadx,f5accc8464,jadx-core/src/main/java/jadx/api/ResourcesLoader.java,defaultLoadFile,0,0,,
+javaparser:02410715ba:JavaParserFacade.java:convertToUsage,javaparser,02410715ba,javaparser-symbol-solver-core/src/main/java/com/github/javaparser/symbolsolver/javaparsermodel/JavaParserFacade.java,convertToUsage,0,0,,
+javaparser:2903fc918d:ContextTest.java:parse,javaparser,2903fc918d,javaparser-symbol-solver-testing/src/test/java/com/github/javaparser/symbolsolver/resolution/ContextTest.java,parse,0,0,,
+javaparser:339d45a569:TestUtils.java:assertEqualsStringIgnoringEol,javaparser,339d45a569,javaparser-core-testing/src/test/java/com/github/javaparser/utils/TestUtils.java,assertEqualsStringIgnoringEol,2,2,M1J1,INSPECTED_ONLY
+javaparser:3b6ee2e9f7:MethodCallExprContext.java:replaceTypeParameter,javaparser,3b6ee2e9f7,javaparser-symbol-solver-core/src/main/java/com/github/javaparser/symbolsolver/javaparsermodel/contexts/MethodCallExprContext.java,replaceTypeParameter,0,0,,
+javaparser:4549a58efd:Context.java:solveTypeInParentContext,javaparser,4549a58efd,javaparser-symbol-solver-core/src/main/java/com/github/javaparser/symbolsolver/core/resolution/Context.java,solveTypeInParentContext,0,0,,
+javaparser:454cc57596:JavaParserFacade.java:convertToUsage,javaparser,454cc57596,javaparser-symbol-solver-core/src/main/java/com/github/javaparser/symbolsolver/javaparsermodel/JavaParserFacade.java,convertToUsage,0,0,,
+javaparser:5aabb74806:MethodResolutionLogic.java:getLastParameterIndex,javaparser,5aabb74806,javaparser-symbol-solver-core/src/main/java/com/github/javaparser/symbolsolver/resolution/MethodResolutionLogic.java,getLastParameterIndex,2,0,,INSPECTED_ONLY
+javaparser:627b56302d:JavaParserFacade.java:getTypeConcrete,javaparser,627b56302d,src/main/java/me/tomassetti/symbolsolver/JavaParserFacade.java,getTypeConcrete,0,0,,
+javaparser:9d8184e1a6:Node.java:createDefaultPrinter,javaparser,9d8184e1a6,javaparser-core/src/main/java/com/github/javaparser/ast/Node.java,createDefaultPrinter,0,0,,
+javaparser:a73aba7b8c:RecordDeclarationTest.java:assertCompilationFails,javaparser,a73aba7b8c,javaparser-core-testing/src/test/java/com/github/javaparser/ast/body/RecordDeclarationTest.java,assertCompilationFails,4,4,M1J1 M1J2 M2J1 M2J2,LLADA_DEV+CROSS_MODEL
+javaparser:a73aba7b8c:RecordDeclarationTest.java:assertOneRecordDeclaration,javaparser,a73aba7b8c,javaparser-core-testing/src/test/java/com/github/javaparser/ast/body/RecordDeclarationTest.java,assertOneRecordDeclaration,10,10,M1J1 M1J2 M2J1 M2J2,LLADA_DEV+CROSS_MODEL
+javaparser:a9adfa6c86:TypeExtractor.java:resolveLambda,javaparser,a9adfa6c86,javaparser-symbol-solver-core/src/main/java/com/github/javaparser/symbolsolver/javaparsermodel/TypeExtractor.java,resolveLambda,0,0,,
+javaparser:b22ebb29ab:TypeExtractor.java:createSolver,javaparser,b22ebb29ab,javaparser-symbol-solver-core/src/main/java/com/github/javaparser/symbolsolver/javaparsermodel/TypeExtractor.java,createSolver,3,3,M1J1 M1J2 M2J1,LLADA_DEV
+javaparser:b79893b578:JavaParserFacade.java:convertToUsage,javaparser,b79893b578,javaparser-symbol-solver-core/src/main/java/com/github/javaparser/symbolsolver/javaparsermodel/JavaParserFacade.java,convertToUsage,0,0,,
+javaparser:baf9003923:UnicodeEscapeProcessingProviderTest.java:provider,javaparser,baf9003923,javaparser-core-testing/src/test/java/com/github/javaparser/UnicodeEscapeProcessingProviderTest.java,provider,0,0,,
+javaparser:baf9003923:UnicodeEscapeProcessingProviderTest.java:process,javaparser,baf9003923,javaparser-core-testing/src/test/java/com/github/javaparser/UnicodeEscapeProcessingProviderTest.java,process,0,0,,
+javaparser:c9adc2fe01:Difference.java:isSpaceOrTabElement,javaparser,c9adc2fe01,javaparser-core/src/main/java/com/github/javaparser/printer/lexicalpreservation/Difference.java,isSpaceOrTabElement,0,0,,
+javaparser:ca3ca0cbd8:Difference.java:considerIndentation,javaparser,ca3ca0cbd8,javaparser-core/src/main/java/com/github/javaparser/printer/lexicalpreservation/Difference.java,considerIndentation,0,0,,
+javaparser:cc159998ac:ReferenceTypeTest.java:parametrizedTypeUpperBounded,javaparser,cc159998ac,javaparser-symbol-solver-testing/src/test/java/com/github/javaparser/symbolsolver/model/typesystem/ReferenceTypeTest.java,parametrizedTypeUpperBounded,0,0,,
+javaparser:df18fcb41f:JavaParserClassDeclaration.java:isAncestor,javaparser,df18fcb41f,javaparser-symbol-solver-core/src/main/java/com/github/javaparser/symbolsolver/javaparsermodel/declarations/JavaParserClassDeclaration.java,isAncestor,0,0,,
+javaparser:e3ae340534:JavaParserFacade.java:convertToUsage,javaparser,e3ae340534,javaparser-symbol-solver-core/src/main/java/com/github/javaparser/symbolsolver/javaparsermodel/JavaParserFacade.java,convertToUsage,0,0,,
+javaparser:ed79beb63e:LexicalDifferenceCalculator.java:getNewLineToken,javaparser,ed79beb63e,javaparser-core/src/main/java/com/github/javaparser/printer/lexicalpreservation/LexicalDifferenceCalculator.java,getNewLineToken,0,0,,
+javaparser:ef3ecbbbde:JavaParserJsonDeserializer.java:deserializeObject,javaparser,ef3ecbbbde,javaparser-core-serialization/src/main/java/com/github/javaparser/serialization/JavaParserJsonDeserializer.java,deserializeObject,0,0,,
+javaparser:f80c6cd0b3:TestUtils.java:assertProblems,javaparser,f80c6cd0b3,javaparser-testing/src/test/java/com/github/javaparser/utils/TestUtils.java,assertProblems,0,0,,
+junit4:1bf8438b65:RunBefores.java:invokeMethod,junit4,1bf8438b65,src/main/java/org/junit/internal/runners/statements/RunBefores.java,invokeMethod,0,0,,
+junit4:1bf8438b65:RunAfters.java:invokeMethod,junit4,1bf8438b65,src/main/java/org/junit/internal/runners/statements/RunAfters.java,invokeMethod,0,0,,
+junit4:2adef6f30c:BlockJUnit4ClassRunnerWithParameters.java:getInjectionType,junit4,2adef6f30c,src/main/java/org/junit/runners/parameterized/BlockJUnit4ClassRunnerWithParameters.java,getInjectionType,3,3,M1J1 M1J2 M2J1,LLADA_DEV+CROSS_MODEL
+junit4:2db6394288:FailOnTimeoutTest.java:failAfter50Ms,junit4,2db6394288,src/test/java/org/junit/internal/runners/statements/FailOnTimeoutTest.java,failAfter50Ms,10,5,M1J1 M1J2 M2J1 M2J2,LLADA_DEV
+junit4:2db6394288:FailOnTimeoutTest.java:run,junit4,2db6394288,src/test/java/org/junit/internal/runners/statements/FailOnTimeoutTest.java,run,8,5,M1J1 M1J2 M2J1 M2J2,LLADA_DEV
+junit4:610155b8c2:TemporaryFolder.java:createTemporaryFolderWithFileApi,junit4,610155b8c2,src/main/java/org/junit/rules/TemporaryFolder.java,createTemporaryFolderWithFileApi,0,0,,
+junit4:6ba9c4dc1e:JUnitCore.java:runMain,junit4,6ba9c4dc1e,src/main/java/org/junit/runner/JUnitCore.java,runMain,0,0,,
+junit5:e07cbb6162:ConsoleLauncherTests.java:output,junit5,e07cbb6162,platform-tests/src/test/java/org/junit/platform/console/ConsoleLauncherTests.java,output,4,4,M1J1 M1J2 M2J1 M2J2,OTHER_MODEL_PRIOR
+junit5:e5f9509c2b:ExtensionComposabilityTests.java:findExtensionApis,junit5,e5f9509c2b,junit-jupiter-engine/src/test/java/org/junit/jupiter/api/extension/ExtensionComposabilityTests.java,findExtensionApis,0,0,,
+junit5:f8a65af3c3:AbstractJupiterTestEngineTests.java:executeTests,junit5,f8a65af3c3,junit-jupiter-engine/src/test/java/org/junit/jupiter/engine/AbstractJupiterTestEngineTests.java,executeTests,0,0,,
+junit5:f95d4e8b09:ParameterizedTestNameFormatterTests.java:format,junit5,f95d4e8b09,junit-jupiter-params/src/test/java/org/junit/jupiter/params/ParameterizedTestNameFormatterTests.java,format,20,18,M1J1 M1J2 M2J1 M2J2,OTHER_MODEL_PRIOR
+mockito:064fe90289:MockitoHamcrest.java:reportMatcher,mockito,064fe90289,src/main/java/org/mockito/hamcrest/MockitoHamcrest.java,reportMatcher,0,0,,
+mockito:63d1cd4050:ReturnsEmptyValues.java:returnCommonEmptyValueFor,mockito,63d1cd4050,src/main/java/org/mockito/internal/stubbing/defaultanswers/ReturnsEmptyValues.java,returnCommonEmptyValueFor,0,0,,
+mockito:6f4eb023ac:GenericMaster.java:getaClass,mockito,6f4eb023ac,src/main/java/org/mockito/internal/util/reflection/GenericMaster.java,getaClass,0,0,,
+pmd:04e5619fa8:ASTMethodDeclaration.java:getBody,pmd,04e5619fa8,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/ast/ASTMethodDeclaration.java,getBody,0,0,,
+pmd:056516bee4:AstTreeInfo.java:findWrapperImpl,pmd,056516bee4,pmd-core/src/main/java/net/sourceforge/pmd/lang/rule/xpath/internal/AstTreeInfo.java,findWrapperImpl,0,0,,
+pmd:08b7dd49dd:CPPTokenizer.java:processToken,pmd,08b7dd49dd,pmd-cpp/src/main/java/net/sourceforge/pmd/cpd/CPPTokenizer.java,processToken,0,0,,
+pmd:0a0bb6e4bb:ASTForStatement.java:getCondition,pmd,0a0bb6e4bb,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/ast/ASTForStatement.java,getCondition,0,0,,
+pmd:0d9080abfd:FileReporter.java:getOutputStream,pmd,0d9080abfd,pmd-core/src/main/java/net/sourceforge/pmd/cpd/FileReporter.java,getOutputStream,0,0,,
+pmd:0d9fe56ec3:ApexCSRFRule.java:isInitializerMethod,pmd,0d9fe56ec3,pmd-apex/src/main/java/net/sourceforge/pmd/lang/apex/rule/errorprone/ApexCSRFRule.java,isInitializerMethod,0,0,,
+pmd:170360b309:DummyTreeUtil.java:nodeImpl,pmd,170360b309,pmd-core/src/test/java/net/sourceforge/pmd/lang/ast/DummyTreeUtil.java,nodeImpl,0,0,,
+pmd:18f393da3c:ClassTypeResolverTest.java:parseAndTypeResolveForClass15,pmd,18f393da3c,pmd-java/src/test/java/net/sourceforge/pmd/typeresolution/ClassTypeResolverTest.java,parseAndTypeResolveForClass15,14,13,M1J1 M1J2 M2J1 M2J2,OTHER_MODEL_PRIOR
+pmd:19d35ff9e2:PMDASMClassLoader.java:loadClassOrNull,pmd,19d35ff9e2,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/typeresolution/PMDASMClassLoader.java,loadClassOrNull,0,0,,
+pmd:1ce585aafb:RulesetsFactoryUtils.java:createFactory,pmd,1ce585aafb,pmd-core/src/main/java/net/sourceforge/pmd/RulesetsFactoryUtils.java,createFactory,0,0,,
+pmd:1ef5079b29:AtfdBaseVisitor.java:isForeignGetterSetterCall,pmd,1ef5079b29,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/metrics/impl/visitors/AtfdBaseVisitor.java,isForeignGetterSetterCall,0,0,,
+pmd:2093011913:TypeTestUtilTest.java:assertIsA,pmd,2093011913,pmd-java/src/test/java/net/sourceforge/pmd/lang/java/types/TypeTestUtilTest.java,assertIsA,0,0,,
+pmd:22db2fdebc:PMDExecutor.java:runPMDRules,pmd,22db2fdebc,pmd-dist/src/test/java/net/sourceforge/pmd/it/PMDExecutor.java,runPMDRules,0,0,,
+pmd:2449f6404e:ReflectionSymFactory.java:getPrimitive,pmd,2449f6404e,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/symbols/internal/impl/reflect/ReflectionSymFactory.java,getPrimitive,0,0,,
+pmd:2d7e200db1:DummyParsingHelper.java:parse,pmd,2d7e200db1,pmd-core/src/test/java/net/sourceforge/pmd/DummyParsingHelper.java,parse,0,0,,
+pmd:30b76285e3:VariableNameDeclaration.java:getExplicitTypeNode,pmd,30b76285e3,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/symboltable/VariableNameDeclaration.java,getExplicitTypeNode,2,2,M1J1,INSPECTED_ONLY
+pmd:312d8e46ae:ImplicitSwitchFallThroughRule.java:checkSwitchLike,pmd,312d8e46ae,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/rule/errorprone/ImplicitSwitchFallThroughRule.java,checkSwitchLike,0,0,,
+pmd:36e55bc2c1:AbstractPMDProcessor.java:reportBrokenRules,pmd,36e55bc2c1,pmd-core/src/main/java/net/sourceforge/pmd/processor/AbstractPMDProcessor.java,reportBrokenRules,0,0,,
+pmd:41b03fec64:AbstractParser.java:setFileName,pmd,41b03fec64,pmd-core/src/main/java/net/sourceforge/pmd/lang/AbstractParser.java,setFileName,0,0,,
+pmd:47470b5d0c:ClasspathClassLoader.java:newInputStreamFromJrtFilesystem,pmd,47470b5d0c,pmd-core/src/main/java/net/sourceforge/pmd/internal/util/ClasspathClassLoader.java,newInputStreamFromJrtFilesystem,0,0,,
+pmd:4cf9f5904a:PMDExecutor.java:runPMDRules,pmd,4cf9f5904a,pmd-dist/src/test/java/net/sourceforge/pmd/it/PMDExecutor.java,runPMDRules,0,0,,
+pmd:5d8b210e6d:ImmutableFieldRule.java:isInLambda,pmd,5d8b210e6d,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/rule/design/ImmutableFieldRule.java,isInLambda,0,0,,
+pmd:5dc2774c0a:PMDTaskImpl.java:getLogRenderer,pmd,5dc2774c0a,pmd-core/src/main/java/net/sourceforge/pmd/ant/internal/PMDTaskImpl.java,getLogRenderer,0,0,,
+pmd:67b7dde950:PmdAnalysisBuilder.java:performAnalysisAndCollectReport,pmd,67b7dde950,pmd-core/src/main/java/net/sourceforge/pmd/PmdAnalysisBuilder.java,performAnalysisAndCollectReport,0,0,,
+pmd:7921e836b1:CsTokenizer.java:getBooleanProperty,pmd,7921e836b1,pmd-cs/src/main/java/net/sourceforge/pmd/cpd/CsTokenizer.java,getBooleanProperty,0,0,,
+pmd:7af212fcde:ForLoopCanBeForeachRule.java:getInfoAboutForIndexVar,pmd,7af212fcde,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/rule/bestpractices/ForLoopCanBeForeachRule.java,getInfoAboutForIndexVar,0,0,,
+pmd:80cba026c2:ASTFormalParameters.java:size,pmd,80cba026c2,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/ast/ASTFormalParameters.java,size,0,0,,
+pmd:946df6fc07:AbstractSymbolTable.java:getCachedMethodResults,pmd,946df6fc07,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/symbols/table/internal/AbstractSymbolTable.java,getCachedMethodResults,0,0,,
+pmd:a229887f03:TypeSystem.java:checkArrayElement,pmd,a229887f03,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/types/TypeSystem.java,checkArrayElement,0,0,,
+pmd:a707d94513:RedundantFieldInitializerRule.java:getNumericLiteralValue,pmd,a707d94513,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/rule/performance/RedundantFieldInitializerRule.java,getNumericLiteralValue,0,0,,
+pmd:a78560c337:JInferenceVar.java:addBound,pmd,a78560c337,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/types/internal/infer/JInferenceVar.java,addBound,0,0,,
+pmd:acb3027166:ASTAnnotationParameter.java:getValue,pmd,acb3027166,pmd-apex/src/main/java/net/sourceforge/pmd/lang/apex/ast/ASTAnnotationParameter.java,getValue,0,0,,
+pmd:b25c16f94d:SuppressWarningsTest.java:assertWarningsWithFoo,pmd,b25c16f94d,pmd-apex/src/test/java/net/sourceforge/pmd/lang/apex/SuppressWarningsTest.java,assertWarningsWithFoo,7,7,M1J1 M1J2 M2J1 M2J2,OTHER_MODEL_PRIOR
+pmd:b48da45701:StringToStringRule.java:isToStringOnStringCall,pmd,b48da45701,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/rule/performance/StringToStringRule.java,isToStringOnStringCall,0,0,,
+pmd:b84dfe80b5:SourceCodeProcessor.java:processSourceCodeWithoutCache,pmd,b84dfe80b5,pmd-core/src/main/java/net/sourceforge/pmd/SourceCodeProcessor.java,processSourceCodeWithoutCache,0,0,,
+pmd:c351314f30:LiteralsFirstInComparisonsRule.java:isNullableComparisonWithStringLiteral,pmd,c351314f30,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/rule/bestpractices/LiteralsFirstInComparisonsRule.java,isNullableComparisonWithStringLiteral,0,0,,
+pmd:cb1d1963a4:ASTAnnotation.java:flatValue,pmd,cb1d1963a4,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/ast/ASTAnnotation.java,flatValue,0,0,,
+pmd:cc8181edc9:TypeHelper.java:loadClass,pmd,cc8181edc9,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/typeresolution/TypeHelper.java,loadClass,0,0,,
+pmd:cd18ba0144:IOUtil.java:createWriter,pmd,cd18ba0144,pmd-core/src/main/java/net/sourceforge/pmd/util/IOUtil.java,createWriter,0,0,,
+pmd:d69520f68f:UnnecessaryCaseChangeRule.java:getParentMethodCallArgsSuffix,pmd,d69520f68f,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/rule/errorprone/UnnecessaryCaseChangeRule.java,getParentMethodCallArgsSuffix,0,0,,
+pmd:dde5b29da8:AbstractNodeInfo.java:filter,pmd,dde5b29da8,pmd-core/src/main/java/net/sourceforge/pmd/lang/ast/xpath/saxon/AbstractNodeInfo.java,filter,0,0,,
+pmd:e6d67312e1:ClassTypeResolverTest.java:parseAndTypeResolveForString,pmd,e6d67312e1,pmd-java/src/test/java/net/sourceforge/pmd/typeresolution/ClassTypeResolverTest.java,parseAndTypeResolveForString,0,0,,
+pmd:e8f8e1ac7a:ASTFieldDeclaration.java:getName,pmd,e8f8e1ac7a,pmd-apex/src/main/java/net/sourceforge/pmd/lang/apex/ast/ASTFieldDeclaration.java,getName,0,0,,
+pmd:e8f8e1ac7a:ASTField.java:getName,pmd,e8f8e1ac7a,pmd-apex/src/main/java/net/sourceforge/pmd/lang/apex/ast/ASTField.java,getName,0,0,,
+pmd:ea532e6d2d:ASTRecordDeclaration.java:getRecordComponents,pmd,ea532e6d2d,pmd-java/src/main/java/net/sourceforge/pmd/lang/java/ast/ASTRecordDeclaration.java,getRecordComponents,0,0,,
+pmd:ee1e43a952:ExecutionResult.java:assertExecResultImpl,pmd,ee1e43a952,pmd-dist/src/test/java/net/sourceforge/pmd/it/ExecutionResult.java,assertExecResultImpl,0,0,,
+pmd:f3d4cd81ed:Filtermap.java:apply,pmd,f3d4cd81ed,pmd-core/src/main/java/net/sourceforge/pmd/lang/ast/internal/Filtermap.java,apply,0,0,,
+pmd:f79941e174:Tokens.java:getEndToken,pmd,f79941e174,pmd-core/src/main/java/net/sourceforge/pmd/cpd/Tokens.java,getEndToken,0,0,,
+pmd:fc81d649b8:MessageReporterBase.java:getErrorMessage,pmd,fc81d649b8,pmd-core/src/main/java/net/sourceforge/pmd/util/log/internal/MessageReporterBase.java,getErrorMessage,0,0,,
+shardingsphere-elasticjob:1bdc817c6a:HttpJobExecutor.java:getConnectionInputStream,shardingsphere-elasticjob,1bdc817c6a,ecosystem/executor/http/src/main/java/org/apache/shardingsphere/elasticjob/http/executor/HttpJobExecutor.java,getConnectionInputStream,0,0,,
+shardingsphere-elasticjob:ca2995d834:SnapshotService.java:dumpJobDirectly,shardingsphere-elasticjob,ca2995d834,elasticjob-lite/elasticjob-lite-core/src/main/java/org/apache/shardingsphere/elasticjob/lite/internal/snapshot/SnapshotService.java,dumpJobDirectly,0,0,,
+shenyu:015c9ce5c7:MockPluginTest.java:buildMockHandle,shenyu,015c9ce5c7,shenyu-integrated-test/shenyu-integrated-test-http/src/test/java/org/apache/shenyu/integrated/test/http/combination/MockPluginTest.java,buildMockHandle,0,0,,
+shenyu:12a2c1929c:ShenyuLoaderService.java:loaderPlugins,shenyu,12a2c1929c,shenyu-web/src/main/java/org/apache/shenyu/web/loader/ShenyuLoaderService.java,loaderPlugins,0,0,,
+shenyu:34aeadeac6:SessionUtil.java:defaultUser,shenyu,34aeadeac6,shenyu-admin/src/main/java/org/apache/shenyu/admin/utils/SessionUtil.java,defaultUser,2,2,M1J1,INSPECTED_ONLY
+shenyu:5be0bf6d74:LoggingClickHousePluginDataHandlerTest.java:createPluginData,shenyu,5be0bf6d74,shenyu-plugin/shenyu-plugin-logging/shenyu-plugin-logging-clickhouse/src/test/java/org/apache/shenyu/plugin/logging/clickhouse/handler/LoggingClickHousePluginDataHandlerTest.java,createPluginData,0,0,,
+shenyu:7761acaba1:SignPlugin.java:handleSignFailed,shenyu,7761acaba1,shenyu-plugin/shenyu-plugin-sign/src/main/java/org/apache/shenyu/plugin/sign/SignPlugin.java,handleSignFailed,0,0,,
+shenyu:8ff9fd1614:HystrixBuilder.java:buildForHystrixCommand,shenyu,8ff9fd1614,shenyu-plugin/shenyu-plugin-hystrix/src/main/java/org/apache/shenyu/plugin/hystrix/builder/HystrixBuilder.java,buildForHystrixCommand,0,0,,
+shenyu:8ff9fd1614:HystrixBuilder.java:build,shenyu,8ff9fd1614,shenyu-plugin/shenyu-plugin-hystrix/src/main/java/org/apache/shenyu/plugin/hystrix/builder/HystrixBuilder.java,build,0,0,,
+shenyu:b40664d4aa:CryptorRequestPluginTest.java:buildRuleHandler,shenyu,b40664d4aa,shenyu-integrated-test/shenyu-integrated-test-http/src/test/java/org/apache/shenyu/integrated/test/http/combination/CryptorRequestPluginTest.java,buildRuleHandler,0,0,,
+shenyu:c2125d57a9:AppAuthServiceImpl.java:syncData,shenyu,c2125d57a9,shenyu-admin/src/main/java/org/apache/shenyu/admin/service/impl/AppAuthServiceImpl.java,syncData,0,0,,
+shenyu:d8c7b57eed:AbstractShenyuPlugin.java:getRawPath,shenyu,d8c7b57eed,shenyu-plugin/shenyu-plugin-base/src/main/java/org/apache/shenyu/plugin/base/AbstractShenyuPlugin.java,getRawPath,0,0,,
+shenyu:e66f0e31f8:SpringCloudClientEventListener.java:getAppName,shenyu,e66f0e31f8,shenyu-client/shenyu-client-http/shenyu-client-springcloud/src/main/java/org/apache/shenyu/client/springcloud/init/SpringCloudClientEventListener.java,getAppName,0,0,,
+shiro:f42ae2c79c:RegExPatternMatcherTest.java:assertPatternMatch,shiro,f42ae2c79c,core/src/test/java/org/apache/shiro/util/RegExPatternMatcherTest.java,assertPatternMatch,0,0,,
+zxing:0d08915628:EncoderTest.java:doTestUserSpecifiedLayers,zxing,0d08915628,core/src/test/java/com/google/zxing/aztec/encoder/EncoderTest.java,doTestUserSpecifiedLayers,0,0,,
+zxing:21eb978d67:HighLevelEncoder.java:lookAheadTestIntern,zxing,21eb978d67,core/src/main/java/com/google/zxing/datamatrix/encoder/HighLevelEncoder.java,lookAheadTestIntern,0,0,,
+zxing:282f5ba726:ReedSolomonDecoder.java:decodeWithECCount,zxing,282f5ba726,core/src/main/java/com/google/zxing/common/reedsolomon/ReedSolomonDecoder.java,decodeWithECCount,0,0,,
+zxing:3909ebe294:EncoderTestCase.java:verifyMinimalEncoding,zxing,3909ebe294,core/src/test/java/com/google/zxing/qrcode/encoder/EncoderTestCase.java,verifyMinimalEncoding,35,34,M1J1 M1J2 M2J1 M2J2,LLADA_DEV
+zxing:3b189fc700:PDF417EncoderTestCase.java:checkEncodeAutoWithSpecialChars,zxing,3b189fc700,core/src/test/java/com/google/zxing/pdf417/encoder/PDF417EncoderTestCase.java,checkEncodeAutoWithSpecialChars,2,0,,INSPECTED_ONLY
+zxing:92854d4a55:PDF417DecoderTestCase.java:encodeDecode,zxing,92854d4a55,core/src/test/java/com/google/zxing/pdf417/decoder/PDF417DecoderTestCase.java,encodeDecode,0,0,,
+zxing:92854d4a55:PDF417.java:generateBarcodeLogic,zxing,92854d4a55,core/src/main/java/com/google/zxing/pdf417/encoder/PDF417.java,generateBarcodeLogic,0,0,,
+zxing:94fb277607:Code128Writer.java:encodeFast,zxing,94fb277607,core/src/main/java/com/google/zxing/oned/Code128Writer.java,encodeFast,0,0,,
+zxing:94fb277607:Code128Writer.java:produceResult,zxing,94fb277607,core/src/main/java/com/google/zxing/oned/Code128Writer.java,produceResult,0,0,,
+zxing:94fb277607:Code128Writer.java:check,zxing,94fb277607,core/src/main/java/com/google/zxing/oned/Code128Writer.java,check,0,0,,
+zxing:ce1a1a53cf:PDF417DecoderTestCase.java:performDecodeTest,zxing,ce1a1a53cf,core/src/test/java/com/google/zxing/pdf417/decoder/PDF417DecoderTestCase.java,performDecodeTest,0,0,,
+zxing:d2027d0e0f:OneDimensionalCodeWriter.java:encode,zxing,d2027d0e0f,core/src/main/java/com/google/zxing/oned/OneDimensionalCodeWriter.java,encode,0,0,,
