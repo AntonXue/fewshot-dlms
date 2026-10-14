@@ -6,7 +6,9 @@ figures: ; $(PY) experiments/fig4_single_target/plot.py && $(PY) experiments/fig
 # The same figures from the download (python -m fewshot_dlms.fetch pools java): every analyze.py recomputes its tables
 # from artifacts/ into $(REPRO)/tables/<fig>/ and prints its difference to data/tables/, then every plot.py draws from
 # those tables into $(REPRO)/figures/. The cross-benchmark figure (fig5's plot.py) reads the table that fig4's
-# analyze.py --crossbench writes.
+# analyze.py --crossbench writes. The "inside the CI" verdicts that --compare prints here are trivially true: the pools
+# analysed are the ones that produced data/tables/, so every frozen mean meets its own interval. They test a rerun's
+# pools (make rerun-*); here the column differences are the check.
 REPRO ?= artifacts/reproduce
 reproduce:
 	$(PY) experiments/fig4_single_target/analyze.py --pools artifacts/pools/fig4 --crossbench --beta-sweep --out $(REPRO)/tables/fig4 --compare data/tables/fig4 data/tables/fig5
@@ -18,6 +20,7 @@ reproduce:
 	$(PY) experiments/fig5_multi_target/plot.py --tables $(REPRO)/tables/fig5 --out $(REPRO)/figures
 	$(PY) experiments/fig6_lengths/plot.py --tables $(REPRO)/tables/fig6 --out $(REPRO)/figures
 	$(PY) experiments/fig7_java/plot.py --tables $(REPRO)/tables/fig7 --out $(REPRO)/figures
+	@echo REPRODUCE_DONE: tables in $(REPRO)/tables, figures in $(REPRO)/figures
 test: ; $(PY) -m pytest -q tests -m "not gpu and not parity and not api" $(PYTEST_ARGS)
 test-parity: ; $(PY) -m pytest -q tests -m parity $(PYTEST_ARGS)
 test-gpu: ; $(PY) -m pytest -q tests -m gpu $(PYTEST_ARGS)
