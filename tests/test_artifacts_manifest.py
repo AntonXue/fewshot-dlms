@@ -11,11 +11,14 @@ import re
 
 import pytest
 
+from fewshot_dlms.leakcheck import find_private
+
 SUMS_LINE = re.compile(r"^([0-9a-f]{64})  (\S.*)$")
 GROUP_PATH = re.compile(r"^(pools|java|heads|head_training)/[^/].*$")
 REVISION = re.compile(r"^[0-9a-f]{40}$")
-# Machine paths and internal working notes, which no shipped text may hold (tools/assemble_artifacts.py).
-PRIVATE_PATTERN = re.compile(r"/(?:hdd|ssd)\d|/home/|/mnt/|hand-off|\.claude")
+# Internal working notes, which no shipped text may hold, next to leakcheck's machine paths and metadata keys
+# (tools/assemble_artifacts.py checks the same).
+LOCAL_PATTERN = re.compile(r"hand-off|\.claude")
 CARD_KEYS = ("license: other", "license_name:", "pretty_name:", "size_categories:")
 
 
@@ -74,7 +77,8 @@ def test_data_card_is_the_uploaded_readme(root, sums):
 def test_manifest_files_hold_no_machine_paths(root):
     for name in ("ARTIFACTS.md", "SHA256SUMS", "artifacts_upload/README.md", "data/artifacts_revision.txt"):
         text = (root / name).read_text(encoding="utf-8")
-        assert not PRIVATE_PATTERN.search(text), name
+        assert not find_private(text), (name, find_private(text))
+        assert not LOCAL_PATTERN.search(text), name
 
 
 @pytest.fixture(scope="module")

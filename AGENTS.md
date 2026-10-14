@@ -37,8 +37,8 @@ Code for "Multi-Target Few-Shot Prompting with Diffusion Language Models". READM
 
 - Never edit the frozen tables under `data/tables/`: they are the paper's numbers; if `analyze.py` disagrees, the
   code is wrong. `data/` is otherwise written only by `tools/`; `artifacts/` is fetched.
-- No private paths, user names, host names or machine metadata in a committed file; `PRIVATE_PATTERNS` in
-  `tests/test_java_data.py` and `tests/test_fixture_leaks.py` hold the generic patterns.
+- No private paths, user names, host names or machine metadata in a committed file; `src/fewshot_dlms/leakcheck.py`
+  holds the generic patterns (`find_private`), which the leak tests and `tools/assemble_artifacts.py` share.
 - GPU: one process per GPU. On the authors' stack (H100 NVL, torch 2.7.1+cu128) reruns of LLaDA-1.5, Nemotron and
   Qwen3-8B at the paper's K reproduce the frozen records bit for bit. Across GPUs, torch builds or K, and for
   dQwen3.5, judge a rerun by `analyze.py --compare` (paper's mean inside the rerun's 95 % CI), never by equality.

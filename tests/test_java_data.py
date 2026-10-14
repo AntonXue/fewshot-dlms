@@ -16,6 +16,7 @@ import pytest
 from fewshot_dlms.canvas import build_java_canvas
 from fewshot_dlms.data import JAVA_DIR
 from fewshot_dlms.data import load_java_episodes
+from fewshot_dlms.leakcheck import find_private
 from tests.fakes import FakeAdapter
 
 EPISODES = load_java_episodes()
@@ -31,15 +32,10 @@ MAX_REPLACEMENT_TOKENS = 80
 MAX_METHOD_LINES = 200
 MAX_CANVAS_TOKENS = 2048
 
-# Patterns that must not match any file under data/java (lower-cased): absolute paths of the
-# authors' machines, run metadata that names a machine, the private source tree, and the
-# vocabulary of the authors' internal working documents.
-PRIVATE_PATTERNS = [
-    r"/(?:hdd|ssd)\d",
-    r"/home/",
-    r"/mnt/",
-    r'"host":',
-    r'"gpu_env":',
+# Patterns that must not match any file under data/java (lower-cased), next to leakcheck's generic ones (absolute
+# paths of the authors' machines, run metadata that names a machine): the private source tree and the vocabulary of
+# the authors' internal working documents.
+LOCAL_PATTERNS = [
     r"editdiff",
     r"scratch/",
     r"hand-?\s?off",
@@ -217,7 +213,8 @@ def test_java_data_directory_has_no_private_strings():
     }
     for path in files:
         text = path.read_text(encoding="utf-8").lower()
-        for pattern in PRIVATE_PATTERNS:
+        assert not find_private(text), f"{find_private(text)} in {path.name}"
+        for pattern in LOCAL_PATTERNS:
             assert re.search(pattern, text) is None, f"{pattern!r} matches {path.name}"
 
 
