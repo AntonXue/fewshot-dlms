@@ -111,3 +111,29 @@ Sampling and scoring 64 report families at K = 64 took, on one H100 NVL in the a
   so its reruns are statistical. Other GPUs or K ≠ 64 give other draws: judge such a rerun by `--compare`.
 - One frozen pool file (LLaDA-1.5 List Functions–Easy, J = 8) holds one family twice; like the paper's analysis,
   `analyze.py` keeps the first complete record of every family.
+
+## Resampling check
+
+GPU sampling is statistical in general, so a rerun is judged by whether the frozen mean lies inside the rerun's
+95 % CI, not by equality. One full Section 4.1 cell was rerun on a GPU and analysed with `--compare`:
+
+    CUDA_VISIBLE_DEVICES=2 python experiments/fig4_single_target/run.py --model llada --tasks sst2_fam --M 4 --K 64 --families 64 --bank report --out artifacts/reruns/fig4
+    python experiments/fig4_single_target/analyze.py --pools artifacts/reruns/fig4 --out artifacts/reruns/fig4/analysis --compare data/tables/fig4
+
+- **Cell.** LLaDA-1.5 (`GSAI-ML/LLaDA-1.5` at revision `84346fd91ba60252d260022201ad6fc5a3468fb2`), SST-2 with
+  opaque codes (text rebuilt with `data/benchmarks/build.py`), M = 4, all 64 report families, K = 64.
+- **Platform and time.** One H100 NVL 96 GB, torch 2.7.1+cu128: 64 s wall-clock (57 s load the model, 5 s sample
+  and score the cell).
+- **Numbers.** Frozen mean (`data/tables/fig4/sec41_accuracy.csv`) against the rerun's mean and 95 % CI
+  (`sec41_accuracy.csv` of the rerun). `--compare` prints the β = 0 verdict; the β = 0.5 row is read from the same
+  CI columns.
+
+  | β | quantity | frozen | rerun [95 % CI] | verdict |
+  |---|---|---|---|---|
+  | 0 | accuracy | 0.445 | 0.445 [0.383, 0.510] | inside |
+  | 0.5 | accuracy | 0.589 | 0.589 [0.514, 0.665] | inside |
+  | 0.5 | paired gain | +0.144 | +0.144 [+0.109, +0.180] | inside |
+
+- **Note.** On this platform the rerun reproduced the frozen pool bit for bit (tokens, ell1, ell0 of all 64 × 64
+  answers), so `--compare` reports a largest difference of 0 in `sec41_accuracy.csv` and `sec44_power.csv` and the
+  rerun's mean equals the frozen one. On another GPU the draws differ and the verdict is the check.

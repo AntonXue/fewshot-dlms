@@ -131,3 +131,43 @@ ablation judged 605 fresh report packets in calls of up to five packets, and 79 
   two episodes, and the ablation's arms M = 0, 1, 2 of the first two anchors. `make test-gpu` replays two stored
   pools (an oracle M2J2 pool and a learned M1J2 pool with three canvases) exactly and checks head C against the
   stored predictions. Other GPUs give other draws; judge such a rerun by `--compare`.
+
+## Resampling check
+
+GPU sampling is statistical in general, so a rerun is judged by whether the frozen mean lies inside the rerun's
+95 % CI, not by equality. One full cell was rerun on a GPU:
+
+    CUDA_VISIBLE_DEVICES=2 python experiments/fig7_java/run.py --regime oracle --M 1 --J 1 --K 16 --out artifacts/reruns/fig7/pools
+    python experiments/fig7_java/analyze.py --pools artifacts/reruns/fig7/pools --out artifacts/reruns/fig7/analysis
+
+- **Cell.** LLaDA-1.5 (`GSAI-ML/LLaDA-1.5` at revision `84346fd91ba60252d260022201ad6fc5a3468fb2`), oracle lengths,
+  (M, J) = (1, 1): all 52 episodes of the cell (50 commits), K = 16.
+- **Platform and time.** One H100 NVL 96 GB, torch 2.7.1+cu128: 9.7 min wall-clock (581 s, of which 56 s load the
+  model).
+- **Without a judge.** U needs a verdict for every draw, and new texts need `judge.py` (an API key). Without one,
+  `analyze.py` counts every draw as unjudged (U = 0), and the check is restricted to the pool statistics that need no
+  verdict: the columns `n_unique_text`, `modal_share`, `R_range`, `ESS0.5` and `maxw0.5` of `metrics_by_episode.csv`,
+  averaged over the 52 episodes. Ordinary sampling (β = 0) has weight 1/16 on every draw (ESS 16) by construction.
+
+  | pool statistic | rerun mean (median) | frozen pools |
+  |---|---|---|
+  | distinct texts per pool | 3.12 (1) | 3.12 |
+  | share of the most frequent text | 0.853 (1) | 0.853 |
+  | range of R = logp1 − logp0 in a pool | 1.80 (0) | 1.80 |
+  | ESS, ordinary (β = 0) / guided (β = 0.5) | 16 / 14.08 (16) | 16 / 14.08 |
+  | largest weight, ordinary / guided | 0.0625 / 0.120 (0.0625) | 0.0625 / 0.120 |
+
+- **With the paper's verdicts.** On this platform the rerun reproduced the frozen pools bit for bit (tokens, texts,
+  logp1 and logp0 of all 52 × 16 draws, every episode's statistic above identical), so the shipped verdicts grade every
+  draw through the packet key (0 of 832 draws unjudged), and the CI verdict can be taken:
+
+      python experiments/fig7_java/analyze.py --pools artifacts/reruns/fig7/pools --verdicts artifacts/java/judging/verdicts.jsonl \
+          --out artifacts/reruns/fig7/analysis_paper_verdicts --compare data/tables/fig7
+
+  | rule | U, frozen | U, rerun [95 % CI] | verdict |
+  |---|---|---|---|
+  | ordinary (β = 0) | 0.761 | 0.761 [0.652, 0.860] | inside |
+  | guidance (β = 0.5) | 0.729 | 0.729 [0.610, 0.841] | inside |
+
+  The `M1J1` rows are the check; the `all` rows that `--compare` also prints set the frozen value over all 127
+  episodes against this 52-episode rerun and do not apply.
