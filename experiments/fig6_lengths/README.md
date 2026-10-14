@@ -73,7 +73,7 @@ is compared with.
 `run.py --mode learned` and `train_head.py` also use (`python -m fewshot_dlms.fetch heads head_training`):
 
     artifacts/heads/<backbone>.pt                         the frozen heads, <backbone> = llada, nemotron, dqwen
-    artifacts/head_training/fsp_<backbone>_train.jsonl    structured few-shot training prompts (100,000 per backbone)
+    artifacts/head_training/fsp_<backbone>_train.jsonl    structured few-shot training prompts (66,499 per backbone)
     artifacts/head_training/edit_<backbone>_train.jsonl   code-edit training prompts (about 22,000 per backbone)
     artifacts/head_training/listbench_dev_<backbone>.jsonl  List Functions-Easy dev bank, M = 4, J in {1, 2, 4, 8}
     artifacts/head_training/edit_<backbone>_dev.jsonl     repository-held-out code edits (evaluation)
@@ -171,7 +171,8 @@ The paper's heads ship frozen; `train_head.py` retrains one (Appendix B, Length 
   reads the normalised state at each placeholder (`lengths.Branch`; `lengths.fresh_head` builds the untrained head).
   219M trainable parameters for LLaDA-1.5 and Nemotron, 211M for dQwen3.5.
 - **Data.** Two sources of compact prompts, each rendered once per backbone tokenizer, labels = exact token counts:
-  *structured few-shot prompts* (100,000 training prompts: List Functions tasks outside List Functions–Easy with 40
+  *structured few-shot prompts* (100,000 training prompts, of which the 66,499 without MIT Movie and ATIS ship (see
+  below): List Functions tasks outside List Functions–Easy with 40
   held back, SALT categories other than 5, 6 and 12, MIT Movie fields other than Director, ATIS fields other than the
   evaluation ones; J uniform on {1, 2, 4, 8}, M ∈ {2, 4, 8} with probabilities 0.2 / 0.6 / 0.2; seeds
   `mtfsp-20261004-structured-v1` (splits) and `mtfsp-20261007-lengthproject-fsp-v1` (episodes)) and *Java code edits*
@@ -189,7 +190,9 @@ The paper's heads ship frozen; `train_head.py` retrains one (Appendix B, Length 
   model; development data (List Functions–Easy dev bank, 1,500 held-out code edits) is only reported.
 - **Compute.** 1.8 h (LLaDA-1.5), 2.1 h (Nemotron) and 2.7 h (dQwen3.5) on one H100 NVL.
 
-The rendered training files ship with the artifacts (`artifacts/head_training/`, listed under Commands):
+The rendered training files ship with the artifacts (`artifacts/head_training/`, listed under Commands), except the
+structured few-shot prompts built from MIT Movie and ATIS (33,501 of the 100,000; those corpora keep their own terms):
+the shipped set holds the 66,499 List Functions and SALT prompts, row for row the authors' own.
 
     python experiments/fig6_lengths/train_head.py --backbone llada --data artifacts/head_training --out runs/llada_head
 
@@ -198,11 +201,12 @@ episodes from `fsp_logical_train.jsonl` and compares them with the shipped promp
 (`final.pt`) loads with `lengths.LengthHead.load`; for LLaDA-1.5 the script ends by comparing the new head's
 exact-length mass with the frozen head's on the ten fixture canvases of `data/fixtures/fig6/`.
 
-**Retraining check** (LLaDA-1.5, H100 NVL). `train_head.py` follows the authors' run update for update: the same source,
-learning rate and epoch counters at every logged update, and a training loss within 2·10⁻³ of theirs over the first 200
-updates (bf16 kernels are not deterministic, so the runs drift apart slowly). A full retrain (1,563 updates, 54 min)
-reached a List Functions–Easy dev P0 of 0.379 (theirs: 0.373) and an exact-length mass of 0.497 on the ten fixture
-canvases, against 0.518 for the frozen head. After 200 updates (`--steps 200`) that mass is still 0.234.
+**Retraining check** (LLaDA-1.5, H100 NVL, on the authors' full set of 100,000 structured few-shot prompts).
+`train_head.py` follows the authors' run update for update: the same source, learning rate and epoch counters at every
+logged update, and a training loss within 2·10⁻³ of theirs over the first 200 updates (bf16 kernels are not
+deterministic, so the runs drift apart slowly). A full retrain (1,563 updates, 54 min) reached a List Functions–Easy
+dev P0 of 0.379 (theirs: 0.373) and an exact-length mass of 0.497 on the ten fixture canvases, against 0.518 for the
+frozen head. After 200 updates (`--steps 200`) that mass is still 0.234.
 
 **What public code regenerates.**
 
@@ -210,12 +214,16 @@ canvases, against 0.518 for the frozen head. After 200 updates (`--steps 200`) t
   iterators, loss, optimiser, evaluation, checkpoint) from the rendered prompts. The structured few-shot prompts of any
   backbone from their logical episodes (`fsp_logical_train.jsonl`) with `train_head.render_fsp`, the renderer of the
   authors' builder; `--check-render` compares it with the shipped prompts token for token (200/200 for LLaDA-1.5).
+- *Not the frozen heads' data.* The shipped structured few-shot set is the 66,499-prompt subset without MIT Movie and
+  ATIS, so a retrain on it draws other prompts (the same 1,563 updates now reach a few thousand of them twice) and is
+  not expected to reproduce the frozen heads' numbers; the retraining check above (0.497 against 0.518) used the full
+  set.
 - *Not regenerable here.*
   - The structured few-shot episodes themselves: the authors' sampler (`lpx_fsp.py`) draws them from inputs that are
     not in this repository or its artifacts: MIT Movie and ATIS field pools from an earlier selection run of theirs,
     filtered so that no utterance overlaps a Director record; the raw BIG-bench List Functions tasks with a list of 40
-    reserved functions; and SALT records from their SALT builder, with generated extra pairs. The episodes ship instead,
-    so the sampler is not ported.
+    reserved functions; and SALT records from their SALT builder, with generated extra pairs. The List Functions and
+    SALT episodes ship instead, so the sampler is not ported; the MIT Movie and ATIS episodes are not shipped.
   - The code-edit prompts: the authors mined edit groups from 28 cloned Java repositories and cropped every episode
     to 2,048 tokens under the three tokenizers at once (`lpx_mine.py`, `lpx_edit.py`). The repositories are not part
     of the artifacts, so the rendered prompts ship and the miner is not ported.

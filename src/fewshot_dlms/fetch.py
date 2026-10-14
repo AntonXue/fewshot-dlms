@@ -4,7 +4,7 @@ Run from the repository root (the tests and every analyze.py read artifacts/ the
 
     python -m fewshot_dlms.fetch pools java       # what make test-parity and the analyze.py scripts need (386 MB)
     python -m fewshot_dlms.fetch heads            # the four length heads (3.47 GB), for the GPU runs
-    python -m fewshot_dlms.fetch head_training    # the heads' training data (1.28 GB)
+    python -m fewshot_dlms.fetch head_training    # the heads' training data (1.03 GB)
     python -m fewshot_dlms.fetch --check          # check the files already under artifacts/; download nothing
     python -m fewshot_dlms.fetch                  # print this usage and the group table; download nothing
 
@@ -42,9 +42,9 @@ REPO_ID = "UT-IFML/fewshot-dlms"
 REPO_TYPE = "dataset"
 # The dataset commit of the frozen artifacts. tests/test_fetch.py checks it against data/artifacts_revision.txt
 # and ARTIFACTS.md, so a stale pin fails make test.
-PINNED_REVISION = "5a79ed36648816ffbc27e3c11d7938692835d227"
+PINNED_REVISION = "f65650d34e80892b94a69083371fd939ed64edcc"
 # SHA-256 of SHA256SUMS at PINNED_REVISION (ARTIFACTS.md), checked against the downloaded copy.
-SUMS_SHA256 = "bdead7d377a47cf4835985e11ec53f6ed4b056c10374e77fa82b31d4c6d11fe9"
+SUMS_SHA256 = "c22f4e3f3609ab684b50c073816a9984684f8adf685b927426a67ad79317cd49"
 SUMS_NAME = "SHA256SUMS"
 CARD_NAME = "README.md"
 # The repository root (src/fewshot_dlms/fetch.py -> ../..), which holds the committed SHA256SUMS.
@@ -54,7 +54,7 @@ GROUPS = {
     "pools": ("376 MB", "Figures 4-6, Appendix B figures: analyze.py of fig4_single_target, fig5_multi_target, fig6_lengths"),
     "java": ("10 MB", "Figure 7: analyze.py and judge.py of fig7_java"),
     "heads": ("3.47 GB", "the four length heads: run.py --mode learned (fig6), --regime learned (fig7), make test-gpu"),
-    "head_training": ("1.28 GB", "the heads' training prompts and configs: fig6_lengths/train_head.py"),
+    "head_training": ("1.03 GB", "the heads' training prompts and configs: fig6_lengths/train_head.py"),
 }
 SUMS_LINE = re.compile(r"^([0-9a-f]{64}) [ *](.+)$")
 BLOCK_BYTES = 1 << 20

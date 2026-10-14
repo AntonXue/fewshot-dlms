@@ -37,7 +37,7 @@ and its license.
 | `pools/fig6` | Section 4.3 pools (oracle, learned and offset lengths) and the frozen heads' predictions | 56 | 74 MB |
 | `java` | Section 5 pools, judge verdicts and packet index, calibration controls, length predictions, zero-demonstration ablation | 21 | 10 MB |
 | `heads` | the four length heads: LLaDA-1.5, Nemotron and dQwen3.5 benchmark heads, Java head C | 4 | 3.47 GB |
-| `head_training` | rendered training prompts of the three benchmark heads, the four heads' training configs, head C's corpus manifests | 22 | 1.28 GB |
+| `head_training` | rendered training prompts of the three benchmark heads (structured few-shot prompts without MIT Movie and ATIS), the four heads' training configs, head C's corpus manifests | 22 | 1.03 GB |
 
 `SHA256SUMS` lists every file (except itself) as `<sha256>  <path>`, the format of `sha256sum`.
 
@@ -133,7 +133,8 @@ models at the revisions below. Section numbers refer to the paper; Appendix B is
   `checkpoint_sha256` in the freeze record); the table below maps them to the published files. Each head is a
   trainable fp32 copy of the backbone's last transformer block and final norm plus a categorical head over the lengths 1..256; the backbone stays
   frozen. `lengths.LengthHead.load` of the code repository loads them. The benchmark heads were trained on 100,000
-  prompts (70 % structured few-shot / 30 % code edits, 1,563 updates, seed 0); head C on 20,000 draws of its Java
+  prompts (70 % structured few-shot / 30 % code edits, 1,563 updates, seed 0) drawn from the full structured few-shot
+  set, of which `head_training` ships a subset (below); head C on 20,000 draws of its Java
   corpus (50 % s5g / 50 % s5h, 313 updates, seed 0). Head C's two comparator heads ship as predictions only
   (`java/length/s5g_B_s5final_G4.npz`, `java/length/fin_llada_m70_100k_s5final_G4.npz`; the second is the LLaDA-1.5
   benchmark head above), not as further checkpoints.
@@ -146,11 +147,14 @@ models at the revisions below. Section numbers refer to the paper; Appendix B is
   | `heads/java_head_C.pt` | `ea54c8b92110f4c5c4dbe838721d23961775082712247f8099b74e8d7d312309` | `b2efefded5ac382b5fc67ace4ee6d9f0ebfa15b820f2431b6f67cdb09721cebf` |
 - **`head_training`**. The authors' rendered training prompts, one file per backbone tokenizer (`train_head.py` of the
   code repository reads them):
-  - `fsp_<backbone>_train.jsonl`: 100,000 structured few-shot prompts (List Functions tasks outside List
-    Functions–Easy, SALT categories other than the evaluated ones, MIT Movie fields other than Director, ATIS fields
-    other than the evaluated ones; seeds `mtfsp-20261004-structured-v1` (splits) and
-    `mtfsp-20261007-lengthproject-fsp-v1` (episodes)). `fsp_logical_train.jsonl` holds the same episodes before
-    rendering.
+  - `fsp_<backbone>_train.jsonl`: 66,499 of the authors' 100,000 structured few-shot prompts (seeds
+    `mtfsp-20261004-structured-v1` (splits) and `mtfsp-20261007-lengthproject-fsp-v1` (episodes)): the 33,527 List
+    Functions prompts (tasks outside List Functions–Easy) and the 32,972 SALT prompts (categories other than the
+    evaluated ones). The public copy omits the 33,501 prompts built from MIT Movie (20,251; fields other than
+    Director) and ATIS (13,250; fields other than the evaluated ones), whose corpora keep their own terms. The frozen
+    heads were trained on the full 100,000. The kept rows are the authors' lines, unchanged and in their order.
+    `fsp_logical_train.jsonl` holds the same 66,499 episodes before rendering. The code-edit prompts below are
+    unchanged.
   - `edit_<backbone>_train.jsonl` (22,128 prompts) and `edit_<backbone>_dev.jsonl` (2,874): Java code edits mined from
     the repositories listed under Licenses, split by repository with seed `mtfsp-20261007-lengthproject-edit-v1`; each
     row names its repository, commit and file.
@@ -170,6 +174,9 @@ Everything is copied byte for byte except:
   `target_inputs` and the decoded prompts `checks.p1_prompt_text` / `checks.p0_prompt_text` are replaced by their
   SHA-256 digests under the same key + `_sha256`. The reference answers and the sampled candidates stay. The code
   repository rebuilds the text from the original sources (`data/benchmarks/build.py`).
+- The structured few-shot files (`head_training/fsp_*`) lose the 33,501 rows of MIT Movie and ATIS (their `source`
+  is `movies` or `atis`) of the 100,000; the other 66,499 lines are copied byte for byte, in their order, so the
+  logical file and the three rendered files still match row for row.
 - The training configurations lose the run directory (`root`) and the GPU index (`gpu`); head C's corpora are
   reduced to manifests (above).
 - The four head checkpoints are loaded and saved again (`torch.save`, loadable with `weights_only=True`) with the same
@@ -201,11 +208,11 @@ Third-party content keeps its own terms:
   | `salt_rep_fam` | SALT (Zheng et al., 2025, "The Curse of CoT", <https://arxiv.org/abs/2504.05081>) | `salt/salt.json` of `github.com/HKUST-KnowComp/CoT-ICL-Eval` at commit `3af5a9b0bc28b0059f0289d3790dc8b2a96cf06f` | MIT (the repository's `LICENSE`) |
   | `movie_dir_fam` | MIT Movie, trivia10k13 corpus (Liu et al., 2012, "A Conversational Movie Search System Based on Conditional Random Fields"; MIT Spoken Language Systems group) | the copy in `github.com/tonyzhaozh/few-shot-learning` (Zhao et al., 2021, "Calibrate Before Use") at commit `e04d8643be91c2cce63f33e07760ff75d5aa3ad0` | see source (that repository is Apache-2.0; the corpus keeps its own terms); the benchmark text is not in the pools |
 
-- **Structured few-shot training prompts** (`head_training/fsp_*`). They contain MIT Movie queries (fields other than
-  Director) and ATIS queries, taken from `github.com/tonyzhaozh/few-shot-learning` at commit
-  `e04d8643be91c2cce63f33e07760ff75d5aa3ad0` (`data/slot-movies/train`, `data/atis/atis.train.pkl`; that repository is
-  Apache-2.0), in plain text in `fsp_logical_train.jsonl` and as token ids in the rendered files. The MIT Movie corpus
-  (MIT Spoken Language Systems group) and ATIS keep their own terms.
+- **Structured few-shot training prompts** (`head_training/fsp_*`). They carry List Functions (BIG-bench,
+  Apache-2.0) and SALT (MIT) inputs and outputs, in plain text in `fsp_logical_train.jsonl` and as token ids in the
+  rendered files. The authors' training set also held MIT Movie queries (fields other than Director) and ATIS queries
+  from `github.com/tonyzhaozh/few-shot-learning` at commit `e04d8643be91c2cce63f33e07760ff75d5aa3ad0`; the MIT Movie
+  corpus (MIT Spoken Language Systems group) and ATIS keep their own terms, so those prompts are not shipped.
 - **Java, Section 5** (`java/`: the calibration controls and the candidates' code). Excerpts of 14 repositories under
   Apache-2.0, LGPL-2.1, LGPL-3.0 or Apache-2.0, EPL-1.0, EPL-2.0 and a BSD-style license; the per-repository table is
   `data/java/LICENSES.md` of the code repository.
