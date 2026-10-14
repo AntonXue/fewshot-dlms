@@ -69,8 +69,12 @@ PROTOCOL_HASH = "0e1d3c9040b09598"
 ZERO_DEMO_PROTOCOL_HASH = "c2a07e4a701f0a41"
 ALLOC_TAG = "s5-final-alloc-v1"
 
-# Length head C (Appendix C): the checkpoint's SHA-256 and the file of its stored predictions in java/length.
-HEAD_CKPT_SHA = "ea54c8b92110f4c5c4dbe838721d23961775082712247f8099b74e8d7d312309"
+# Length head C (Appendix C): the SHA-256 of the published checkpoint (artifacts/heads/java_head_C.pt) and the file of
+# its stored predictions in java/length. The published file is the authors' final.pt re-saved without the run
+# directory pickled in its training config, tensors identical; the stored pools and predictions record the original
+# file's SHA-256 (TRAINED_HEAD_CKPT_SHA) in head_ckpt_sha / ckpt_sha, and a live run records the file it reads.
+HEAD_CKPT_SHA = "b2efefded5ac382b5fc67ace4ee6d9f0ebfa15b820f2431b6f67cdb09721cebf"
+TRAINED_HEAD_CKPT_SHA = "ea54c8b92110f4c5c4dbe838721d23961775082712247f8099b74e8d7d312309"
 HEAD_PROBS_FILE = "s5hc_C_s5final_G4.npz"
 
 
@@ -431,7 +435,7 @@ def run_main(args, adapter, episodes, out):
             head_sha = str(np.load(args.head_probs, allow_pickle=False)["ckpt_sha"])
         else:
             head_sha = file_sha256(args.head)
-            if head_sha != HEAD_CKPT_SHA:
+            if head_sha not in (HEAD_CKPT_SHA, TRAINED_HEAD_CKPT_SHA):
                 print(f"warning: {args.head} is not the paper's head C (sha256 {head_sha[:12]}...)", flush=True)
             probs = head_probs(adapter, args.head, selected, args.device)
     config = config_of(args, adapter, head_sha)

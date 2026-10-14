@@ -25,9 +25,12 @@ What changes on the way; everything else is copied byte for byte:
     (extract_fixtures.without_benchmark_text). The reference answers and the sampled candidates stay.
   - The training configs of the heads lose CONFIG_DROPPED; head C's training corpus ships as manifests, every field
     of a row except MANIFEST_DROPPED (the token ids).
+  - The head checkpoints are re-saved (torch.save) with CONFIG_DROPPED removed from the training config pickled in
+    them; their tensors are checked to be identical, byte for byte, to the authors' final.pt. The re-saved files have
+    new SHA-256s; the stored pools and predictions keep recording the original ones.
 Then it hashes the tree into SHA256SUMS (also written to the repository root, where fetch.py verifies downloads
 against it) and checks it: no record keeps a key of RUN_METADATA, no SST-2 or MIT Movie record keeps prompt text,
-and no text file matches PRIVATE_PATTERN. It exits with status 1 if a check fails or a source is missing.
+and no file matches PRIVATE_PATTERN (in JSONL files, sampled candidate texts excepted). It exits with status 1 if a check fails or a source is missing.
 
 Re-running is safe: unchanged outputs are not rewritten and files that are no longer planned are removed. The
 upload directory is outside the repository (large files); artifacts_upload/ in the repository holds the data card,
@@ -44,7 +47,10 @@ import os
 import re
 import shutil
 import sys
+import tempfile
 from pathlib import Path
+
+import torch
 
 from extract_fixtures import without_benchmark_text  # tools/ is on sys.path when this script runs
 from fewshot_dlms.data import TEXT_FREE_BENCHMARKS
@@ -98,7 +104,8 @@ def plan():
     """Every file of the tree except README.md and SHA256SUMS: a list of (path in the tree, source, kind).
 
     kind is "copy" (bytes), "jsonl" (records without RUN_METADATA and benchmark text), "config" (JSON without
-    CONFIG_DROPPED) or "manifest" (JSONL rows without MANIFEST_DROPPED).
+    CONFIG_DROPPED), "manifest" (JSONL rows without MANIFEST_DROPPED) or "head" (a checkpoint re-saved without
+    CONFIG_DROPPED in its training config).
     """
     files = []
     for bank in ("report", "dev"):
@@ -151,12 +158,12 @@ def plan():
     for name in ZERO_DEMO_POOLS:
         files.append((f"java/zero_demo/pools/pools_{name}.jsonl", JAVA_ZERO_DEMO / "generation" / "report" / f"pools_{name}.jsonl", "jsonl"))
     for backbone, run in HEAD_RUNS.values():
-        files.append((f"heads/{backbone}.pt", LENGTH_PROJECT / "runs" / run / "final.pt", "copy"))
+        files.append((f"heads/{backbone}.pt", LENGTH_PROJECT / "runs" / run / "final.pt", "head"))
         files.append((f"head_training/configs/{backbone}.json", LENGTH_PROJECT / "runs" / run / "config.json", "config"))
         for name in (f"fsp_{backbone}_train", f"edit_{backbone}_train", f"listbench_dev_{backbone}", f"edit_{backbone}_dev"):
             files.append((f"head_training/{name}.jsonl", LENGTH_PROJECT / "data" / f"{name}.jsonl", "jsonl"))
     files.append(("head_training/fsp_logical_train.jsonl", LENGTH_PROJECT / "data" / "fsp_logical_train.jsonl", "jsonl"))
-    files.append(("heads/java_head_C.pt", JAVA_LENGTH / "runs" / "s5hc_C" / "final.pt", "copy"))
+    files.append(("heads/java_head_C.pt", JAVA_LENGTH / "runs" / "s5hc_C" / "final.pt", "head"))
     files.append(("head_training/configs/java_head_C.json", JAVA_LENGTH / "runs" / "s5hc_C" / "config.json", "config"))
     for corpus in HEAD_C_CORPUS:
         for split in ("train", "dev"):
@@ -230,6 +237,46 @@ def cleaned_config(source):
     return (json.dumps(config, indent=1) + "\n").encode("utf-8")
 
 
+def same_tensors(original, resaved):
+    """True if two state dicts hold the same names, dtypes, shapes and bytes (torch.equal and the raw bytes)."""
+    if list(original) != list(resaved):
+        return False
+    for name, tensor in original.items():
+        other = resaved[name]
+        if tensor.dtype != other.dtype or tensor.shape != other.shape or not torch.equal(tensor, other):
+            return False
+        if not torch.equal(tensor.contiguous().view(torch.uint8), other.contiguous().view(torch.uint8)):
+            return False
+    return True
+
+
+def resaved_head(source, dest):
+    """Write the head checkpoint `source` to `dest` without CONFIG_DROPPED in its training config.
+
+    The checkpoint is {"branch": state dict, "config": training config} (lengths.LengthHead.load). It is saved under
+    its final file name, which torch.save writes into the archive, so the bytes depend only on the content. The new
+    file must load with weights_only=True, hold the same tensors byte for byte and the same config minus
+    CONFIG_DROPPED, and no string of the config may match PRIVATE_PATTERN. Returns True if `dest` was written.
+    """
+    original = torch.load(source, map_location="cpu", weights_only=True)
+    config = {key: value for key, value in original["config"].items() if key not in CONFIG_DROPPED}
+    if PRIVATE_PATTERN.search(json.dumps(config).encode("utf-8")):
+        raise ValueError(f"{source}: the training config still holds a private path")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=dest.parent) as staging:
+        staged = Path(staging) / dest.name
+        torch.save(dict(original, config=config), staged)
+        resaved = torch.load(staged, map_location="cpu", weights_only=True)
+        if list(resaved) != list(original) or resaved["config"] != config:
+            raise ValueError(f"{dest}: re-saved checkpoint differs outside the tensors")
+        if not same_tensors(original["branch"], resaved["branch"]):
+            raise ValueError(f"{dest}: re-saved tensors differ from {source}")
+        if dest.is_file() and dest.stat().st_size == staged.stat().st_size and dest.read_bytes() == staged.read_bytes():
+            return False
+        os.replace(staged, dest)
+    return True
+
+
 def write_bytes(dest, data):
     """Write `data` to `dest` unless it already holds exactly these bytes; returns True if written."""
     if dest.is_file() and dest.stat().st_size == len(data) and dest.read_bytes() == data:
@@ -269,6 +316,8 @@ def assemble(dest, files):
             written += write_bytes(target, manifest_jsonl(source))
         elif kind == "config":
             written += write_bytes(target, cleaned_config(source))
+        elif kind == "head":
+            written += resaved_head(source, target)
         else:
             raise ValueError(kind)
     written += write_bytes(dest / "README.md", CARD.read_bytes())
@@ -311,12 +360,6 @@ def write_sums(dest, paths):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def is_text(path):
-    """grep's rule: a file with a NUL byte in its first 32 KiB is binary."""
-    with path.open("rb") as handle:
-        return b"\x00" not in handle.read(1 << 15)
-
-
 def sampled_matches(data):
     """The sampled candidate texts of a JSONL file that match PRIVATE_PATTERN, or None if any match lies elsewhere.
 
@@ -346,10 +389,8 @@ def check(dest, paths):
         samples = sampled_matches(data) if hits and path.endswith(".jsonl") else None
         if hits and samples:
             print(f"note: {path}: {hits} only inside sampled candidate texts (model output, kept): {samples}")
-        elif hits and is_text(dest / path):
-            failures.append(f"{path}: private text {hits}")
         elif hits:
-            print(f"note: binary file {path} contains {hits}")
+            failures.append(f"{path}: private text {hits}")
         if not path.endswith(".jsonl"):
             continue
         for number, line in enumerate(jsonl_lines(data), 1):

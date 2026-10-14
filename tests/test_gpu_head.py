@@ -18,7 +18,8 @@ runs the same bf16 kernels (LengthHead.predict_examples). On the authors' platfo
 agree to about 1e-6; without the filler a single prompt would differ by up to 0.07.
 
 GPU only (`make test-gpu`); needs flash-attn, the pinned LLaDA-1.5 checkpoint (README.md) and the head
-checkpoint at artifacts/heads/llada.pt (the authors' final.pt of run fin_llada_m70_100k).
+checkpoint at artifacts/heads/llada.pt (the authors' final.pt of run fin_llada_m70_100k, re-saved without the run
+directory pickled in its training config; tensors identical, SHA-256 in the fixture's head.checkpoint_sha256).
 """
 import hashlib
 import json
@@ -91,11 +92,12 @@ def canvases(head, fixture):
 
 
 def test_checkpoint_is_the_frozen_head(head_path, fixture):
+    """The published head, or the authors' original final.pt it was re-saved from (the same tensors)."""
     digest = hashlib.sha256()
     with open(head_path, "rb") as handle:
         for block in iter(lambda: handle.read(1 << 24), b""):
             digest.update(block)
-    assert digest.hexdigest() == fixture["head"]["checkpoint_sha256"]
+    assert digest.hexdigest() in (fixture["head"]["checkpoint_sha256"], fixture["head"]["trained_checkpoint_sha256"])
 
 
 def test_head_reads_the_frozen_compact_prompts(head, fixture, canvases):

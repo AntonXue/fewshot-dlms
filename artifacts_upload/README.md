@@ -121,13 +121,23 @@ models at the revisions below. Section numbers refer to the paper.
   698 ablation packets. The packet texts are not shipped; `judge.py` rebuilds them byte for byte. The three `npz` files
   hold the predicted length distributions (float32, `P [214, 256]`) of head C and of two comparator heads at the 214
   target sites; the comparator heads themselves are not shipped.
-- **`heads`**. The checkpoints used for the paper's pools, byte for byte (their SHA-256 are the ones recorded in the
-  freeze record, in the Java pools' `head_ckpt_sha` and in `SHA256SUMS`). Each is a trainable fp32 copy of the
+- **`heads`**. The checkpoints used for the paper's pools, re-saved without the run directory that was pickled in
+  their training configuration (see the changes below): the tensors are identical to the authors' files, byte for
+  byte. The stored pools and predictions keep recording the original files' SHA-256 (`head_ckpt_sha` in the Java pools,
+  `ckpt_sha` in the `npz` files, the freeze record); the table below maps them to the published files. Each is a
+  trainable fp32 copy of the
   backbone's last transformer block and final norm plus a categorical head over the lengths 1..256; the backbone stays
   frozen. `lengths.LengthHead.load` of the code repository loads them. The benchmark heads were trained on 100,000
   prompts (70 % structured few-shot / 30 % code edits, 1,563 updates, seed 0); head C on 20,000 draws of its Java
   corpus (50 % s5g / 50 % s5h, 313 updates, seed 0). This group has four files: the spec's "five heads" counted head C's
   comparator, whose predictions ship as `java/length/s5g_B_s5final_G4.npz` instead of a checkpoint.
+
+  | file | SHA-256 of the authors' file (recorded in pools and predictions) | SHA-256 of the published file |
+  |---|---|---|
+  | `heads/llada.pt` | `0de13a8ac6b881493e368d281531326b84fe7f5d2c50b1dccba6491dd1dec1d8` | `a49355771567e3b091e8a5d79b09aadd460b677af0f850af6d4afe27360e1452` |
+  | `heads/nemotron.pt` | `df46105dab89104d0d1ccdb34795343a69fadda5528d610fd725bf414fb62e62` | `c0509fba53347491ed927f1ee2d55f8ae9ce5859eeabd4ef8a245d215943842a` |
+  | `heads/dqwen.pt` | `83126cce639d3aa28cee0ef13cc526cd63684b8c94c6ff51ddad511ba206232f` | `3241752d59aabb53769fa5e3353c04142fc03bbbeb3cc9116098f1cbbdcf927d` |
+  | `heads/java_head_C.pt` | `ea54c8b92110f4c5c4dbe838721d23961775082712247f8099b74e8d7d312309` | `b2efefded5ac382b5fc67ace4ee6d9f0ebfa15b820f2431b6f67cdb09721cebf` |
 - **`head_training`**. The authors' rendered training prompts, one file per backbone tokenizer (`train_head.py` of the
   code repository reads them):
   - `fsp_<backbone>_train.jsonl`: 100,000 structured few-shot prompts (List Functions tasks outside List
@@ -155,6 +165,10 @@ Everything is copied byte for byte except:
   SHA-256 digests under the same key + `_sha256`. The reference answers and the sampled candidates stay. The code
   repository rebuilds the text from the original sources (`data/benchmarks/build.py`).
 - The training configurations lose the run directory (`root`); head C's corpora are reduced to manifests (above).
+- The four head checkpoints are loaded and saved again (`torch.save`, loadable with `weights_only=True`) with the same
+  `root` entry removed from the training configuration pickled in them; nothing else in the configuration changes,
+  and every tensor is identical to the original, byte for byte. Their SHA-256 therefore differ from the ones the
+  pools record (table above).
 
 The tables of the paper are recomputed from these files exactly (`make test-parity` in the code repository).
 
