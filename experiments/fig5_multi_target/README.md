@@ -1,0 +1,92 @@
+# Figure 5: several targets on one canvas (Section 4.2)
+
+The M × J grid of Section 4.2 and three appendix figures that use the same machinery:
+
+| Paper | Content | Output of `plot.py` | Table in `data/tables/fig5/` |
+|---|---|---|---|
+| Figure 5 (Section 4.2) | ordinary A_all, ordinary A_avg, guidance gain in A_all at β = 0.5 | `fig5.pdf` | `cells.csv` |
+| Figure 8 (Appendix B.3) | gold NLL per token by reveal position, P1 vs P0 (cross-benchmark study, J = 8) | `fig8_mechanism.pdf` | `mechanism.csv` |
+| Figure 9 (Appendix B.3) | cross-benchmark study: ordinary A_all and its gain at β = 0.5 against J | `fig9_crossbench.pdf` | `cells_crossbench.csv` |
+| Figure 10 (Appendix B.4) | sharpening control (target P1^{3/2}) vs example guidance | `fig10_sharpening.pdf` | `sharpening.csv` |
+
+`gold.csv` and `diagnostics.csv` hold the gold-answer support and the pool diagnostics of every cell
+(coverage, reward spread, effective sample size).
+
+## Protocol
+
+- **Task.** List Functions–Easy, the 64 families of the report bank (`data/benchmarks/report/list_easy_fam.jsonl`),
+  graded by the integer-list grader of `grading.py`.
+- **Grid.** Models `llada`, `nemotron_pt` (causal prefix, bidirectional tail), `dqwen`; M ∈ {2, 4, 8, 16}
+  demonstrations; J ∈ {1, 2, 4, 8} targets: 48 cells × 64 families.
+- **Canvas.** One chat turn with demonstrations and targets interleaved in the family's 24-slot master layout
+  (`canvas.master_layout`, seed `mtfsp-20261011-mj-placement-v1`); cell (M, J) keeps D1..DM and T1..TJ.
+  Every target gets its oracle length: the token count of `" " + answer` under the model's tokenizer.
+- **Sampling.** K = 16 infills per family from P1 by fixed-order decoding (ascending canvas position, one token
+  per step, Lemma 3.1), all 16 in one reveal. The seed of a family's pool is the first 16 hex digits of
+  SHA-256(`sec42_mj|proposal|<model>|<episode_id>|<M>|<J>|master24`) mod 2^31 (`run.proposal_seed`).
+- **Scoring.** ell0 = log P0 with the demonstration outputs masked, for the distinct infills and the reference
+  infill together; the reference infill is also scored alone under P1. Both are teacher-forced in the same
+  reveal order.
+- **Guidance.** Pool weights softmax(β · (ell1 − ell0)); β = 0 is ordinary sampling and β = 0.5 the common
+  strength of the paper (β = 0.1, 0.25 and 1 are in `cells.csv` as sensitivity values). The sharpening control
+  has the same total exponent on P1 without P0: weights `pool_weights(ell1, ell0, 0, tau=2/3)` ∝ P1^{1/2}.
+- **Intervals.** Paired family bootstrap, 10,000 resamples, percentile 95 %:
+  - `cells.csv`, `gold.csv`: seed string `mtfsp-20261011-mj-bootstrap-v1`, cell key `<model>|<M>|<J>`
+    (`bootstrap.cell_indices`);
+  - `sharpening.csv`: seed SHA-256(`agentC-appA-20261011-mj-v1|<model>|<M>|<J>`), first 16 hex digits mod 2^32
+    (`analyze.sharpening_indices`);
+  - `mechanism.csv`: seed string `gold|<model>|<task>|8` (`bootstrap.boot_sd`).
+- **Cross-benchmark study (Figures 8 and 9).** A separate study of Section 4.1's pipeline: SST-2, List
+  Functions–Easy, SALT and Movie Director, M = 4, J ∈ {1, 2, 4, 8}, K = 64, three DLMs. Its pools are not
+  mixed with the K = 16 grid. Figure 9 plots its cell table (`cells_crossbench.csv`, produced by the Figure 4
+  pipeline); Figure 8 uses its reference answers scored target by target under P1 and P0.
+
+## Commands
+
+    python experiments/fig5_multi_target/analyze.py --pools artifacts/pools/fig5 --compare data/tables/fig5
+    python experiments/fig5_multi_target/plot.py                      # PDFs in experiments/fig5_multi_target/out/
+
+`analyze.py` needs the frozen pools (`python -m fewshot_dlms.fetch pools java`):
+
+    artifacts/pools/fig5/<model>/list_easy_fam_M{M}_J{J}.jsonl            one record per family (the grid)
+    artifacts/pools/fig5/crossbench_gold/<model>/<task>_M4_J8_il.jsonl    reference answers scored (Figure 8)
+
+It writes `families.csv`, `cells.csv`, `gold.csv`, `diagnostics.csv`, `sharpening.csv`, `mechanism.csv`,
+`candidates.csv.gz` and `coverage.json`, takes about 10 s on a CPU, and with `--compare` prints the largest
+difference per column against the paper's tables and, per cell, whether the paper's ordinary A_all lies inside
+the 95 % CI of the pools analysed. `plot.py` needs only `data/tables/fig5/`.
+
+GPU, one model per process:
+
+    python experiments/fig5_multi_target/run.py --model llada --M 2,4,8,16 --J 1,2,4,8 --K 16 --out artifacts/reruns/fig5
+    make rerun-fig5        # LLaDA-1.5, cell M = 4, J = 2, first 8 families, then analyze.py --compare
+
+`--families N` keeps the first N families. Records are appended to
+`<out>/<model>/list_easy_fam_M{M}_J{J}.jsonl` as families finish, so an interrupted run resumes;
+`<out>/<model>/manifest_<hash>.json` holds the configuration, its hash (the records' `protocol_hash`), every
+seed, and the library and GPU versions.
+
+## Runtime
+
+Sampling and scoring one cell (64 families, K = 16) took, on one H100 NVL in the authors' run:
+
+| model | J = 1 | J = 2 | J = 4 | J = 8 | whole grid |
+|---|---|---|---|---|---|
+| `llada` | 3–5 min | 7–13 min | 19–37 min | 73–111 min | 8.3 GPU-h |
+| `nemotron_pt` | 6–11 min | 8–14 min | 25–45 min | 91–147 min | 10.9 GPU-h |
+| `dqwen` | 7–11 min | 9–16 min | 26–46 min | 81–132 min | 11.0 GPU-h |
+
+(ranges over M; `seconds_per_family` in `diagnostics.csv`).
+
+## Fidelity
+
+- **Analysis.** On the frozen pools `analyze.py` reproduces `cells.csv`, `gold.csv`, `diagnostics.csv`,
+  `sharpening.csv` and `mechanism.csv` exactly: every column, maximum difference 0 (`make test-parity`).
+- **Figures.** Rendered with `pdftoppm -r 150`, the four PDFs are pixel-identical to the paper's figures.
+- **Reruns.** On an H100 NVL with torch 2.7.1+cu128, `run.py --K 16` reproduces the frozen records of LLaDA-1.5
+  and Nemotron bit for bit (tokens, ell1, ell0 and the reference scores; checked on two families of the cells
+  (4, 2), (4, 8), (16, 2), (16, 8) and (4, 2), (4, 8) respectively). dQwen3.5 runs autotuned Triton kernels whose
+  numerics vary from process to process, so its reruns are statistical. Other GPUs or K ≠ 16 give other draws:
+  judge such a rerun by `--compare`, which asks whether the frozen mean lies inside the rerun's 95 % CI.
+- Two frozen pool files, LLaDA-1.5 (16, 8) and dQwen3.5 (16, 4), hold one family twice; like the paper's
+  analysis, `analyze.py` keeps the first complete record of every family.

@@ -26,6 +26,10 @@ gpu = ["flash-linear-attention==0.5.1"]
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# TeX Gyre Pagella for the figures (figstyle.py), with its license texts (GUST Font License, LPPL 1.3c).
+[tool.setuptools.package-data]
+fewshot_dlms = ["fonts/*.otf", "fonts/*.txt"]
+
 [tool.pytest.ini_options]
 markers = ["gpu: needs a CUDA GPU and model weights", "parity: needs fetched artifacts"]
 # Third-party warnings: sentencepiece (imported by the tokenizers) is a SWIG extension that warns on import
