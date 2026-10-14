@@ -48,14 +48,19 @@ episodes, their provenance and licenses are in `data/java/`.
   with it (M = 1) and, for the 47 anchors whose targets also form an M = 2 episode, with both demonstrations of
   that episode (M = 2), under the neutral instruction `JAVA_ZERO_DEMO_INSTRUCTION`, oracle lengths, K = 16,
   β = 0. Seed: SHA-256(`c2a07e4a701f0a41|demo_ablation|<anchor>|<target sites joined by +>|<M>`)[:12] mod 2^31.
-  Every arm was judged with the anchor's demonstration in the packet.
+  Every arm was judged with the anchor's demonstration in the packet. The ablation ships the paper's verdicts
+  (`java/zero_demo/judging/verdicts.jsonl`); re-judging it is not supported, and `judge.py` exits with status 2 on
+  its pool files. A rerun of the ablation (`run.py --study zero_demo`) is graded by the shipped verdicts wherever it
+  draws texts the paper drew.
 
 ## The judge
 
-The paper's verdicts were produced by **Claude Sonnet 5.5 running as Claude Code sub-agents** (five packets of
-different episodes per call; 2,089 packets for the main run, 698 for the ablation). Before the run, 46 calibration
-controls built from the source of 12 episodes (references, no-ops, partial edits, swapped arguments, flipped
-conditions, wrong receivers, harmless comments) were judged one per call: 46/46 matched their expected verdicts.
+The paper's verdicts were produced by **Claude Sonnet 5.5 running as Claude Code sub-agents**, each call judging
+several packets of different episodes: the main run's 2,089 packets took 272 calls; the ablation's 698 packets
+reused 93 verdicts of the main run (byte-identical packets) and judged 605 in calls of up to five packets of
+different anchors. Before the main run, 46 calibration controls built from the source of 12 episodes (references,
+no-ops, partial edits, swapped arguments, flipped conditions, wrong receivers, harmless comments) were judged one
+packet per call: 46/46 matched their expected verdicts (45/46 when the ablation judged them again).
 The original verdicts ship with the artifacts (`java/judging/verdicts.jsonl`, `java/zero_demo/judging/verdicts.jsonl`)
 and `analyze.py` reads them.
 
@@ -63,13 +68,18 @@ and `analyze.py` reads them.
 all 2,089 + 698 + 46 frozen packets in `make test-parity`), rubric r1 verbatim as the system prompt, one packet per
 call, model `claude-sonnet-5-5`, the verdict JSON parsed as in the paper's run. **Re-judging is approximate**: an API
 call is not a Claude Code sub-agent, and an LLM's verdicts vary between calls. It needs `pip install -e '.[judge]'` and
-`ANTHROPIC_API_KEY`, and it costs API credits (a packet with the rubric is several thousand input tokens).
+`ANTHROPIC_API_KEY` (without it, it exits with status 2 before judging anything), and it costs API credits (a
+packet with the rubric is several thousand input tokens). A reply that is not a valid verdict, or a declined
+request, leaves its packet unjudged for the next run; any other API error stops the run, which resumes from `--out`.
 
     python experiments/fig7_java/judge.py --calibrate --limit 5          # first 5 calibration controls vs expected and the paper's judge
     python experiments/fig7_java/judge.py --pools artifacts/reruns/fig7/pools   # every new packet of a rerun
 
 A packet's key is the first 20 hex digits of SHA-256(`<rubric sha16>|<episode>|<demo sites>|<texts as sorted JSON>`),
 so a rerun that draws texts the paper already judged is graded with the paper's verdicts (`analyze.py --verdicts`).
+
+One test calls the API (two calibration controls; marker `api`). `make test` and `make test-parity` never run it;
+run it on purpose with `make test-api` (or `pytest -m api`), with `ANTHROPIC_API_KEY` set and the artifacts fetched.
 
 ## Commands
 
@@ -104,7 +114,10 @@ draws the learned lengths from the stored predictions instead of running head C.
 ## Runtime
 
 On one H100 NVL in the authors' run: the main run took 2.9 GPU-h (oracle 0.55 h, learned 2.33 h; a learned
-episode has up to 16 canvases), the ablation 0.3 GPU-h, the judge 329 + 684 sub-agent calls.
+episode has up to 16 canvases), the ablation 0.3 GPU-h. The judge made 329 sub-agent calls for the main run (272
+for the 2,089 report packets, 46 calibration controls, one retry of a malformed reply, ten agreement repeats). The
+ablation judged 605 fresh report packets in calls of up to five packets, and 79 packets more (the 46 controls again,
+6 repeats of them, 7 malformed replies, 20 agreement repeats); its records do not give the number of calls.
 
 ## Fidelity
 

@@ -17,14 +17,17 @@ exactly in every other column):
 
 The parity tests need the fetched Java artifacts (`python -m fewshot_dlms.fetch pools java`). They also check
 that judge.py rebuilds every frozen judge packet byte for byte and that run.py's seed and length-sampling rules
-give the stored seeds and allocations. The other tests run on every `make test`.
+give the stored seeds and allocations. One test calls the Anthropic API (marker `api`, `make test-api`); the
+others run on every `make test`.
 """
+import argparse
 import hashlib
 import importlib.util
 import json
 import os
 import subprocess
 import sys
+import types
 
 import numpy as np
 import pandas as pd
@@ -224,11 +227,15 @@ def test_zero_demo_units_and_seeds_match_the_stored_pools(root, java):
         assert run.zero_demo_seed(unit) == record["seed"]
 
 
-@pytest.mark.parity
+@pytest.mark.api
 @pytest.mark.skipif(not os.environ.get("ANTHROPIC_API_KEY"), reason="calls the Anthropic API: needs ANTHROPIC_API_KEY")
 def test_judge_api_on_two_calibration_controls(root, java):
     """judge.py through the Anthropic API on the first two calibration controls (a reference rewrite, expected
-    correct, and a no-op, expected incorrect), as the paper's judge called them. Costs two API calls."""
+    correct, and a no-op, expected incorrect), as the paper's judge called them.
+
+    Costs two API calls, so it carries its own marker and runs only on request (`make test-api`, i.e.
+    `pytest -m api`); `make test` and `make test-parity` never run it. It also needs the fetched artifacts.
+    """
     anthropic = pytest.importorskip("anthropic")
     judge = load_script(root, "judge")
     episodes = {episode["episode_id"]: episode for episode in load_java_episodes()}
@@ -278,6 +285,84 @@ def test_verdict_parsing_follows_the_paper(root):
     assert verdict["instance_ill_posed"] is False
     with pytest.raises(ValueError):
         judge.parse_verdict('{"targets": [], "joint": "maybe"}', {"Target 1": "t1"})
+
+
+@pytest.mark.parametrize("reply", [
+    '{"targets": {"label": "Target 1"}, "joint": "correct"}',  # targets not a list
+    '{"targets": ["Target 1"], "joint": "correct"}',  # a target that is not an object
+    '{"targets": [{"label": ["Target 1"], "verdict": "correct"}], "joint": "correct"}',  # a label that is not a string
+])
+def test_malformed_verdicts_are_rejected_not_raised(root, reply):
+    """A reply that is JSON but not the rubric's schema raises ValueError, so the packet stays unjudged."""
+    judge = load_script(root, "judge")
+    with pytest.raises(ValueError):
+        judge.parse_verdict(reply, {"Target 1": "t1"})
+
+
+class FakeMessages:
+    """Stands in for client.messages: returns one fixed response object."""
+
+    def __init__(self, response):
+        self.response = response
+
+    def create(self, **kwargs):
+        return self.response
+
+
+class FakeClient:
+    def __init__(self, response):
+        self.messages = FakeMessages(response)
+
+
+def test_judge_leaves_a_packet_unjudged_on_refusal_or_bad_reply(root):
+    """judge_one returns None for a declined request (with or without stop_details) and for a malformed reply."""
+    judge = load_script(root, "judge")
+    args = argparse.Namespace(model=judge.MODEL)
+    labels = {"Target 1": "t1"}
+    refusal = types.SimpleNamespace(stop_reason="refusal", content=[])  # no stop_details attribute at all
+    assert judge.judge_one(FakeClient(refusal), args, "rubric", "packet", labels) is None
+    block = types.SimpleNamespace(type="text", text='{"targets": [7], "joint": "correct"}')
+    malformed = types.SimpleNamespace(stop_reason="end_turn", content=[block])
+    assert judge.judge_one(FakeClient(malformed), args, "rubric", "packet", labels) is None
+    block = types.SimpleNamespace(type="text", text='{"targets": [{"label": "Target 1", "verdict": "correct"}], "joint": "correct"}')
+    valid = types.SimpleNamespace(stop_reason="end_turn", content=[block])
+    assert judge.judge_one(FakeClient(valid), args, "rubric", "packet", labels)["per_target"] == {"t1": "correct"}
+
+
+def run_judge(root, *arguments, without_key=True):
+    environment = dict(os.environ)
+    if without_key:
+        environment.pop("ANTHROPIC_API_KEY", None)
+        environment.pop("ANTHROPIC_AUTH_TOKEN", None)
+    command = [sys.executable, str(root / "experiments/fig7_java/judge.py"), *arguments]
+    return subprocess.run(command, capture_output=True, text=True, cwd=root, env=environment)
+
+
+def test_judge_refuses_zero_demo_pools(root, tmp_path):
+    """The ablation's pools are keyed by unit: judge.py says it ships the paper's verdicts and exits 2."""
+    record = {"unit_id": "A|M0", "anchor_episode_id": "A", "M": 0, "J": 1, "candidates": []}
+    (tmp_path / "pools_zero_demo.jsonl").write_text(json.dumps(record) + "\n")
+    result = run_judge(root, "--pools", str(tmp_path))
+    assert result.returncode == 2
+    assert "the zero-demo ablation ships the paper's verdicts; re-judging it is not supported" in result.stderr
+
+
+def test_judge_without_an_api_key_exits_before_judging(root, tmp_path):
+    """Without ANTHROPIC_API_KEY judge.py names the variable and exits 2, before any banner (pools and --calibrate)."""
+    episode = load_java_episodes()[0]
+    record = {"episode_id": episode["episode_id"], "regime": "oracle", "candidates": [{"text_by_target": {"t1": "x"}, "text_sha": "s"}]}
+    (tmp_path / "pools_oracle.jsonl").write_text(json.dumps(record) + "\n")
+    result = run_judge(root, "--pools", str(tmp_path), "--out", str(tmp_path / "verdicts.jsonl"))
+    assert result.returncode == 2
+    assert "ANTHROPIC_API_KEY" in result.stderr
+    assert result.stdout == ""
+    controls = tmp_path / "calibration" / "controls.jsonl"
+    controls.parent.mkdir()
+    controls.write_text("{}\n")
+    result = run_judge(root, "--calibrate", "--controls", str(controls), "--out", str(tmp_path / "calibration.jsonl"))
+    assert result.returncode == 2
+    assert "ANTHROPIC_API_KEY" in result.stderr
+    assert result.stdout == ""
 
 
 def test_packet_key_and_seed_rules(root):

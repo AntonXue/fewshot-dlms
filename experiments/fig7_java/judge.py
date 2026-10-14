@@ -10,12 +10,14 @@ the packet shows no reference answer, length regime, guidance weight, reward or 
 rubric_r1.md (verbatim from the paper's run) and answers with a JSON verdict per target and a joint verdict:
 "correct" only if every target is correct, "incorrect" if any is, else "uncertain".
 
-The paper's verdicts were produced by Claude Sonnet 5.5 running as Claude Code sub-agents (five packets of
-different episodes per sub-agent call; 46 calibration controls judged one per call; 46/46 matched their expected
-verdicts). This script calls the Anthropic API instead (model claude-sonnet-5-5 by default, one packet per call,
+The paper's verdicts were produced by Claude Sonnet 5.5 running as Claude Code sub-agents (several packets of
+different episodes per sub-agent call, 2,089 packets in 272 calls; the 46 calibration controls one per call, 46/46
+matching their expected verdicts). This script calls the Anthropic API instead (model claude-sonnet-5-5 by default, one packet per call,
 rubric r1 as the system prompt). It is a re-implementation of the instrument, not a replay: an API call is not a
 Claude Code sub-agent, and LLM verdicts vary between calls, so re-judging is approximate. The original verdicts
-ship with the artifacts (java/judging/verdicts.jsonl) and analyze.py reads them by default.
+ship with the artifacts (java/judging/verdicts.jsonl) and analyze.py reads them by default. The pools of the
+zero-demonstration ablation (run.py --study zero_demo) are not re-judged: its verdicts ship with the artifacts
+(java/zero_demo/judging/verdicts.jsonl), and judge.py exits with status 2 on its pool files.
 
 Packet identity. The cache key of a packet is the first 20 hex digits of
 SHA-256("<rubric sha16>|<episode_id>|<demo sites joined by '|'>|<candidate texts as sorted JSON>"); a text judged
@@ -46,6 +48,10 @@ CONTEXT_AFTER = 12  # lines shown after it
 CUT_MARKER = "    // ..."
 VERDICTS = ("correct", "incorrect", "uncertain")
 JUDGE_LABEL = "Claude Sonnet 5.5 via the Anthropic API ({model}), rubric r1"
+ZERO_DEMO_MESSAGE = (
+    "the zero-demo ablation ships the paper's verdicts; re-judging it is not supported "
+    "(its packets show the anchor's demonstration for every arm; analyze.py reads java/zero_demo/judging/verdicts.jsonl)"
+)
 TASK = (
     "Judge the packet below with the rubric in the system prompt. Answer with the verdict JSON of the rubric's "
     "schema and nothing else.\n\n"
@@ -157,6 +163,20 @@ def read_pools(pools):
     return records
 
 
+def holds_zero_demo_records(pools):
+    """True when a pool file of `pools` holds records of the zero-demonstration ablation (keyed by unit, no regime)."""
+    for path in sorted(glob.glob(str(Path(pools) / "pools_*.jsonl"))):
+        with open(path, encoding="utf-8") as handle:
+            for line in handle:
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if "unit_id" in record and "regime" not in record:
+                    return True
+    return False
+
+
 def report_packets(records, episodes, rubric):
     """One packet per distinct (episode, candidate texts), numbered in order of first appearance."""
     packets = {}
@@ -192,8 +212,9 @@ def calibration_packet(episode, control):
 def parse_verdict(reply, label_map):
     """The verdict in a judge's reply: the JSON object from the first '{' to the last '}'.
 
-    Raises ValueError unless the joint verdict and every target verdict are one of correct / incorrect /
-    uncertain and there is one target verdict per target. Labels ("Target 1") are mapped back to target keys.
+    Raises ValueError unless the reply follows the rubric's schema: a "targets" list of objects with a string
+    "label", one per target, every target verdict and the joint verdict one of correct / incorrect / uncertain.
+    Labels ("Target 1") are mapped back to target keys.
     """
     text = reply.strip()
     try:
@@ -201,7 +222,13 @@ def parse_verdict(reply, label_map):
         response = json.loads(text)
     except ValueError as error:
         raise ValueError(f"no JSON verdict in the reply: {error}") from error
+    if not isinstance(response, dict):
+        raise ValueError("the verdict is not a JSON object")
     targets = response.get("targets", [])
+    if not isinstance(targets, list) or not all(isinstance(target, dict) for target in targets):
+        raise ValueError("'targets' is not a list of objects")
+    if not all(isinstance(target.get("label"), str) for target in targets):
+        raise ValueError("a target label is not a string")
     if response.get("joint") not in VERDICTS:
         raise ValueError(f"joint verdict {response.get('joint')!r}")
     if any(target.get("verdict") not in VERDICTS for target in targets):
@@ -224,8 +251,17 @@ def parse_verdict(reply, label_map):
 # ---------------------------------------------------------------------------------------------
 
 
+def require_api_key():
+    """Exit with status 2 and a message unless the environment holds Anthropic API credentials."""
+    if os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"):
+        return
+    print("judge.py calls the Anthropic API: set ANTHROPIC_API_KEY (the paper's verdicts need no key: they ship with the artifacts)", file=sys.stderr)
+    sys.exit(2)
+
+
 def make_client():
-    """An Anthropic client (credentials from the environment, e.g. ANTHROPIC_API_KEY); needs the `judge` extra."""
+    """An Anthropic client with the credentials of the environment (ANTHROPIC_API_KEY); needs the `judge` extra."""
+    require_api_key()
     try:
         import anthropic
     except ImportError as error:
@@ -246,7 +282,7 @@ def call_judge(client, model, rubric_text, packet_text):
         messages=[{"role": "user", "content": TASK + packet_text}],
     )
     if response.stop_reason == "refusal":
-        raise RuntimeError(f"the judge declined the packet ({response.stop_details})")
+        raise RuntimeError(f"the judge declined the packet ({getattr(response, 'stop_details', None)})")
     return "".join(block.text for block in response.content if block.type == "text")
 
 
@@ -353,6 +389,7 @@ def main():
         if not Path(args.controls).exists():
             print(f"no calibration controls at {args.controls}; run: python -m fewshot_dlms.fetch pools java", file=sys.stderr)
             sys.exit(2)
+        require_api_key()
         args.out = args.out or "artifacts/reruns/fig7/judging/calibration_verdicts.jsonl"
         Path(args.out).parent.mkdir(parents=True, exist_ok=True)
         judge_calibration(args, episodes)
@@ -360,6 +397,10 @@ def main():
     if not any(Path(args.pools).glob("pools_*.jsonl")):
         print(f"no pools in {args.pools}", file=sys.stderr)
         sys.exit(2)
+    if holds_zero_demo_records(args.pools):
+        print(ZERO_DEMO_MESSAGE, file=sys.stderr)
+        sys.exit(2)
+    require_api_key()
     args.out = args.out or str(Path(args.pools).parent / "judging" / "verdicts.jsonl")
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     judge_report(args, episodes)
