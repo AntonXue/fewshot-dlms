@@ -26,7 +26,7 @@ Code for "Multi-Target Few-Shot Prompting with Diffusion Language Models". READM
 
 - `python -m fewshot_dlms.fetch <group> ...` downloads `UT-IFML/fewshot-dlms` at the revision pinned in ARTIFACTS.md
   into `artifacts/` and checks `SHA256SUMS`. Groups: `pools` and `java` (about 390 MB together, what the analyses
-  need), `heads` (3.5 GB), `head_training` (1.3 GB).
+  need), `heads` (3.5 GB), `head_training` (1.0 GB).
 - `make test`: CPU unit tests and fixtures; no downloads, no GPU. Run it before every commit.
 - `make test-parity` and `make reproduce`: CPU; every paper table from the pools; need `fetch pools java`.
 - `make test-gpu`: replay on a CUDA GPU; needs the pinned checkpoints, flash-attn, `fetch java heads`.

@@ -111,3 +111,53 @@ def test_check_allows_an_invented_path_only_in_sampled_texts(assembler, tmp_path
     (tmp_path / "elsewhere.jsonl").write_text(json.dumps(elsewhere) + "\n")
     assert assembler.check(tmp_path, ["sampled.jsonl"]) == []
     assert len(assembler.check(tmp_path, ["elsewhere.jsonl"])) == 1
+
+
+def _fsp_rows(rendered):
+    """Three synthetic FSP rows (one kept source, one excluded, another kept), logical or rendered."""
+    rows = []
+    for number, source in enumerate(("list", "movies", "salt")):
+        row = {"id": f"fsp-{number}", "split": "train", "source": source, "M": 2, "J": 1}
+        if rendered:
+            row.update(input_ids=[5, 6, 7 + number], mask_positions=[2], labels=[1 + number], n_tokens=3)
+        else:
+            row.update(instruction="Map the input.", entries=[{"role": "target", "input": "é", "output": "x"}])
+        rows.append(row)
+    return rows
+
+
+def test_fsp_filter_drops_the_excluded_sources_and_keeps_lines_byte_for_byte(assembler, tmp_path):
+    """The kept rows of a logical and a rendered FSP file are their original lines, in order; the final newline stays."""
+    assert set(assembler.EXCLUDED_FSP_SOURCES) == {"movies", "atis"}
+    for rendered, ascii_only in ((False, False), (True, True)):
+        rows = _fsp_rows(rendered)
+        lines = [json.dumps(row, ensure_ascii=ascii_only) for row in rows]
+        source = tmp_path / f"fsp_{rendered}.jsonl"
+        source.write_bytes(("\n".join(lines) + "\n").encode("utf-8"))
+        data, kept, dropped = assembler.fsp_jsonl(source)
+        assert (kept, dropped) == (2, 1)
+        assert data == (lines[0] + "\n" + lines[2] + "\n").encode("utf-8")
+        assert [json.loads(line)["id"] for line in data.decode("utf-8").splitlines()] == ["fsp-0", "fsp-2"]
+    atis = tmp_path / "atis.jsonl"
+    atis.write_text(json.dumps(dict(_fsp_rows(True)[0], source="atis")) + "\n", encoding="utf-8")
+    assert assembler.fsp_jsonl(atis) == (b"", 0, 1)  # every row dropped: an empty file
+
+
+def test_check_fails_on_an_excluded_fsp_row_or_misaligned_fsp_files(assembler, tmp_path):
+    """check() requires the FSP files without the excluded sources and with one id sequence across the four files."""
+    names = [f"head_training/fsp_{name}_train.jsonl" for name in ("logical", "llada")]
+    (tmp_path / "head_training").mkdir()
+
+    def write(name, rows):
+        (tmp_path / name).write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+
+    kept = [row for row in _fsp_rows(True) if row["source"] not in assembler.EXCLUDED_FSP_SOURCES]
+    write(names[0], [row for row in _fsp_rows(False) if row["source"] not in assembler.EXCLUDED_FSP_SOURCES])
+    write(names[1], kept)
+    assert assembler.check(tmp_path, names) == []
+    write(names[1], _fsp_rows(True))
+    failures = assembler.check(tmp_path, names)
+    assert any("movies" in failure for failure in failures), failures
+    write(names[1], kept[::-1])
+    failures = assembler.check(tmp_path, names)
+    assert len(failures) == 1 and "same row ids" in failures[0], failures

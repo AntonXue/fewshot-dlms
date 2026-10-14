@@ -1,7 +1,7 @@
 # Artifacts
 
 The frozen pools, length heads, head-training data and judge verdicts live on the Hugging Face dataset
-[`UT-IFML/fewshot-dlms`](https://huggingface.co/datasets/UT-IFML/fewshot-dlms) (5.14 GB). Its README is the data card:
+[`UT-IFML/fewshot-dlms`](https://huggingface.co/datasets/UT-IFML/fewshot-dlms) (4.89 GB). Its README is the data card:
 provenance, seeds, protocol hashes and licenses per group. `python -m fewshot_dlms.fetch` downloads groups of it at the
 pinned revision into `artifacts/` and checks every file against `SHA256SUMS`.
 
@@ -11,7 +11,7 @@ Run from the repository root:
 
     python -m fewshot_dlms.fetch pools java       # make test-parity, make reproduce, every analyze.py (386 MB)
     python -m fewshot_dlms.fetch heads            # the length heads for the GPU runs (3.47 GB)
-    python -m fewshot_dlms.fetch head_training    # the heads' training data (1.28 GB)
+    python -m fewshot_dlms.fetch head_training    # the heads' training data (1.03 GB)
     python -m fewshot_dlms.fetch --check          # re-check what is under artifacts/, no download
     python -m fewshot_dlms.fetch                  # the group table; downloads nothing
 
@@ -26,9 +26,9 @@ refused login or an unreachable Hub ends the fetch with one line naming the caus
 | | |
 |---|---|
 | dataset | `UT-IFML/fewshot-dlms` (repo type `dataset`) |
-| pinned revision | `5a79ed36648816ffbc27e3c11d7938692835d227` (also in `data/artifacts_revision.txt`) |
+| pinned revision | `f65650d34e80892b94a69083371fd939ed64edcc` (also in `data/artifacts_revision.txt`) |
 | file list | [`SHA256SUMS`](SHA256SUMS): `<sha256>  <path>` for each of the 500 files, the format of `sha256sum` |
-| SHA-256 of `SHA256SUMS` | `bdead7d377a47cf4835985e11ec53f6ed4b056c10374e77fa82b31d4c6d11fe9` |
+| SHA-256 of `SHA256SUMS` | `c22f4e3f3609ab684b50c073816a9984684f8adf685b927426a67ad79317cd49` |
 | built by | `tools/assemble_artifacts.py` (data card: `artifacts_upload/README.md`) |
 
 The dataset holds `SHA256SUMS` too; the copy here is the one the fetcher trusts. To check a download by hand:
@@ -44,12 +44,16 @@ The dataset holds `SHA256SUMS` too; the copy here is the one the fetcher trusts.
 | `pools/fig6` | 56 | 73,747,644 | `experiments/fig6_lengths/analyze.py` |
 | `java` | 21 | 10,060,127 | `experiments/fig7_java/analyze.py`, `judge.py` |
 | `heads` | 4 | 3,473,109,316 | `experiments/fig6_lengths/run.py --mode learned`, `experiments/fig7_java/run.py --regime learned`, `make test-gpu` |
-| `head_training` | 22 | 1,278,322,054 | `experiments/fig6_lengths/train_head.py` |
-| `README.md` | 1 | 18,055 | the data card |
-| total | 500 | 5,137,570,636 | |
+| `head_training` | 22 | 1,025,900,426 | `experiments/fig6_lengths/train_head.py` |
+| `README.md` | 1 | 21,108 | the data card |
+| total | 500 | 4,885,152,061 | |
 
 `pools/fig6/<model>/list_easy_fam_M4_J{J}_oracle.jsonl` are the same bytes as
 `pools/fig4/report/<model>/list_easy_fam_M4_J{J}_il.jsonl`, shipped in both groups.
+
+`head_training/fsp_*` hold 66,499 of the authors' 100,000 structured few-shot training prompts: the 33,501 built
+from MIT Movie and ATIS are not shipped (data card, `head_training`). The frozen heads were trained on all
+100,000.
 
 ### Heads re-saved
 
@@ -90,4 +94,5 @@ The adapters in `src/fewshot_dlms/adapters/` load exactly these revisions.
 - dQwen3.5: flash-linear-attention 0.5.1 (the `gpu` extra), without causal-conv1d.
 - LLaDA-1.5 length heads: flash-attn 2.8.3.
 - The upload used huggingface_hub 1.23.0 (`upload_large_folder`; the re-saved heads, configs, card and
-  `SHA256SUMS` were then replaced with `upload_folder`).
+  `SHA256SUMS` were then replaced with `upload_folder`, later the four structured few-shot files, card and
+  `SHA256SUMS` once more). The dataset's history was then squashed into the single pinned commit.

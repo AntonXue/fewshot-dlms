@@ -24,6 +24,9 @@ What changes on the way; everything else is copied byte for byte:
   - Records of SST-2 and MIT Movie lose the benchmark text, as in data/fixtures: target_inputs and the decoded
     prompts in checks become SHA-256 digests under the same key + "_sha256"
     (extract_fixtures.without_benchmark_text). The reference answers and the sampled candidates stay.
+  - The structured few-shot training files (head_training/fsp_*.jsonl: the logical episodes and the three rendered
+    files) lose the rows whose "source" is in EXCLUDED_FSP_SOURCES (MIT Movie and ATIS); every kept line is copied
+    byte for byte, in its order (fsp_jsonl). The frozen heads were trained on the full set.
   - The training configs of the heads lose CONFIG_DROPPED; head C's training corpus ships as manifests, every field
     of a row except MANIFEST_DROPPED (the token ids).
   - The head checkpoints are re-saved (torch.save) with HEAD_CONFIG_DROPPED removed from the training config pickled
@@ -31,7 +34,8 @@ What changes on the way; everything else is copied byte for byte:
     new SHA-256s; the stored pools and predictions keep recording the original ones.
 Then it hashes the tree into SHA256SUMS (also written to the repository root, where fetch.py verifies downloads
 against it) and checks it: no record keeps a key of RUN_METADATA, no SST-2 or MIT Movie record keeps prompt text,
-and no file, text or binary, holds private text (private_hits: fewshot_dlms.leakcheck plus LOCAL_PRIVATE; in JSONL
+no FSP file holds a row of EXCLUDED_FSP_SOURCES and the four FSP files list the same ids in the same order, and no
+file, text or binary, holds private text (private_hits: fewshot_dlms.leakcheck plus LOCAL_PRIVATE; in JSONL
 files, sampled candidate texts excepted). With --check it also requires the tree to match the repository's SHA256SUMS
 and writes nothing. It exits with status 1 if a check fails or a source is missing, and with status 2 if
 tools/sources.local.json is missing or incomplete (with --check it needs only upload_dir).
@@ -103,6 +107,13 @@ RUN_METADATA = ("host", "hostname", "gpu_env", "gpu", "device", "pid", "cwd", "r
 CONFIG_DROPPED = ("root", "gpu")  # a head's training config (JSON): the run directory and the GPU index
 HEAD_CONFIG_DROPPED = ("root",)  # the config pickled in a head checkpoint: the run directory only; weights unchanged
 MANIFEST_DROPPED = ("input_ids", "mask_positions")  # head C's corpus rows: the tokenised code
+# The values of a structured few-shot (FSP) row's "source" whose rows the public head_training/ omits: MIT Movie
+# ("movies", fields other than Director) and ATIS queries. The two corpora keep their own terms, and the code repository
+# itself ships MIT Movie as record ids only (data/benchmarks/build.py rebuilds the text), so neither their plain text
+# (fsp_logical_train.jsonl) nor their token ids (fsp_<backbone>_train.jsonl) are redistributed. The frozen heads were
+# trained on all 100,000 prompts and are shipped as trained.
+EXCLUDED_FSP_SOURCES = ("movies", "atis")
+FSP_PREFIX = "head_training/fsp_"  # the logical FSP episodes and their three renderings, one row per episode id
 # Text that must not reach the tree: the generic machine paths and metadata keys of fewshot_dlms.leakcheck, and
 # (this site's own) the vocabulary of internal working notes. No names.
 LOCAL_PRIVATE = re.compile(r"hand-off|\.claude")
@@ -131,9 +142,9 @@ def plan(sources):
 
     `sources` maps each key of SOURCE_KEYS to its directory (load_sources).
 
-    kind is "copy" (bytes), "jsonl" (records without RUN_METADATA and benchmark text), "config" (JSON without
-    CONFIG_DROPPED), "manifest" (JSONL rows without MANIFEST_DROPPED) or "head" (a checkpoint re-saved without
-    HEAD_CONFIG_DROPPED in its training config).
+    kind is "copy" (bytes), "jsonl" (records without RUN_METADATA and benchmark text), "fsp" (the lines of the rows
+    outside EXCLUDED_FSP_SOURCES, byte for byte), "config" (JSON without CONFIG_DROPPED), "manifest" (JSONL rows
+    without MANIFEST_DROPPED) or "head" (a checkpoint re-saved without HEAD_CONFIG_DROPPED in its training config).
     """
     final_sweeps = sources["final_sweeps"]
     gold_probe = sources["gold_probe"]
@@ -195,9 +206,10 @@ def plan(sources):
     for backbone, run in HEAD_RUNS.values():
         files.append((f"heads/{backbone}.pt", length_project / "runs" / run / "final.pt", "head"))
         files.append((f"head_training/configs/{backbone}.json", length_project / "runs" / run / "config.json", "config"))
-        for name in (f"fsp_{backbone}_train", f"edit_{backbone}_train", f"listbench_dev_{backbone}", f"edit_{backbone}_dev"):
+        files.append((f"head_training/fsp_{backbone}_train.jsonl", length_project / "data" / f"fsp_{backbone}_train.jsonl", "fsp"))
+        for name in (f"edit_{backbone}_train", f"listbench_dev_{backbone}", f"edit_{backbone}_dev"):
             files.append((f"head_training/{name}.jsonl", length_project / "data" / f"{name}.jsonl", "jsonl"))
-    files.append(("head_training/fsp_logical_train.jsonl", length_project / "data" / "fsp_logical_train.jsonl", "jsonl"))
+    files.append(("head_training/fsp_logical_train.jsonl", length_project / "data" / "fsp_logical_train.jsonl", "fsp"))
     files.append(("heads/java_head_C.pt", java_length / "runs" / "s5hc_C" / "final.pt", "head"))
     files.append(("head_training/configs/java_head_C.json", java_length / "runs" / "s5hc_C" / "config.json", "config"))
     for corpus in HEAD_C_CORPUS:
@@ -264,6 +276,26 @@ def manifest_jsonl(source):
             record = {key: value for key, value in json.loads(line).items() if key not in MANIFEST_DROPPED}
             lines.append(dump_like(record, line) + "\n")
     return "".join(lines).encode("utf-8")
+
+
+def fsp_jsonl(source):
+    """The bytes of an FSP training file without the rows of EXCLUDED_FSP_SOURCES, the rows kept and the rows dropped.
+
+    A row is dropped by its own "source" field, which the logical file and the three rendered files carry row for row
+    (same ids, same order). Every other line, blank ones included, is kept byte for byte and in its order, so the kept
+    rows keep their token ids, labels and n_tokens, and the file keeps its final newline.
+    """
+    lines = []
+    kept = dropped = 0
+    for line in jsonl_lines(source.read_bytes()):
+        if not line.strip():
+            lines.append(line)
+        elif json.loads(line)["source"] in EXCLUDED_FSP_SOURCES:
+            dropped += 1
+        else:
+            lines.append(line)
+            kept += 1
+    return "\n".join(lines).encode("utf-8"), kept, dropped
 
 
 def cleaned_config(source):
@@ -366,6 +398,10 @@ def assemble(dest, files):
         elif kind == "jsonl":
             data = cleaned_jsonl(source)
             written += copy_file(source, target) if data is None else write_bytes(target, data)
+        elif kind == "fsp":
+            data, kept, dropped = fsp_jsonl(source)
+            print(f"{path}: kept {kept} rows, dropped {dropped} (source {' or '.join(EXCLUDED_FSP_SOURCES)})")
+            written += write_bytes(target, data)
         elif kind == "manifest":
             written += write_bytes(target, manifest_jsonl(source))
         elif kind == "config":
@@ -440,6 +476,7 @@ def sampled_matches(data):
 def check(dest, paths):
     """The checks of the module doc, on text and binary files alike; returns the list of failures."""
     failures = []
+    fsp_ids = {}  # FSP file -> its row ids in file order
     for path in paths:
         data = (dest / path).read_bytes()
         hits = private_hits(data.decode("latin-1"))  # latin-1: one character per byte, binary files too
@@ -450,6 +487,9 @@ def check(dest, paths):
             failures.append(f"{path}: private text {hits}")
         if not path.endswith(".jsonl"):
             continue
+        fsp = path.startswith(FSP_PREFIX)
+        if fsp:
+            fsp_ids[path] = []
         for number, line in enumerate(jsonl_lines(data), 1):
             if not line.strip():
                 continue
@@ -463,6 +503,13 @@ def check(dest, paths):
                 if "target_inputs" in record or "Input:" in rest:
                     failures.append(f"{path}:{number}: benchmark text of {record['source']}")
                     break
+            if fsp:
+                if record.get("source") in EXCLUDED_FSP_SOURCES:
+                    failures.append(f"{path}:{number}: a row of {record['source']}, which the FSP files omit")
+                    break
+                fsp_ids[path].append(record.get("id"))
+    if len({tuple(ids) for ids in fsp_ids.values()}) > 1:
+        failures.append(f"the FSP files {sorted(fsp_ids)} do not list the same row ids in the same order")
     return failures
 
 
