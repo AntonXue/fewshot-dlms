@@ -17,7 +17,8 @@ dependencies = [
 [project.optional-dependencies]
 judge = ["anthropic>=0.40"]
 dev = ["pytest>=8"]
-data = ["datasets>=3"]
+# pyarrow 26 needs NumPy 2, but the core dependencies pin numpy==1.26.4.
+data = ["datasets>=3", "pyarrow<26"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
