@@ -57,4 +57,5 @@ returns next-token logits and runs in `sample_ar` / `logprob_ar` / `decode_ar` o
 register it in `adapters/__init__.py` (`NAMES`, `adapter_class`), add it to the pipelines' model lists
 (`INTERFACE` and `MODELS41`/`MODELS42` in `fig4_single_target/run.py`, `MODELS` in the fig5 and fig6 `run.py`), give
 it entries in `TOLERANCES` and `BATCHED_TOLERANCES` of `tests/gpu_util.py`, and add a replay test like
-`tests/test_gpu_replay.py`.
+`tests/test_gpu_replay.py`. CPU tests need no checkpoint: `tests/fakes.py` (`FakeAdapter`, a byte-level stand-in) and
+`tests/test_adapters_cpu.py` (fake tokenizer and model classes with `monkeypatch`) are the harness to copy.
