@@ -43,6 +43,10 @@ KEYS = {
 COMPARE_LINE = re.compile(
     r"^(\S+) M=(\d+) J=(\d+): frozen A_all ([0-9.]+), rerun CI \[([0-9.]+), ([0-9.]+)\] -> frozen mean (inside|outside)"
 )
+# The verdict of the same cell under guidance at beta = 0.5, printed after the ordinary one.
+COMPARE_LINE_GUIDED = re.compile(
+    r"^(\S+) M=(\d+) J=(\d+) beta=0\.5: frozen A_all ([0-9.]+), rerun CI \[([0-9.]+), ([0-9.]+)\] -> frozen mean (inside|outside)"
+)
 
 
 def run_analyze(root, pools, out, *extra):
@@ -97,40 +101,45 @@ def test_table_matches_paper(root, analysis, name):
 
 @pytest.mark.parity
 def test_frozen_pools_lie_inside_their_own_intervals(analysis):
-    """Compared with itself, every cell reports the frozen mean inside the 95 % CI."""
+    """Compared with itself, every cell reports the frozen mean inside the 95 % CI, at beta = 0 and 0.5."""
     _, stdout = analysis
-    lines = [COMPARE_LINE.match(line) for line in stdout.splitlines()]
-    verdicts = [match.group(7) for match in lines if match]
-    assert len(verdicts) == 48
-    assert set(verdicts) == {"inside"}
+    for pattern in (COMPARE_LINE, COMPARE_LINE_GUIDED):
+        lines = [pattern.match(line) for line in stdout.splitlines()]
+        verdicts = [match.group(7) for match in lines if match]
+        assert len(verdicts) == 48
+        assert set(verdicts) == {"inside"}
 
 
 def test_compare_reports_inside_ci(root, tmp_path):
     """A resampled cell is judged by whether the frozen mean lies inside the rerun's 95 % CI.
 
-    The two-family fixture pool plays the rerun of the LLaDA-1.5 cell M = 4, J = 2.
+    The two-family fixture pool plays the rerun of the LLaDA-1.5 cell M = 4, J = 2; --compare prints one verdict
+    for ordinary sampling (beta = 0) and one for guidance at beta = 0.5.
     """
     pools = tmp_path / "pools"
     (pools / "llada").mkdir(parents=True)
     shutil.copy(root / "data" / "fixtures" / "fig5" / "llada_M4_J2.jsonl", pools / "llada" / "list_easy_fam_M4_J2.jsonl")
     result = run_analyze(root, pools, tmp_path / "out", "--compare", str(root / "data" / "tables" / "fig5"))
     assert result.returncode == 0, result.stderr
-    matches = [COMPARE_LINE.match(line) for line in result.stdout.splitlines()]
-    matches = [match for match in matches if match]
-    assert len(matches) == 1
-    model, M, J, frozen, lo, hi, verdict = matches[0].groups()
-    assert (model, M, J) == ("llada", "4", "2")
-
+    lines = result.stdout.splitlines()
     paper = pd.read_csv(root / "data" / "tables" / "fig5" / "cells.csv")
-    paper_cell = paper[(paper.model == "llada") & (paper.M == 4) & (paper.J == 2) & (paper.beta == 0.0)].iloc[0]
     rerun = pd.read_csv(tmp_path / "out" / "cells.csv")
-    rerun_cell = rerun[rerun.beta == 0.0].iloc[0]
-    assert rerun_cell.families == 2
-    assert float(frozen) == pytest.approx(paper_cell.A_all, abs=5e-4)
-    assert float(lo) == pytest.approx(rerun_cell.A_all_lo, abs=5e-4)
-    assert float(hi) == pytest.approx(rerun_cell.A_all_hi, abs=5e-4)
-    inside = rerun_cell.A_all_lo <= paper_cell.A_all <= rerun_cell.A_all_hi
-    assert verdict == ("inside" if inside else "outside")
+    for beta, pattern in ((0.0, COMPARE_LINE), (0.5, COMPARE_LINE_GUIDED)):
+        matches = [match for match in map(pattern.match, lines) if match]
+        assert len(matches) == 1, beta
+        model, M, J, frozen, lo, hi, verdict = matches[0].groups()
+        assert (model, M, J) == ("llada", "4", "2")
+
+        paper_cell = paper[(paper.model == "llada") & (paper.M == 4) & (paper.J == 2) & (paper.beta == beta)].iloc[0]
+        rerun_cell = rerun[rerun.beta == beta].iloc[0]
+        assert rerun_cell.families == 2
+        assert float(frozen) == pytest.approx(paper_cell.A_all, abs=5e-4)
+        assert float(lo) == pytest.approx(rerun_cell.A_all_lo, abs=5e-4)
+        assert float(hi) == pytest.approx(rerun_cell.A_all_hi, abs=5e-4)
+        inside = rerun_cell.A_all_lo <= paper_cell.A_all <= rerun_cell.A_all_hi
+        assert verdict == ("inside" if inside else "outside")
+    guided = next(index for index, line in enumerate(lines) if COMPARE_LINE_GUIDED.match(line))
+    assert COMPARE_LINE.match(lines[guided - 1])  # each cell's guided verdict follows its ordinary one
 
 
 def test_missing_pools_name_the_fetch_command(root, tmp_path):

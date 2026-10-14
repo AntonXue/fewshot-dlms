@@ -848,7 +848,8 @@ def max_abs_diff(a, b):
 
 def compare(frames, references):
     """Print the largest |difference| per numeric column against the tables in the reference directories, then the
-    resampling verdict of every Section 4.1 cell: is the frozen ordinary accuracy inside the 95 % CI computed here?
+    resampling verdicts of every Section 4.1 cell: is the frozen accuracy inside the 95 % CI computed here, for
+    ordinary sampling (beta = 0) and for guidance at FIGURE_BETA? One line each; the guided line names its beta.
 
     CSVs are parsed with float_precision="round_trip", so a value written by pandas reads back exactly.
     """
@@ -870,20 +871,24 @@ def compare(frames, references):
     if "sec41_accuracy" not in frames or not paths:
         return
     frozen = pd.read_csv(paths[0], float_precision="round_trip")
-    frozen = frozen[frozen.beta == 0.0].set_index(["model", "source", "M"])
+    frozen = frozen.set_index(["model", "source", "M", "beta"])
     rerun = frames["sec41_accuracy"]
-    rerun = rerun[rerun.beta == 0.0]
-    for _, cell in rerun.iterrows():
-        key = (cell.model, cell.source, cell.M)
-        if key not in frozen.index:
-            continue
-        value = frozen.loc[key, "accuracy"]
-        inside = cell.ci_lo <= value <= cell.ci_hi
-        verdict = "inside" if inside else "outside"
-        print(
-            f"{cell.model} {cell.source} M={cell.M}: frozen accuracy {value:.3f}, rerun CI [{cell.ci_lo:.3f}, {cell.ci_hi:.3f}]"
-            f" -> frozen mean {verdict} the rerun's 95 % CI ({cell.families} families)"
-        )
+    guided = rerun[rerun.beta == FIGURE_BETA].set_index(["model", "source", "M"])
+    for _, ordinary in rerun[rerun.beta == 0.0].iterrows():
+        key = (ordinary.model, ordinary.source, ordinary.M)
+        cells = [(0.0, "", ordinary)]
+        if key in guided.index:
+            cells.append((FIGURE_BETA, f" beta={FIGURE_BETA:g}", guided.loc[key]))
+        for beta, label, cell in cells:
+            if key + (beta,) not in frozen.index:
+                continue
+            value = frozen.loc[key + (beta,), "accuracy"]
+            inside = cell.ci_lo <= value <= cell.ci_hi
+            verdict = "inside" if inside else "outside"
+            print(
+                f"{ordinary.model} {ordinary.source} M={ordinary.M}{label}: frozen accuracy {value:.3f}, rerun CI"
+                f" [{cell.ci_lo:.3f}, {cell.ci_hi:.3f}] -> frozen mean {verdict} the rerun's 95 % CI ({int(cell.families)} families)"
+            )
 
 
 def io_csv(frame):

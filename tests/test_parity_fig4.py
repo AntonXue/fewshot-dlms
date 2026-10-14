@@ -48,6 +48,10 @@ LOCK_FIELDS = ["beta", "n_cells", "cells", "cell_set", "best_positive_below_ordi
 COMPARE_LINE = re.compile(
     r"^(\S+) (\S+) M=(\d+): frozen accuracy ([0-9.]+), rerun CI \[([0-9.]+), ([0-9.]+)\] -> frozen mean (inside|outside)"
 )
+# The verdict of the same cell under guidance at beta = 0.5 (Figure 4's strength), printed after the ordinary one.
+COMPARE_LINE_GUIDED = re.compile(
+    r"^(\S+) (\S+) M=(\d+) beta=0\.5: frozen accuracy ([0-9.]+), rerun CI \[([0-9.]+), ([0-9.]+)\] -> frozen mean (inside|outside)"
+)
 
 
 def run_analyze(root, pools, out, *extra):
@@ -138,40 +142,45 @@ def test_beta_locks_match_frozen(root, analysis):
 
 @pytest.mark.parity
 def test_frozen_pools_lie_inside_their_own_intervals(analysis):
-    """Compared with itself, every Section 4.1 cell reports the frozen mean inside the 95 % CI."""
+    """Compared with itself, every Section 4.1 cell reports the frozen mean inside the 95 % CI, at beta = 0 and 0.5."""
     _, stdout = analysis
-    lines = [COMPARE_LINE.match(line) for line in stdout.splitlines()]
-    verdicts = [match.group(7) for match in lines if match]
-    assert len(verdicts) == 80
-    assert set(verdicts) == {"inside"}
+    for pattern in (COMPARE_LINE, COMPARE_LINE_GUIDED):
+        lines = [pattern.match(line) for line in stdout.splitlines()]
+        verdicts = [match.group(7) for match in lines if match]
+        assert len(verdicts) == 80
+        assert set(verdicts) == {"inside"}
 
 
 def test_compare_reports_inside_ci(root, tmp_path):
     """A resampled cell is judged by whether the frozen mean lies inside the rerun's 95 % CI.
 
-    The two-family fixture pool of Qwen3-8B (SST-2, M = 4, K = 64) plays the rerun of that cell.
+    The two-family fixture pool of Qwen3-8B (SST-2, M = 4, K = 64) plays the rerun of that cell; --compare prints one
+    verdict for ordinary sampling (beta = 0) and one for guidance at beta = 0.5.
     """
     pools = tmp_path / "pools" / "report" / "qwen"
     pools.mkdir(parents=True)
     shutil.copy(root / "data" / "fixtures" / "fig4" / "qwen_sst2_M4.jsonl", pools / "sst2_fam_M4_J1.jsonl")
     result = run_analyze(root, tmp_path / "pools", tmp_path / "out", "--compare", str(root / "data" / "tables" / "fig4"))
     assert result.returncode == 0, result.stderr
-    matches = [COMPARE_LINE.match(line) for line in result.stdout.splitlines()]
-    matches = [match for match in matches if match]
-    assert len(matches) == 1
-    model, source, M, frozen, lo, hi, verdict = matches[0].groups()
-    assert (model, source, M) == ("qwen", "sst2_fam", "4")
-
+    lines = result.stdout.splitlines()
     paper = pd.read_csv(root / "data" / "tables" / "fig4" / "sec41_accuracy.csv")
-    paper_cell = paper[(paper.model == "qwen") & (paper.source == "sst2_fam") & (paper.M == 4) & (paper.beta == 0.0)].iloc[0]
     rerun = pd.read_csv(tmp_path / "out" / "sec41_accuracy.csv")
-    rerun_cell = rerun[rerun.beta == 0.0].iloc[0]
-    assert rerun_cell.families == 2
-    assert float(frozen) == pytest.approx(paper_cell.accuracy, abs=5e-4)
-    assert float(lo) == pytest.approx(rerun_cell.ci_lo, abs=5e-4)
-    assert float(hi) == pytest.approx(rerun_cell.ci_hi, abs=5e-4)
-    inside = rerun_cell.ci_lo <= paper_cell.accuracy <= rerun_cell.ci_hi
-    assert verdict == ("inside" if inside else "outside")
+    for beta, pattern in ((0.0, COMPARE_LINE), (0.5, COMPARE_LINE_GUIDED)):
+        matches = [match for match in map(pattern.match, lines) if match]
+        assert len(matches) == 1, beta
+        model, source, M, frozen, lo, hi, verdict = matches[0].groups()
+        assert (model, source, M) == ("qwen", "sst2_fam", "4")
+
+        paper_cell = paper[(paper.model == "qwen") & (paper.source == "sst2_fam") & (paper.M == 4) & (paper.beta == beta)].iloc[0]
+        rerun_cell = rerun[rerun.beta == beta].iloc[0]
+        assert rerun_cell.families == 2
+        assert float(frozen) == pytest.approx(paper_cell.accuracy, abs=5e-4)
+        assert float(lo) == pytest.approx(rerun_cell.ci_lo, abs=5e-4)
+        assert float(hi) == pytest.approx(rerun_cell.ci_hi, abs=5e-4)
+        inside = rerun_cell.ci_lo <= paper_cell.accuracy <= rerun_cell.ci_hi
+        assert verdict == ("inside" if inside else "outside")
+    guided = next(index for index, line in enumerate(lines) if COMPARE_LINE_GUIDED.match(line))
+    assert COMPARE_LINE.match(lines[guided - 1])  # each cell's guided verdict follows its ordinary one
 
 
 def test_missing_pools_name_the_fetch_command(root, tmp_path):
