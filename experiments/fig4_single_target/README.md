@@ -86,7 +86,8 @@ GPU, one model per process (`CUDA_VISIBLE_DEVICES` picks the GPU):
 
 `--families N` keeps the first N families. Records are appended to `<out>/<bank>/<model>/<task>_M{M}_J{J}[_il].jsonl` as
 families finish. Each carries its cell's `protocol_hash`, which depends on that cell alone; an interrupted run resumes
-after the families with that hash and refuses a file holding records of another protocol.
+after the families with that hash and, before loading the model, refuses a file holding records of another protocol
+(exit status 2, naming the file).
 `<out>/<bank>/<model>/manifest_<hash>.json` holds every cell's configuration and hash, every seed, and the library and
 GPU versions. A failed family is counted and the run exits non-zero. SST-2 and Movie Director need their text rebuilt
 first (`python data/benchmarks/build.py`).

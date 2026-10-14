@@ -332,12 +332,19 @@ def test_run_writes_complete_records_on_toy_models(root):
 @pytest.fixture
 def toy_run(root, monkeypatch, capsys):
     """run.py with the toy canvas model in place of a checkpoint and no GPU; returns (module, call) where
-    call(out, *arguments) runs main() for LLaDA-1.5's List Functions-Easy cells and returns (exit code, stdout)."""
+    call(out, *arguments) runs main() for LLaDA-1.5's List Functions-Easy cells and returns (exit code, stdout), or
+    (exit code, stdout, stderr) with stderr=True. Every model load is counted in run.loads."""
     run = load_module(root, "experiments/fig4_single_target/run.py", "fig4_run_main")
-    monkeypatch.setattr(run, "load", lambda name, device: ToyText("dlm"))
+    run.loads = []
+
+    def toy_load(name, device):
+        run.loads.append(name)
+        return ToyText("dlm")
+
+    monkeypatch.setattr(run, "load", toy_load)
     monkeypatch.setattr(run.torch.cuda, "is_available", lambda: False)
 
-    def call(out, *arguments):
+    def call(out, *arguments, stderr=False):
         argv = ["run.py", "--model", "llada", "--tasks", "list_easy_fam", "--device", "cpu", "--out", str(out), *arguments]
         monkeypatch.setattr(sys, "argv", argv)
         code = 0
@@ -345,7 +352,10 @@ def toy_run(root, monkeypatch, capsys):
             run.main()
         except SystemExit as exit:
             code = exit.code
-        return code, capsys.readouterr().out
+        captured = capsys.readouterr()
+        if stderr:
+            return code, captured.out, captured.err
+        return code, captured.out
 
     return run, call
 
@@ -391,16 +401,52 @@ def test_run_resumes_and_keeps_each_cells_hash(toy_run, tmp_path):
 
 
 def test_run_refuses_a_pool_of_another_protocol(toy_run, tmp_path):
-    """Changing K changes the cell's protocol: the existing file is refused, nothing is appended, the exit code is 1."""
+    """Changing K changes the cell's protocol: the existing file is refused before the model is loaded, nothing is
+    appended to any cell, the exit code is 2 and the message names the file."""
     run, call = toy_run
     out = tmp_path / "pools"
     assert call(out, "--M", "2", "--K", "4", "--families", "2")[0] == 0
+    assert run.loads == ["llada"]
     before = pool_lines(out, "list_easy_fam_M2_J1")
-    code, stdout = call(out, "--M", "2", "--K", "3", "--families", "2")
-    assert code == 1
-    assert "REFUSED" in stdout
-    assert "RUN_FAILED" in stdout
+    code, stdout, stderr = call(out, "--M", "4,2", "--K", "3", "--families", "2", stderr=True)
+    assert code == 2
+    assert f"refusing to append: {out / 'report' / 'llada' / 'list_easy_fam_M2_J1.jsonl'}" in stderr
+    assert run.loads == ["llada"]
+    assert "CELL_DONE" not in stdout
     assert pool_lines(out, "list_easy_fam_M2_J1") == before
+    assert not (out / "report" / "llada" / "list_easy_fam_M4_J1.jsonl").exists()
+
+
+def test_done_episodes_resumes_only_records_of_the_same_protocol(root, tmp_path):
+    """done_episodes returns the families a run of the same protocol may skip (a cut-off last line is sampled again),
+    and refuses a file that holds a record of another protocol, or one without a protocol hash (the frozen pools)."""
+    run = load_module(root, "experiments/fig4_single_target/run.py", "fig4_run")
+    config = run.cell_config("llada", "GSAI-ML/LLaDA-1.5", "rev", "report", "list_easy_fam", 2, 1, False, 4, 32, False)
+    digest = run.protocol_hash(config)
+    path = tmp_path / "pool.jsonl"
+    assert run.done_episodes(path, digest) == set()
+    good = [json.dumps({"episode_id": name, "protocol_hash": digest}) for name in ("a", "b")]
+    path.write_text("\n".join(good) + '\n{"episode_id": "c", "protoc', encoding="utf-8")  # an interrupted write
+    assert run.done_episodes(path, digest) == {"a", "b"}
+    for other in ({"episode_id": "d", "protocol_hash": "0123456789abcdef"}, {"episode_id": "d"}):
+        path.write_text(good[0] + "\n" + json.dumps(other) + "\n", encoding="utf-8")
+        with pytest.raises(run.ProtocolMismatch, match=str(other.get("protocol_hash"))):
+            run.done_episodes(path, digest)
+
+
+def test_run_script_refuses_a_pool_of_another_protocol(root, tmp_path):
+    """run.py, as a script, exits with status 2 naming the file before it loads a model when a cell's pool holds
+    another protocol (here a hash of no possible configuration)."""
+    pool = tmp_path / "report" / "llada" / "list_easy_fam_M4_J1.jsonl"
+    pool.parent.mkdir(parents=True)
+    pool.write_text(json.dumps({"episode_id": "list_easy_fam:report:000", "protocol_hash": "0123456789abcdef"}) + "\n")
+    command = [sys.executable, str(root / "experiments/fig4_single_target/run.py"), "--model", "llada"]
+    command += ["--tasks", "list_easy_fam", "--M", "4", "--K", "4", "--families", "2"]
+    command += ["--out", str(tmp_path), "--device", "cpu"]
+    result = subprocess.run(command, capture_output=True, text=True, cwd=root)
+    assert result.returncode == 2, result.stderr
+    assert str(pool) in result.stderr
+    assert "loaded in" not in result.stdout
 
 
 def test_run_counts_a_failed_family_and_retries_it(toy_run, tmp_path, monkeypatch):

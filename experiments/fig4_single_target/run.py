@@ -29,10 +29,13 @@ stop. On the first --audit-n families the reference is scored together with the 
 whose rescored log-likelihoods are kept as a score-equivalence check (gold_equiv), as the authors' gold scoring did.
 
 Records go to <out>/<bank>/<model>/<task>_M{M}_J{J}[_il].jsonl, one JSON line per family, appended as they finish.
-Every record carries the protocol_hash of its cell (a function of that cell alone); an interrupted run resumes after
-the families whose record has the cell's hash, and refuses a pool file that holds records of another protocol.
+Every record carries the protocol_hash of its cell (cell_config: model, revision, bank, task, M, J, K, chunk, rules; a
+function of that cell alone). A rerun with the same protocol skips the families already in the file, so an interrupted
+run resumes; a pool file that holds records of another protocol (another K, chunk, revision, ...) is refused with exit
+status 2, naming the file, before the model is loaded, so that analyze.py never reads two protocols as one pool.
 <out>/<bank>/<model>/manifest_<hash>.json lists every cell's configuration and hash, the seeds and the library
-versions. A family that fails is reported and counted; the run exits non-zero if any did. analyze.py reads the pools.
+versions. A family that fails is reported and counted; the run exits with status 1 if any did. analyze.py reads the
+pools.
 
     CUDA_VISIBLE_DEVICES=0 python experiments/fig4_single_target/run.py --model llada --tasks list_easy_fam --M 4 \\
         --K 64 --families 8 --score-gold --out artifacts/reruns/fig4
@@ -51,6 +54,7 @@ import numpy as np
 import torch
 import transformers
 
+from fewshot_dlms.adapters import adapter_class
 from fewshot_dlms.adapters import load
 from fewshot_dlms.adapters.base import context_ids
 from fewshot_dlms.adapters.base import decode_ar
@@ -461,12 +465,20 @@ def write_manifest(directory, cells, plan, model):
     return path
 
 
-def existing_records(path, digest):
-    """Episode ids in a pool file whose record has this cell's protocol hash, and the number of other records."""
-    done = set()
-    foreign = 0
+class ProtocolMismatch(Exception):
+    """A pool file holds records of another protocol than the run that would append to it."""
+
+
+def done_episodes(path, digest):
+    """Episode ids already in a pool file, which a run of protocol `digest` resumes after.
+
+    Every record of the file must carry protocol_hash == digest; otherwise ProtocolMismatch names the file and the
+    hashes found. Lines that do not parse (an interrupted write) are ignored, so their family is sampled again.
+    """
     if not path.exists():
-        return done, foreign
+        return set()
+    done = set()
+    others = set()
     with open(path, encoding="utf-8") as handle:
         for line in handle:
             if not line.strip():
@@ -478,8 +490,13 @@ def existing_records(path, digest):
             if record.get("protocol_hash") == digest:
                 done.add(record["episode_id"])
             else:
-                foreign += 1
-    return done, foreign
+                others.add(str(record.get("protocol_hash")))
+    if others:
+        raise ProtocolMismatch(
+            f"{path} holds records of protocol {', '.join(sorted(others))}, but this run is protocol {digest} "
+            "(another K, chunk, revision or code). Write to another --out, or move the file away to start the pool afresh."
+        )
+    return done
 
 
 def append_record(path, record):
@@ -525,24 +542,33 @@ def main():
     Ms = args.M or ([CROSSBENCH_M] if args.crossbench else M_GRID)
     Js = args.J if args.crossbench else [1]
 
-    started = time.time()
-    adapter = load(args.model, args.device)
-    print(f"[fig4] {args.model} {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
+    adapter_cls, _ = adapter_class(args.model)
     out = Path(args.out) / args.bank / args.model
-    out.mkdir(parents=True, exist_ok=True)
 
+    # Every cell's pool, checked before the model is loaded: resume a pool of the same protocol only.
     plan = []
     cells = {}
+    done_of = {}
     for task in args.tasks:
         families = load_families(task, args.bank)[: args.families]
         for M in Ms:
             for J in Js:
                 config = cell_config(
-                    args.model, adapter.model_id, adapter.revision, args.bank, task, M, J, args.crossbench, args.K, args.chunk, args.score_gold
+                    args.model, adapter_cls.model_id, adapter_cls.revision, args.bank, task, M, J, args.crossbench, args.K, args.chunk, args.score_gold
                 )
                 name = f"{task}_M{M}_J{J}" + ("_il" if args.crossbench else "")
                 cells[name] = {"config": config, "protocol_hash": protocol_hash(config)}
                 plan.append((task, families, M, J, name))
+                try:
+                    done_of[name] = done_episodes(out / f"{name}.jsonl", cells[name]["protocol_hash"])
+                except ProtocolMismatch as error:
+                    print(f"refusing to append: {error}", file=sys.stderr)
+                    sys.exit(2)
+
+    started = time.time()
+    adapter = load(args.model, args.device)
+    print(f"[fig4] {args.model} {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
+    out.mkdir(parents=True, exist_ok=True)
     manifest = write_manifest(out, cells, plan, args.model)
     print(f"[fig4] manifest {manifest}", flush=True)
 
@@ -550,11 +576,7 @@ def main():
     for task, families, M, J, name in plan:
         path = out / f"{name}.jsonl"
         digest = cells[name]["protocol_hash"]
-        done, foreign = existing_records(path, digest)
-        if foreign:
-            print(f"REFUSED {path}: {foreign} records of another protocol (not {digest}); write to another --out", flush=True)
-            failures.append((name, "foreign records"))
-            continue
+        done = done_of[name]
         written = 0
         cell_start = time.time()
         for index, family in enumerate(families):
