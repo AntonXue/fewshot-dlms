@@ -116,6 +116,8 @@ def test_offset_pools_hold_exactly_the_families_run_keeps(root, artifacts, model
     """The forced-offset pools skip a family when some L*_j + delta < 1 (never clipped); run.py keeps the same families."""
     run = load_module(root, "run")
     pools = artifacts / "pools" / "fig6" / model
+    if not (pools / "length_head_report.jsonl").exists():
+        pytest.skip(f"Figure 6 pools of {model} not fetched: run `python -m fewshot_dlms.fetch pools java`")
     oracle = {(row["episode_id"], row["J"]): row["oracle"] for row in read_jsonl(pools / "length_head_report.jsonl")}
     family_ids = [family["episode_id"] for family in load_families("list_easy_fam", "report")]
     for J in (1, 2):
@@ -244,6 +246,50 @@ def test_length_mass_and_site_metrics():
     out_of_support = site_metrics(probs, np.array([3, 9]), lmax=5)
     assert out_of_support["out_of_support"] == 0.5
     assert out_of_support["P0"] == pytest.approx(0.15)
+
+
+def run_config_for(run, K):
+    """run.py's configuration of an oracle run of LLaDA-1.5 at J = 1, 2 with K candidates (no GPU, no model)."""
+    args = run.argparse.Namespace(model="llada", mode="oracle", delta=[0], J=[1, 2], K=K, chunk=run.CHUNK)
+    return run.run_config(args, "GSAI-ML/LLaDA-1.5", "rev", None)
+
+
+def test_pool_protocol_depends_on_what_decides_the_records(root):
+    """A pool's protocol hash changes with K (and mode, head, ...), not with the other pools a run also samples."""
+    run = load_module(root, "run")
+    small = run.protocol_hash(run.pool_config(run_config_for(run, 4), "oracle", 1, 4))
+    paper = run.protocol_hash(run.pool_config(run_config_for(run, 64), "oracle", 1, 64))
+    assert small != paper
+    args = run.argparse.Namespace(model="llada", mode="oracle", delta=[0], J=[1], K=64, chunk=run.CHUNK)
+    only_J1 = run.protocol_hash(run.pool_config(run.run_config(args, "GSAI-ML/LLaDA-1.5", "rev", None), "oracle", 1, 64))
+    assert only_J1 == paper
+
+
+def test_resume_skips_only_records_of_the_same_protocol(root, tmp_path):
+    """done_episodes returns the families a run of the same protocol may skip, and refuses a file of another protocol."""
+    run = load_module(root, "run")
+    digest = run.protocol_hash(run.pool_config(run_config_for(run, 4), "oracle", 1, 4))
+    path = tmp_path / "pool.jsonl"
+    assert run.done_episodes(path, digest) == set()
+    write_pool(path, [{"episode_id": "a", "protocol_hash": digest}, {"episode_id": "b", "protocol_hash": digest}])
+    with open(path, "a", encoding="utf-8") as handle:
+        handle.write('{"episode_id": "c", "protoc')  # an interrupted write: that family is sampled again
+    assert run.done_episodes(path, digest) == {"a", "b"}
+    write_pool(path, [{"episode_id": "a", "protocol_hash": digest}, {"episode_id": "b", "protocol_hash": "0123456789abcdef"}])
+    with pytest.raises(run.ProtocolMismatch, match="0123456789abcdef"):
+        run.done_episodes(path, digest)
+
+
+def test_run_refuses_a_pool_of_another_protocol(root, tmp_path):
+    """run.py exits with status 2, naming the file, before it loads a model, when its pool holds another protocol."""
+    pool = tmp_path / "llada" / "list_easy_fam_M4_J1_oracle.jsonl"
+    write_pool(pool, [{"episode_id": "list_easy_fam:report:000", "protocol_hash": "0123456789abcdef"}])
+    command = [sys.executable, str(root / "experiments/fig6_lengths/run.py"), "--model", "llada", "--mode", "oracle"]
+    command += ["--J", "1", "--K", "4", "--families", "2", "--out", str(tmp_path), "--device", "cpu"]
+    result = subprocess.run(command, capture_output=True, text=True, cwd=root)
+    assert result.returncode == 2, result.stderr
+    assert str(pool) in result.stderr
+    assert "loaded in" not in result.stdout
 
 
 def test_frozen_config_has_no_absolute_paths(root):

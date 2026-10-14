@@ -355,55 +355,55 @@ def main():
     (out / "config.json").write_text(json.dumps(config, indent=1))
     print(json.dumps({key: config[key] for key in ("backbone", "mix_normalised", "updates", "updates_per_source", "dropped_gt_lmax_or_ctx", "trainable_params")}), flush=True)
 
-    log = open(out / "log.jsonl", "a")
-    eval_log = open(out / "evals.jsonl", "a")
-    started = time.time()
-    branch.train()
-    n_updates = min(U, args.steps) if args.steps else U
-    for u in range(n_updates):
-        source = schedule[u]
-        examples = [data[source][i] for i in iterators[source].take(args.ppu)]
-        set_lr(u)
-        optimizer.zero_grad(set_to_none=True)
-        loss_prompt = 0.0
-        nll_sum = 0.0
-        n_sites = 0
-        for batch in microbatches(examples, args.backbone, args.tokens_per_micro):
-            log_q = head.log_probs(batch)
-            y = torch.tensor([length for example in batch for length in example["labels"]], device=args.device)
-            nll = -log_q.gather(1, (y - 1)[:, None]).squeeze(1)
-            weights = [1.0 / (len(example["labels"]) * len(examples)) for example in batch for _ in example["labels"]]
-            loss = (nll * torch.tensor(weights, device=args.device)).sum()
-            loss.backward()
-            loss_prompt += float(loss)
-            nll_sum += float(nll.sum())
-            n_sites += len(y)
-        grad_norm = float(torch.nn.utils.clip_grad_norm_(branch.parameters(), 1.0))
-        optimizer.step()
-        if (u + 1) % LOG_EVERY == 0:
-            entry = {
-                "update": u + 1,
-                "source": source,
-                "loss_prompt": loss_prompt,
-                "nll_site": nll_sum / n_sites,
-                "grad_norm": grad_norm,
-                "lr_block": optimizer.param_groups[0]["lr"],
-                "s": time.time() - started,
-                "epochs": {s: it.epoch for s, it in iterators.items()},
-            }
-            log.write(json.dumps(entry) + "\n")
-            log.flush()
-            print(f"update {u + 1}/{n_updates} {source:4s} loss {loss_prompt:.4f} nll/site {nll_sum / n_sites:.4f} grad {grad_norm:.2f} {time.time() - started:.0f}s", flush=True)
-        if (u + 1) % args.eval_every == 0 and u + 1 < n_updates:
-            results = evaluate(head, devsets, args)
-            eval_log.write(json.dumps({"update": u + 1, "s": time.time() - started, **results}) + "\n")
-            eval_log.flush()
-            print("EVAL", u + 1, json.dumps({k: {m: round(v[m], 4) for m in ("P0", "P1", "P2", "nll_site", "eae", "mode_exact")} for k, v in results.items()}), flush=True)
+    # A run writes its logs afresh: a rerun into the same --out replaces them instead of appending to the old ones.
+    with open(out / "log.jsonl", "w", encoding="utf-8") as log, open(out / "evals.jsonl", "w", encoding="utf-8") as eval_log:
+        started = time.time()
+        branch.train()
+        n_updates = min(U, args.steps) if args.steps else U
+        for u in range(n_updates):
+            source = schedule[u]
+            examples = [data[source][i] for i in iterators[source].take(args.ppu)]
+            set_lr(u)
+            optimizer.zero_grad(set_to_none=True)
+            loss_prompt = 0.0
+            nll_sum = 0.0
+            n_sites = 0
+            for batch in microbatches(examples, args.backbone, args.tokens_per_micro):
+                log_q = head.log_probs(batch)
+                y = torch.tensor([length for example in batch for length in example["labels"]], device=args.device)
+                nll = -log_q.gather(1, (y - 1)[:, None]).squeeze(1)
+                weights = [1.0 / (len(example["labels"]) * len(examples)) for example in batch for _ in example["labels"]]
+                loss = (nll * torch.tensor(weights, device=args.device)).sum()
+                loss.backward()
+                loss_prompt += float(loss)
+                nll_sum += float(nll.sum())
+                n_sites += len(y)
+            grad_norm = float(torch.nn.utils.clip_grad_norm_(branch.parameters(), 1.0))
+            optimizer.step()
+            if (u + 1) % LOG_EVERY == 0:
+                entry = {
+                    "update": u + 1,
+                    "source": source,
+                    "loss_prompt": loss_prompt,
+                    "nll_site": nll_sum / n_sites,
+                    "grad_norm": grad_norm,
+                    "lr_block": optimizer.param_groups[0]["lr"],
+                    "s": time.time() - started,
+                    "epochs": {s: it.epoch for s, it in iterators.items()},
+                }
+                log.write(json.dumps(entry) + "\n")
+                log.flush()
+                print(f"update {u + 1}/{n_updates} {source:4s} loss {loss_prompt:.4f} nll/site {nll_sum / n_sites:.4f} grad {grad_norm:.2f} {time.time() - started:.0f}s", flush=True)
+            if (u + 1) % args.eval_every == 0 and u + 1 < n_updates:
+                results = evaluate(head, devsets, args)
+                eval_log.write(json.dumps({"update": u + 1, "s": time.time() - started, **results}) + "\n")
+                eval_log.flush()
+                print("EVAL", u + 1, json.dumps({k: {m: round(v[m], 4) for m in ("P0", "P1", "P2", "nll_site", "eae", "mode_exact")} for k, v in results.items()}), flush=True)
 
-    assert not any(p.grad is not None for p in head.adapter.model.parameters()), "a gradient reached the frozen backbone"
-    results = evaluate(head, devsets, args, out=out)
-    eval_log.write(json.dumps({"update": n_updates, "s": time.time() - started, "final": True, **results}) + "\n")
-    eval_log.flush()
+        assert not any(p.grad is not None for p in head.adapter.model.parameters()), "a gradient reached the frozen backbone"
+        results = evaluate(head, devsets, args, out=out)
+        eval_log.write(json.dumps({"update": n_updates, "s": time.time() - started, "final": True, **results}) + "\n")
+        eval_log.flush()
     checkpoint = out / "final.pt"
     torch.save({"branch": branch.state_dict(), "config": config}, checkpoint)
     digest = hashlib.sha256(checkpoint.read_bytes()).hexdigest()

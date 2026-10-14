@@ -23,9 +23,12 @@ the paper's oracle arm used the K = 64 pools of Sections 4.1/4.2 (pass --K 64). 
 H100 NVL this reproduces the frozen LLaDA-1.5 and Nemotron pools token for token (README.md, Fidelity).
 
 Records go to <out>/<model>/list_easy_fam_M4_J{J}_<condition>.jsonl (condition = oracle, learned, delta-2, delta-1,
-delta0, delta+1, delta+2), one JSON line per family, appended as families finish (a family already in the file is
-skipped, so an interrupted run resumes). <out>/<model>/manifest_<hash>.json holds the configuration, its hash (the
-records' protocol_hash), every seed, and the library and GPU versions. analyze.py reads the pools.
+delta0, delta+1, delta+2), one JSON line per family, appended as families finish. Every record carries the protocol_hash
+of its pool (pool_config: model, revision, condition, J, K, chunk, head, rules). A rerun with the same protocol skips the
+families already in the file, so an interrupted run resumes; a file that holds records of another protocol (another K,
+head, ...) is refused with exit status 2, so that analyze.py never reads two protocols as one pool. A family that fails
+is reported and retried on the next run; the run then exits with status 1. <out>/<model>/manifest_<hash>.json holds the
+run's configuration, the hash of every pool, every seed, and the library and GPU versions. analyze.py reads the pools.
 
     python experiments/fig6_lengths/run.py --model llada --mode learned --J 1,2,4,8 --out artifacts/reruns/fig6
     python experiments/fig6_lengths/run.py --model llada --mode offset --delta=-2,-1,1,2 --J 1,2 --out artifacts/reruns/fig6
@@ -45,6 +48,7 @@ import numpy as np
 import torch
 import transformers
 
+from fewshot_dlms.adapters import adapter_class
 from fewshot_dlms.adapters import load
 from fewshot_dlms.adapters.base import context_ids
 from fewshot_dlms.adapters.base import reveal
@@ -199,16 +203,15 @@ def run_family(adapter, family, J, K, allocations, chunk, audit):
     }
 
 
-def config_of(args, adapter, head_sha):
-    """Everything that decides the records (not which families, where, or on which device): its hash is the
-    `protocol_hash` of every record."""
+def run_config(args, model_id, revision, head_sha):
+    """Everything that decides the records of this run (not which families, where, or on which device)."""
     return {
         "study": "fig6_lengths",
         "task": TASK,
         "bank": "report",
-        "model": adapter.name,
-        "model_id": adapter.model_id,
-        "revision": adapter.revision,
+        "model": args.model,
+        "model_id": model_id,
+        "revision": revision,
         "M": M,
         "mode": args.mode,
         "delta": args.delta if args.mode == "offset" else None,
@@ -224,19 +227,30 @@ def config_of(args, adapter, head_sha):
     }
 
 
+def pool_config(config, condition, J, K):
+    """What decides the records of one pool file: the run's configuration narrowed to the pool's condition, J and K.
+
+    Its hash is the protocol_hash of the pool's records, so a pool is resumed only by a run with the same protocol,
+    whatever other J or offsets that run also samples.
+    """
+    narrowed = {key: value for key, value in config.items() if key not in ("J", "K", "delta")}
+    return {**narrowed, "condition": condition, "J": J, "K": K}
+
+
 def protocol_hash(config):
     """First 16 hex digits of SHA-256 of the configuration as sorted JSON."""
     return hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()[:16]
 
 
-def write_manifest(path, config, digest, families, args, Ks):
-    """The run's manifest: configuration and hash, the seeds of every (J, family), library and GPU versions."""
+def write_manifest(path, config, digest, pool_hashes, families, args, Ks):
+    """The run's manifest: configuration and hash, the hash of every pool, the seeds of every (J, family), versions."""
     seeds = {}
     for J in args.J:
         seeds[f"J{J}"] = {family["episode_id"]: proposal_seed(config["model"], family["episode_id"], M, J) for family in families}
     manifest = {
         "config": config,
         "protocol_hash": digest,
+        "pool_protocol_hash": pool_hashes,
         "K_by_J": {str(J): Ks[J] for J in args.J},
         "families": [family["episode_id"] for family in families],
         "seeds": seeds,
@@ -253,15 +267,37 @@ def write_manifest(path, config, digest, families, args, Ks):
     path.write_text(json.dumps(manifest, indent=1))
 
 
-def done_episodes(path):
-    """Episode ids already in a pool file (an interrupted run resumes after them)."""
+class ProtocolMismatch(Exception):
+    """A pool file holds records of another protocol than the run that would append to it."""
+
+
+def done_episodes(path, digest):
+    """Episode ids already in a pool file, which a run of protocol `digest` resumes after.
+
+    Every record of the file must carry protocol_hash == digest; otherwise ProtocolMismatch names the file and the
+    hashes found. Lines that do not parse (an interrupted write) are ignored, so their family is sampled again.
+    """
     if not path.exists():
         return set()
     done = set()
+    others = set()
     with open(path, encoding="utf-8") as handle:
         for line in handle:
-            if line.strip():
-                done.add(json.loads(line)["episode_id"])
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if record.get("protocol_hash") == digest:
+                done.add(record["episode_id"])
+            else:
+                others.add(str(record.get("protocol_hash")))
+    if others:
+        raise ProtocolMismatch(
+            f"{path} holds records of protocol {', '.join(sorted(others))}, but this run is protocol {digest} "
+            "(another K, mode, head or code). Write to another --out, or move the file away to start the pool afresh."
+        )
     return done
 
 
@@ -303,85 +339,103 @@ def main():
     Ks = {J: (args.K if args.K else default_K(J)) for J in args.J}
 
     families = load_families(TASK, "report")[: args.families]
-    started = time.time()
-    adapter = load(args.model, args.device)
-    print(f"[fig6] {args.model} {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
-    head = None
+    head_path = None
     head_sha = None
     if args.mode == "learned":
-        backbone = BACKBONE_OF_ADAPTER[args.model]
-        head_path = args.head or f"artifacts/heads/{backbone}.pt"
-        head = LengthHead.load(adapter, head_path, args.device)
+        head_path = args.head or f"artifacts/heads/{BACKBONE_OF_ADAPTER[args.model]}.pt"
         head_sha = sha256_file(head_path)
-        print(f"[fig6] length head {head_path} (sha256 {head_sha[:16]})", flush=True)
-    config = config_of(args, adapter, head_sha)
+    adapter_cls, _ = adapter_class(args.model)
+    config = run_config(args, adapter_cls.model_id, adapter_cls.revision, head_sha)
     digest = protocol_hash(config)
     out = Path(args.out) / args.model
-    out.mkdir(parents=True, exist_ok=True)
-    write_manifest(out / f"manifest_{digest}.json", config, digest, families, args, Ks)
 
+    # Every pool this run appends to, checked before the model is loaded: resume a pool of the same protocol only.
+    pools = []
     deltas = args.delta if args.mode == "offset" else [None]
     for delta in deltas:
         condition = condition_name(args.mode, delta)
         for J in args.J:
             K = Ks[J]
             path = out / f"{TASK}_M{M}_J{J}_{condition}.jsonl"
-            done = done_episodes(path)
-            written = 0
-            skipped = 0
-            job_start = time.time()
-            for family in families:
-                if family["episode_id"] in done:
-                    continue
-                oracle_L = oracle_lengths(adapter, family, J)
-                canvas = build_canvas(adapter, family, M, J, oracle_L)
-                allocations = allocations_of(args.mode, family, J, K, oracle_L, canvas, head, delta)
-                if allocations is None:
-                    skipped += 1
-                    continue
-                try:
-                    body = run_family(adapter, family, J, K, allocations, args.chunk, audit=written < args.audit_n)
-                except Exception as error:  # one failed family must not stop the pool; it is retried on the next run
-                    print(f"FAILED {family['episode_id']} J={J} {condition}: {error}\n{traceback.format_exc()[-1500:]}", flush=True)
-                    torch.cuda.empty_cache()
-                    continue
-                episode = active_episode(family, M, J)
-                record = {
-                    "episode_id": family["episode_id"],
-                    "source": TASK,
-                    "rule_id": family["rule_id"],
-                    "model": args.model,
-                    "model_name": adapter.model_id,
-                    "revision": adapter.revision,
-                    "M": M,
-                    "J": J,
-                    "K": K,
-                    "condition": condition,
-                    "delta": delta,
-                    "head_sha256": head_sha,
-                    "placement": PLACEMENT,
-                    "record_labels": [entry["slot"] for entry in episode["entries"]],
-                    "p": 1.0,
-                    "tau": 1.0,
-                    "beta_convention": "zero_is_ordinary",
-                    "protocol_hash": digest,
-                    "gold": [target["output"] for target in family["targets"][:J]],
-                    "target_inputs": [target["input"] for target in family["targets"][:J]],
-                    "grader": family["grader"],
-                    "status": "scored",
-                    "oracle_L": oracle_L,
-                    **body,
-                }
-                append_record(path, record)
-                written += 1
-                print(
-                    f"[{args.model}] {condition} J={J} K={K} {family['episode_id']} L*={oracle_L} allocations={body['n_unique_alloc']}"
-                    f" distinct={body['n_unique']} gen {body['seconds_gen']:.1f}s"
-                    + (f" replay {body['checks']['replay_P1_max_abs_seq']:.1e}" if body["checks"] else ""),
-                    flush=True,
-                )
-            print(f"CELL_DONE {args.model} {condition} J={J} new={written} skipped={skipped} {time.time() - job_start:.0f}s", flush=True)
-    print(f"RUN_DONE {args.model} {time.time() - started:.0f}s -> {out}", flush=True)
+            pool_digest = protocol_hash(pool_config(config, condition, J, K))
+            try:
+                done = done_episodes(path, pool_digest)
+            except ProtocolMismatch as error:
+                print(f"refusing to append: {error}", file=sys.stderr)
+                sys.exit(2)
+            pools.append((delta, condition, J, K, path, pool_digest, done))
+
+    started = time.time()
+    adapter = load(args.model, args.device)
+    print(f"[fig6] {args.model} {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
+    head = None
+    if args.mode == "learned":
+        head = LengthHead.load(adapter, head_path, args.device)
+        print(f"[fig6] length head {head_path} (sha256 {head_sha[:16]})", flush=True)
+    out.mkdir(parents=True, exist_ok=True)
+    pool_hashes = {path.name: pool_digest for _, _, _, _, path, pool_digest, _ in pools}
+    write_manifest(out / f"manifest_{digest}.json", config, digest, pool_hashes, families, args, Ks)
+
+    failed = 0
+    for delta, condition, J, K, path, pool_digest, done in pools:
+        written = 0
+        skipped = 0
+        job_start = time.time()
+        for family in families:
+            if family["episode_id"] in done:
+                continue
+            oracle_L = oracle_lengths(adapter, family, J)
+            canvas = build_canvas(adapter, family, M, J, oracle_L)
+            allocations = allocations_of(args.mode, family, J, K, oracle_L, canvas, head, delta)
+            if allocations is None:
+                skipped += 1
+                continue
+            try:
+                body = run_family(adapter, family, J, K, allocations, args.chunk, audit=written < args.audit_n)
+            except Exception as error:  # one failed family must not stop the pool; it is retried on the next run
+                print(f"FAILED {family['episode_id']} J={J} {condition}: {error}\n{traceback.format_exc()[-1500:]}", flush=True)
+                torch.cuda.empty_cache()
+                failed += 1
+                continue
+            episode = active_episode(family, M, J)
+            record = {
+                "episode_id": family["episode_id"],
+                "source": TASK,
+                "rule_id": family["rule_id"],
+                "model": args.model,
+                "model_name": adapter.model_id,
+                "revision": adapter.revision,
+                "M": M,
+                "J": J,
+                "K": K,
+                "condition": condition,
+                "delta": delta,
+                "head_sha256": head_sha,
+                "placement": PLACEMENT,
+                "record_labels": [entry["slot"] for entry in episode["entries"]],
+                "p": 1.0,
+                "tau": 1.0,
+                "beta_convention": "zero_is_ordinary",
+                "protocol_hash": pool_digest,
+                "gold": [target["output"] for target in family["targets"][:J]],
+                "target_inputs": [target["input"] for target in family["targets"][:J]],
+                "grader": family["grader"],
+                "status": "scored",
+                "oracle_L": oracle_L,
+                **body,
+            }
+            append_record(path, record)
+            written += 1
+            print(
+                f"[{args.model}] {condition} J={J} K={K} {family['episode_id']} L*={oracle_L} allocations={body['n_unique_alloc']}"
+                f" distinct={body['n_unique']} gen {body['seconds_gen']:.1f}s"
+                + (f" replay {body['checks']['replay_P1_max_abs_seq']:.1e}" if body["checks"] else ""),
+                flush=True,
+            )
+        print(f"CELL_DONE {args.model} {condition} J={J} new={written} skipped={skipped} {time.time() - job_start:.0f}s", flush=True)
+    print(f"RUN_DONE {args.model} {time.time() - started:.0f}s -> {out}; failed families: {failed}", flush=True)
+    if failed:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -70,6 +70,15 @@ is compared with.
     artifacts/pools/fig6/<model>/length_head_report.jsonl               per (family, J): oracle lengths, demonstration
                                                                         lengths demo_L, and the compact prompt
 
+`run.py --mode learned` and `train_head.py` also use (same fetch):
+
+    artifacts/heads/<backbone>.pt                         the frozen heads, <backbone> = llada, nemotron, dqwen
+    artifacts/head_training/fsp_<backbone>_train.jsonl    structured few-shot training prompts (100,000 per backbone)
+    artifacts/head_training/edit_<backbone>_train.jsonl   code-edit training prompts (about 22,000 per backbone)
+    artifacts/head_training/listbench_dev_<backbone>.jsonl  List Functions-Easy dev bank, M = 4, J in {1, 2, 4, 8}
+    artifacts/head_training/edit_<backbone>_dev.jsonl     repository-held-out code edits (evaluation)
+    artifacts/head_training/fsp_logical_train.jsonl      optional: the structured few-shot episodes before rendering
+
 `<model>` is `llada`, `nemotron_pt` or `dqwen`. One record per family; each candidate keeps its tokens, the texts of its
 J targets, ell1 and its allocation `alloc_L`. The pool files are the authors' Section 4.3 pools (the per-candidate run
 of the length project) and, for the oracle arm, their Section 4.1/4.2 pools; the npz files are their head evaluation.
@@ -86,11 +95,19 @@ GPU, one model per process (`--delta` takes a list, written with `=` because it 
     make rerun-fig6        # LLaDA-1.5, J = 1, first 8 families, oracle and learned, then analyze.py --compare
 
 `--K N` replaces K = 64 / J at every J; `--families N` keeps the first N families. The learned mode loads the head
-from `artifacts/heads/<backbone>.pt` (`llada`, `nemotron`, `dqwen`; `--head` to override) and needs flash-attn for
-LLaDA-1.5 (`pip install -e .[heads]`; see `pyproject.toml`). Records are appended to
-`<out>/<model>/list_easy_fam_M4_J{J}_<condition>.jsonl` as families finish, so an interrupted run resumes;
-`<out>/<model>/manifest_<hash>.json` holds the configuration, its hash (the records' `protocol_hash`), every seed, and
-the library and GPU versions.
+from `artifacts/heads/<backbone>.pt` (`llada`, `nemotron`, `dqwen`; `--head` to override). LLaDA-1.5's head needs
+flash-attn, which compiles against the installed torch, so install it after the package:
+
+    pip install -e .
+    pip install "flash-attn==2.8.3" --no-build-isolation     # the version pinned by the `heads` extra of pyproject.toml
+
+Records are appended to `<out>/<model>/list_easy_fam_M4_J{J}_<condition>.jsonl` as families finish. Each record
+carries the `protocol_hash` of its pool (model, revision, condition, J, K, chunk, head and rules): a rerun with the same
+protocol skips the families already there, so an interrupted run resumes, and a file holding records of another
+protocol (say K = 4 smoke records before a K = 64 run) is refused with exit status 2 and the file's name. A family that
+fails is retried on the next run, and the run exits with status 1, which stops `make rerun-fig6` before `analyze.py`.
+`<out>/<model>/manifest_<hash>.json` holds the configuration, the hash of every pool, every seed, and the library and
+GPU versions.
 
 ## Runtime
 
@@ -142,7 +159,7 @@ The paper's heads ship frozen; `train_head.py` retrains one (Appendix B.5). Rest
   model; development data (List Functions–Easy dev bank, 1,500 held-out code edits) is only reported.
 - **Compute.** 1.8 h (LLaDA-1.5), 2.1 h (Nemotron) and 2.7 h (dQwen3.5) on one H100 NVL.
 
-The rendered training files ship with the artifacts (`artifacts/head_training/`, see the docstring of `train_head.py`):
+The rendered training files ship with the artifacts (`artifacts/head_training/`, listed under Commands):
 
     python experiments/fig6_lengths/train_head.py --backbone llada --data artifacts/head_training --out runs/llada_head
 
@@ -156,3 +173,19 @@ learning rate and epoch counters at every logged update, and a training loss wit
 updates (bf16 kernels are not deterministic, so the runs drift apart slowly). A full retrain (1,563 updates, 54 min)
 reached a List Functions–Easy dev P0 of 0.379 (theirs: 0.373) and an exact-length mass of 0.497 on the ten fixture
 canvases, against 0.518 for the frozen head. After 200 updates (`--steps 200`) that mass is still 0.234.
+
+**What public code regenerates.**
+
+- *Regenerable from this repository and the shipped files.* The training run itself (`train_head.py`: schedule,
+  iterators, loss, optimiser, evaluation, checkpoint) from the rendered prompts. The structured few-shot prompts of any
+  backbone from their logical episodes (`fsp_logical_train.jsonl`) with `train_head.render_fsp`, the renderer of the
+  authors' builder; `--check-render` compares it with the shipped prompts token for token (200/200 for LLaDA-1.5).
+- *Not regenerable here.*
+  - The structured few-shot episodes themselves: the authors' sampler (`lpx_fsp.py`) draws them from inputs that are
+    not in this repository or its artifacts: MIT Movie and ATIS field pools from an earlier selection run of theirs,
+    filtered so that no utterance overlaps a Director record; the raw BIG-bench List Functions tasks with a list of 40
+    reserved functions; and SALT records from their SALT builder, with generated extra pairs. The episodes ship instead,
+    so the sampler is not ported.
+  - The code-edit prompts: the authors mined edit groups from 28 cloned Java repositories and cropped every episode
+    to 2,048 tokens under the three tokenizers at once (`lpx_mine.py`, `lpx_edit.py`). The repositories are not part
+    of the artifacts, so the rendered prompts ship and the miner is not ported.
