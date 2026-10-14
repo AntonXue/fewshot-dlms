@@ -131,6 +131,31 @@ dQwen3.5 took 0.5 to 1.4 times as long per cell. Distinct allocations rarely sha
   other K give other draws: judge such a rerun by `--compare`, which asks whether the frozen mean lies inside the
   rerun's 95 % CI.
 
+## Resampling check
+
+GPU sampling is statistical in general, so a rerun is judged by whether the frozen mean lies inside the rerun's
+95 % CI, not by equality. One full learned-length cell was rerun on a GPU and analysed with `--compare`:
+
+    CUDA_VISIBLE_DEVICES=2 python experiments/fig6_lengths/run.py --model llada --mode learned --J 2 --out artifacts/reruns/fig6
+    python experiments/fig6_lengths/analyze.py --pools artifacts/reruns/fig6 --out artifacts/reruns/fig6/analysis --compare data/tables/fig6
+
+- **Cell.** LLaDA-1.5 (`GSAI-ML/LLaDA-1.5` at revision `84346fd91ba60252d260022201ad6fc5a3468fb2`) with its frozen
+  length head (`artifacts/heads/llada.pt`, SHA-256 `0de13a8ac6b881493e368d281531326b84fe7f5d2c50b1dccba6491dd1dec1d8`),
+  learned lengths, J = 2, all 64 report families, K = 32 (= 64 / J).
+- **Platform and time.** One H100 NVL 96 GB, torch 2.7.1+cu128: 15.3 min wall-clock (920 s, of which 54 s load the
+  model).
+- **Numbers.** Section 4.3 uses ordinary sampling only (β = 0), so there is no guided row. Frozen mean
+  (`data/tables/fig6/sec43_downstream.csv`) against the rerun's mean and 95 % CI:
+
+  | β | quantity | frozen | rerun [95 % CI] | verdict |
+  |---|---|---|---|---|
+  | 0 | A_avg (learned lengths) | 0.250 | 0.250 [0.187, 0.317] | inside |
+
+- **Note.** On this platform the rerun reproduced the frozen pool bit for bit (allocations, tokens and ell1 of all
+  64 × 32 candidates): `--compare` reports a largest difference of 0 (2.8e-17 in `pr_L_ne_Lstar_given_correct`) in
+  every column except `diff_vs_oracle`, `diff_lo` and `diff_hi`, which are empty because the rerun directory holds no
+  oracle pool. On another GPU the draws differ and the verdict is the check.
+
 ## Training a length head (optional)
 
 The paper's heads ship frozen; `train_head.py` retrains one (Appendix B.5). Restated with `frozen_config.json`:

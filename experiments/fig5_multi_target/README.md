@@ -90,3 +90,29 @@ Sampling and scoring one cell (64 families, K = 16) took, on one H100 NVL in the
   judge such a rerun by `--compare`, which asks whether the frozen mean lies inside the rerun's 95 % CI.
 - Two frozen pool files, LLaDA-1.5 (16, 8) and dQwen3.5 (16, 4), hold one family twice; like the paper's
   analysis, `analyze.py` keeps the first complete record of every family.
+
+## Resampling check
+
+GPU sampling is statistical in general, so a rerun is judged by whether the frozen mean lies inside the rerun's
+95 % CI, not by equality. One full cell was rerun on a GPU and analysed with `--compare`:
+
+    CUDA_VISIBLE_DEVICES=2 python experiments/fig5_multi_target/run.py --model llada --M 4 --J 2 --K 16 --families 64 --out artifacts/reruns/fig5
+    python experiments/fig5_multi_target/analyze.py --pools artifacts/reruns/fig5 --out artifacts/reruns/fig5/analysis --compare data/tables/fig5
+
+- **Cell.** LLaDA-1.5 (`GSAI-ML/LLaDA-1.5` at revision `84346fd91ba60252d260022201ad6fc5a3468fb2`), M = 4, J = 2,
+  all 64 report families, K = 16.
+- **Platform and time.** One H100 NVL 96 GB, torch 2.7.1+cu128: 7.4 min wall-clock (444 s, of which 57 s load the
+  model).
+- **Numbers.** Frozen mean (`data/tables/fig5/cells.csv`) against the rerun's mean and 95 % CI (`cells.csv` of the
+  rerun). `--compare` prints the β = 0 verdict; the β = 0.5 row is read from the same CI columns.
+
+  | β | quantity | frozen | rerun [95 % CI] | verdict |
+  |---|---|---|---|---|
+  | 0 | A_all | 0.516 | 0.516 [0.406, 0.623] | inside |
+  | 0.5 | A_all | 0.564 | 0.564 [0.456, 0.671] | inside |
+  | 0.5 | gain in A_all | +0.049 | +0.049 [+0.025, +0.077] | inside |
+
+- **Note.** On this platform the rerun reproduced the frozen pool bit for bit (tokens, ell1, ell0 of all 64 × 16
+  candidates), so `--compare` reports a largest difference of 0 in `cells.csv`, `gold.csv` and `sharpening.csv`
+  (only the timing column of `diagnostics.csv` differs) and the rerun's mean equals the frozen one. On another GPU
+  the draws differ and the verdict is the check.
