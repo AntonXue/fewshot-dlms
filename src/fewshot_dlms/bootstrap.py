@@ -1,8 +1,10 @@
 # ported from editdiff/experiments/paper_integration/agent_a/fig5_compute.py (idx_for, ci, boot_sd) and experiments/sec42_mj/mj_analyze.py @ d276fa6
 """Family bootstrap with the paper's exact seed derivation. Do not change the RNG or draw order: CI parity depends on it.
 
-Every figure resamples whole families (episodes) with replacement. One index matrix is drawn per cell and shared by
-every quantity of that cell, so differences between quantities (for example tilted minus ordinary accuracy) are paired.
+Figures 4 and 5 use this module: they resample whole families (episodes) with replacement. One index matrix is drawn
+per cell and shared by every quantity of that cell, so differences between quantities (for example tilted minus
+ordinary accuracy) are paired. Figures 6 and 7 keep their own resampling, as their analyze.py files document: Figure 6
+an integer-seeded numpy default_rng over families, Figure 7 a commit-level random.Random(0).
 Per-pipeline seed strings and cell keys: Fig 4 ("mtfsp-20261003-bootstrap-v1", f"{model}|{src}"),
 Fig 5 ("mtfsp-20261011-mj-bootstrap-v1", f"{model}|{M}|{J}").
 """

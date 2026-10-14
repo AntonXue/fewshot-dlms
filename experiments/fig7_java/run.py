@@ -1,4 +1,4 @@
-# ported from editdiff/private-docs-redacted/20261011-012221-sec5-final-helper-run/scratch/fr_gen.py (main run) and private-docs-redacted/20261011-055211-s5-zero-demo-ablation/scratch/zd_gen.py (zero-demonstration ablation) @ d276fa6
+# ported from editdiff/<the authors' Section 5 run package>: fr_gen.py (main run) and zd_gen.py (zero-demonstration ablation) @ d276fa6
 """Sample and score the Java pools of Section 5 (Figure 7) on a GPU: LLaDA-1.5, one process, one GPU.
 
 Main run (--study main). For every episode of data/java in the chosen cells (M demonstrations, J targets) and a
@@ -29,8 +29,9 @@ not which cells or episodes the run selects); protocol_hash stays the paper's ru
 rerun with the same configuration skips the units already in the file, so an interrupted run resumes; a file that
 holds records of another configuration (another K, chunk, head, ...; or the frozen pools, which carry no config_hash)
 is refused with exit status 2, naming the file, before the model is loaded, so that analyze.py never reads two
-configurations as one pool. <out>/manifest_<hash>.json records the run's configuration and hash, the pool's hash,
-every seed and the library versions.
+configurations as one pool. A unit that raises is reported and counted, the others are written, and the run ends with
+RUN_FAILED and exit status 1; the next run samples only the failed units. <out>/manifest_<hash>.json records the
+run's configuration and hash, the pool's hash, every seed and the library versions.
 
     python experiments/fig7_java/run.py --regime oracle --M 1,2 --J 1,2 --K 16 --out artifacts/reruns/fig7/pools
     python experiments/fig7_java/run.py --regime learned --head artifacts/heads/java_head_C.pt --out artifacts/reruns/fig7/pools
@@ -476,7 +477,13 @@ def head_sha_of(args):
     if args.study != "main" or args.regime != "learned":
         return ""
     if args.head_probs:
+        if not Path(args.head_probs).is_file():
+            print(f"no stored head predictions at {args.head_probs}; run: python -m fewshot_dlms.fetch java", file=sys.stderr)
+            sys.exit(2)
         return str(np.load(args.head_probs, allow_pickle=False)["ckpt_sha"])
+    if not Path(args.head).is_file():
+        print(f"no length head at {args.head}; run: python -m fewshot_dlms.fetch heads", file=sys.stderr)
+        sys.exit(2)
     head_sha = file_sha256(args.head)
     if head_sha not in (HEAD_CKPT_SHA, TRAINED_HEAD_CKPT_SHA):
         print(f"warning: {args.head} is not the paper's head C (sha256 {head_sha[:12]}...)", flush=True)
@@ -489,7 +496,8 @@ def pool_path(args, out):
 
 
 def run_main(args, adapter, episodes, out, config, done, head_sha):
-    """The main run: one record per selected episode in one regime, skipping the episodes in `done`."""
+    """The main run: one record per selected episode in one regime, skipping the episodes in `done`. Returns the number
+    of episodes that failed."""
     selected = [e for e in episodes if e["M"] in args.M and e["J"] in args.J][: args.families]
     probs = None
     if args.regime == "learned":
@@ -504,6 +512,7 @@ def run_main(args, adapter, episodes, out, config, done, head_sha):
     if args.regime == "oracle":
         seeds = {e["episode_id"]: generation_seed("oracle", e["episode_id"], e["oracle_lengths"]) for e in selected}
     write_manifest(out / f"manifest_{digest}.json", config, digest, {path.name: pool_digest}, seeds, args)
+    failed = 0
     for episode in selected:
         if episode["episode_id"] in done:
             continue
@@ -512,6 +521,7 @@ def run_main(args, adapter, episodes, out, config, done, head_sha):
         except Exception as error:  # one failed episode must not stop the run; it is retried on the next run
             print(f"FAILED {episode['episode_id']} {args.regime}: {error}\n{traceback.format_exc()[-1500:]}", flush=True)
             torch.cuda.empty_cache()
+            failed += 1
             continue
         record = {
             **body,
@@ -528,10 +538,12 @@ def run_main(args, adapter, episodes, out, config, done, head_sha):
             f" replay {body['max_p1_replay_absdiff']:.1e} gen {body['seconds_gen']:.0f}s score {body['seconds_score']:.0f}s",
             flush=True,
         )
+    return failed
 
 
 def run_zero_demo(args, adapter, episodes, out, config, done):
-    """The zero-demonstration ablation: one record per (anchor, arm M), skipping the units in `done`."""
+    """The zero-demonstration ablation: one record per (anchor, arm M), skipping the units in `done`. Returns the number
+    of units that failed."""
     by_id = {episode["episode_id"]: episode for episode in episodes}
     units = zero_demo_units(episodes, args.M, args.J)
     anchors = list(dict.fromkeys(unit["anchor_episode_id"] for unit in units))
@@ -542,17 +554,20 @@ def run_zero_demo(args, adapter, episodes, out, config, done):
     path = pool_path(args, out)
     seeds = {unit["unit_id"]: zero_demo_seed(unit) for unit in units}
     write_manifest(out / f"manifest_{digest}.json", config, digest, {path.name: pool_digest}, seeds, args)
+    failed = 0
     for unit in units:
         if unit["unit_id"] in done:
             continue
         try:
             body = run_zero_demo_unit(adapter, unit, by_id[unit["arm_source_episode"]], args.K, args.chunk)
-        except Exception as error:
+        except Exception as error:  # one failed unit must not stop the run; it is retried on the next run
             print(f"FAILED {unit['unit_id']}: {error}\n{traceback.format_exc()[-1500:]}", flush=True)
             torch.cuda.empty_cache()
+            failed += 1
             continue
         append_record(path, {**body, "tag": args.tag, "config_hash": pool_digest, "K": args.K})
         print(f"[M{unit['M']}] {unit['unit_id']} J={unit['J']} distinct texts={body['n_unique_text']} gen {body['seconds_gen']:.0f}s", flush=True)
+    return failed
 
 
 def main():
@@ -596,9 +611,12 @@ def main():
     print(f"[fig7] {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
     out.mkdir(parents=True, exist_ok=True)
     if args.study == "main":
-        run_main(args, adapter, episodes, out, config, done, head_sha)
+        failed = run_main(args, adapter, episodes, out, config, done, head_sha)
     else:
-        run_zero_demo(args, adapter, episodes, out, config, done)
+        failed = run_zero_demo(args, adapter, episodes, out, config, done)
+    if failed:
+        print(f"RUN_FAILED {args.study} {time.time() - started:.0f}s -> {out}; failed families: {failed}", flush=True)
+        sys.exit(1)
     print(f"RUN_DONE {args.study} {time.time() - started:.0f}s -> {out}", flush=True)
 
 

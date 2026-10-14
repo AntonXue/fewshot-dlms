@@ -12,13 +12,18 @@ figures (Figures 4–7 and the Appendix B figures) on a CPU from stored candidat
     make reproduce                               # every table from the pools, then every figure; CPU, about 1 min
 
 `make reproduce` writes `artifacts/reproduce/` and prints each table's difference to the paper's (`data/tables/`,
-which `make figures` plots offline). The fetcher pins the revision in [`ARTIFACTS.md`](ARTIFACTS.md) and checks
-SHA-256s; while the dataset is private it needs a Hugging Face login. Tests (`pip install -e '.[dev]'` first):
+which `make figures` plots offline into `experiments/fig*/out/`, 10 PDFs). Its "inside the CI" verdicts are trivially
+true, since the pools analysed are the paper's own; they test reruns (`make rerun-*`). The fetcher pins the revision in
+[`ARTIFACTS.md`](ARTIFACTS.md) and checks SHA-256s; while the dataset is private it needs a Hugging Face login. Tests
+(`pip install -e '.[dev]'` first):
 
     make test          # CPU unit and fixture tests; no downloads, about 30 s
     make test-parity   # CPU; every paper table from the pools; needs `fetch pools java`
     make test-gpu      # GPU replay; needs the checkpoints, flash-attn, `fetch java heads`
     make test-api      # the judge via the Anthropic API; needs `fetch java` and ANTHROPIC_API_KEY; spends credits
+
+`make test` skips the tests that read the SST-2 / MIT Movie text until `pip install -e '.[data]'` and
+`python data/benchmarks/build.py` (network) build it.
 
 ## The three ideas
 
@@ -56,7 +61,19 @@ so it cancels from R. Code: `lengths.py`.
 | Appendix B, Likelihood Sharpening | M × J sharpening figure (Fig. 10 ACL / Fig. 11 arXiv); matched-power residuals | `fig5_multi_target`; `fig4_single_target` |
 | Appendix B, Guidance-Strength Sensitivity (arXiv only) | guidance-strength sweep figure (Fig. 10 arXiv) | `fig4_single_target/analyze.py --beta-sweep` |
 
-Appendix material is named by topic: its numbers differ between the ACL and arXiv builds.
+Appendix material is named by topic: its numbers differ between the ACL and arXiv builds. The *ACL version* is the
+submitted manuscript; the *arXiv version* is the longer build with the guidance-strength appendix.
+`make figures` writes these files (directories under `experiments/`):
+
+| `make figures` output | paper figure |
+|---|---|
+| `fig4_single_target/out/fig4.pdf` | Fig. 4 (Section 4.1) |
+| `fig5_multi_target/out/fig5.pdf` | Fig. 5 (Section 4.2) |
+| `fig6_lengths/out/fig6.pdf` | Fig. 6 (Section 4.3) |
+| `fig7_java/out/fig7.pdf` | Fig. 7 (Section 5) |
+| `fig5_multi_target/out/fig8_mechanism.pdf`, `fig9_crossbench.pdf`, `fig10_sharpening.pdf` | Appendix B: mechanism (Fig. 8, both builds), cross-benchmark (Fig. 9, both builds), M × J sharpening (Fig. 10 ACL / Fig. 11 arXiv) |
+| `fig4_single_target/out/gold_reward_row.pdf`, `fig11_beta_sweep.pdf`; `fig6_lengths/out/fidelity_row.pdf` | Appendix B: gold-reward row (Single-Target Prompting), guidance-strength sweep (arXiv version only, Fig. 10 there), length-head fidelity row (Length Allocation) |
+
 `python examples/walkthrough.py --cached` walks one pool from the canvas to ℓ1, ℓ0, R, weights and picks.
 
 ## Three levels of fidelity
@@ -94,16 +111,16 @@ re-judges through the Anthropic API, approximately and at a cost.
 ## Layout and size
 
     README.md AGENTS.md THIRD_PARTY.md LICENSE ARTIFACTS.md SHA256SUMS Makefile pyproject.toml
-    src/fewshot_dlms/   2,928   the library
-    examples/             241   walkthrough.py
-    experiments/        6,937   one pipeline per figure: run.py, analyze.py, plot.py, README
-    tests/              4,837   CPU, parity, GPU and API tests
-    tools/              1,127   scripts that cut data/ and the artifacts from the authors' runs
+    src/fewshot_dlms/   3,036   the library
+    examples/             271   walkthrough.py
+    experiments/        7,160   one pipeline per figure: run.py, analyze.py, plot.py, README
+    tests/              5,527   CPU, parity, GPU and API tests
+    tools/              1,134   scripts that cut data/ and the artifacts from the authors' runs
     data/  artifacts_upload/  artifacts/   inputs and the paper's tables; the data card; downloads (not in git)
 
-Lines of Python. A reader needs `src/` and `examples/` (3,169 lines, kept under 5,000); parity tests hold the ports
-in `experiments/` to the paper. A port's first line, `# ported from editdiff/<path> @ <commit>`, names its source in
-the authors' research repository.
+Lines of Python (`wc -l` over tracked `*.py`). A reader needs `src/` and `examples/` (3,307 lines, kept under 5,000);
+parity tests hold the ports in `experiments/` to the paper. A port's first line,
+`# ported from editdiff/<path> @ <commit>`, names its source in the authors' research repository.
 
 ## License and citation
 

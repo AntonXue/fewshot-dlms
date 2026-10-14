@@ -4,12 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fewshot-dlms"
-version = "0.1.0"
+version = "1.0.0"
 description = "Multi-target few-shot prompting with diffusion language models: code and reproduction for the paper"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-requires-python = ">=3.12"
+# numpy==1.26.4 has no wheels for Python 3.13.
+requires-python = ">=3.12,<3.13"
 dependencies = [
   "torch==2.7.1", "transformers==5.13.0", "numpy==1.26.4", "pandas==2.3.3",
   "matplotlib==3.10.7", "huggingface_hub>=0.30",
@@ -34,6 +35,8 @@ where = ["src"]
 fewshot_dlms = ["fonts/*.otf", "fonts/*.txt"]
 
 [tool.pytest.ini_options]
+# Every marker must be registered below.
+addopts = "--strict-markers"
 markers = [
   "gpu: needs a CUDA GPU and model weights",
   "parity: needs fetched artifacts",

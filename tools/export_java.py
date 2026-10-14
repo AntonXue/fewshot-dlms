@@ -136,7 +136,7 @@ def main() -> None:
         "--src",
         type=Path,
         default=None,
-        help="package directory of the authors' Section 5 run (has manifests/ and scratch/); not shipped",
+        help="package directory of the authors' Section 5 run (its manifests and episode library); not shipped",
     )
     parser.add_argument(
         "--dest",

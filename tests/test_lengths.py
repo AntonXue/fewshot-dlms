@@ -13,6 +13,7 @@ import torch
 
 from fewshot_dlms.canvas import build_canvas
 from fewshot_dlms.data import load_families
+from fewshot_dlms.lengths import ALLOC_TAG
 from fewshot_dlms.lengths import L_MAX
 from fewshot_dlms.lengths import LengthHead
 from fewshot_dlms.lengths import allocate
@@ -164,6 +165,20 @@ def test_sampler_reproduces_the_frozen_allocations(head_fixture):
         probs = np.asarray(record["probs"], dtype=np.float32).astype(np.float64)
         seed = section43_seed(head_fixture["bank"], backbone, record["episode_id"], head_fixture["J"])
         assert sample_allocations(probs, len(record["allocations"]), seed) == record["allocations"]
+
+
+def test_head_sample_rounds_through_float32_as_the_pipelines_do():
+    """LengthHead.sample draws from the head's float64 probabilities rounded to float32 and back, the two-step path of
+    the fig6 and fig7 run.py. The vector puts site 0's CDF 1e-9 below candidate 0's uniform, where the rounding
+    decides the length."""
+    seed = section43_seed("report", "llada", FAMILY["episode_id"], 1)
+    u = hashed_uniform(ALLOC_TAG, *seed, 0, 0)
+    probs = np.array([[u - 1e-9, 1 - (u - 1e-9)]], dtype=np.float64)
+    head = LengthHead.__new__(LengthHead)  # no model: predict returns the vector
+    head.predict = lambda canvas: probs
+    pipelines = sample_allocations(probs.astype(np.float32).astype(np.float64), 8, seed)
+    assert head.sample(None, 8, seed) == pipelines
+    assert sample_allocations(probs, 8, seed) != pipelines
 
 
 def test_head_fixture_is_well_formed(head_fixture):

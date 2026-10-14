@@ -384,10 +384,14 @@ def test_run_resumes_and_keeps_each_cells_hash(toy_run, tmp_path):
     first = pool_lines(out, "list_easy_fam_M2_J1")
     assert len(first) == 2
 
+    (path,) = (out / "report" / "llada").glob("manifest_*.json")
+    session = json.loads(path.read_text())["sessions"][0]
     code, stdout = call(out, "--M", "2", "--K", "4", "--families", "2")
     assert code == 0
     assert "CELL_DONE llada list_easy_fam_M2_J1 new=0" in stdout
     assert pool_lines(out, "list_easy_fam_M2_J1") == first
+    sessions = json.loads(path.read_text())["sessions"]  # the resumed run keeps the first session's record
+    assert len(sessions) == 2 and sessions[0] == session
 
     code, stdout = call(out, "--M", "2,4", "--K", "4", "--families", "5")
     assert code == 0
@@ -403,7 +407,8 @@ def test_run_resumes_and_keeps_each_cells_hash(toy_run, tmp_path):
     manifests = [json.loads(path.read_text()) for path in (out / "report" / "llada").glob("manifest_*.json")]
     assert len(manifests) == 2  # one per distinct set of requested cells
     manifest = next(m for m in manifests if "list_easy_fam_M4_J1" in m["cells"])
-    assert set(manifest) == {"cells", "seeds", "versions", "command"}
+    assert set(manifest) == {"cells", "seeds", "sessions"}
+    assert set(manifest["sessions"][0]) == {"versions", "command"}
     assert set(manifest["cells"]) == {"list_easy_fam_M2_J1", "list_easy_fam_M4_J1"}
     assert manifest["cells"]["list_easy_fam_M2_J1"]["protocol_hash"] == records[0]["protocol_hash"]
     assert manifest["seeds"]["list_easy_fam_M2_J1"]["list_easy_fam:report:000"] == records[0]["seed"]

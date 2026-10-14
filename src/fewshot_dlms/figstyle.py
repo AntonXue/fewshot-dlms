@@ -1,4 +1,4 @@
-# ported from editdiff-paper/scripts/figstyle.py and scripts/figgrid.py @ fd2a8a9
+# ported from the paper repository's scripts/figstyle.py and scripts/figgrid.py @ fd2a8a9
 """One shared style for the paper's figures.
 
 Width is an input, not an output: every figure is authored at ACL's full text width (FIGW) with a fixed

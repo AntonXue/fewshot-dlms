@@ -53,8 +53,8 @@ def load_script(root, name):
 
 
 @pytest.fixture(scope="module")
-def java(artifacts):
-    path = artifacts / "java"
+def java(artifact_root):
+    path = artifact_root / "java"
     if not (path / "pools").exists():
         pytest.skip("Java artifacts not fetched: run `python -m fewshot_dlms.fetch pools java`")
     return path
@@ -126,9 +126,9 @@ def test_replay_in_the_frozen_batches_reproduces_stored_loglik(adapter, run, rec
         assert worst <= limit, (record["episode_id"], worst, limit)
 
 
-def test_head_c_predictions_match_the_stored_ones(adapter, run, records, episodes, artifacts, java, record_property):
+def test_head_c_predictions_match_the_stored_ones(adapter, run, records, episodes, artifact_root, java, record_property):
     """Head C on the two episodes' compact prompts: the stored distributions, and the stored learned allocations."""
-    head_path = artifacts / "heads" / "java_head_C.pt"
+    head_path = artifact_root / "heads" / "java_head_C.pt"
     if not head_path.exists():
         pytest.skip("Java head C not fetched: run `python -m fewshot_dlms.fetch heads`")
     pytest.importorskip("flash_attn")

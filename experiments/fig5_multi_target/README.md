@@ -67,7 +67,7 @@ GPU, one model per process:
 depends on that cell alone; an interrupted run resumes after the families with that hash and, before loading the
 model, refuses a file holding records of another protocol (exit status 2, naming the file).
 `<out>/<model>/manifest_<hash>.json` holds the run's configuration and hash, every pool's hash, every seed, and the
-library and GPU versions.
+library and GPU versions. A failed family is counted and the run exits non-zero.
 
 ## Runtime
 

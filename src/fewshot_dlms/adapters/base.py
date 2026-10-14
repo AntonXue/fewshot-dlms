@@ -147,7 +147,8 @@ def reveal(adapter, contexts, orders, which, allowed, generator=None, forced=Non
     adapter.begin_reveal(orders[0]). With several contexts the first target position is the same in
     all of them (only the target lengths differ), so orders[0] stands for every context.
 
-    Sampling (forced=None): every candidate draws its next token from its factor.
+    Sampling (forced=None): every candidate draws its next token from its factor, with `generator` (a
+    torch.Generator; required, so that no draw comes from torch's global RNG: ValueError without it).
     Scoring (forced = n token lists in reveal order): the given tokens are written in instead.
     Returns the n token lists and, for each, its log-prob terms in reveal order. Their sum is log P1
     or log P0 of the candidate, depending on the context.
@@ -159,6 +160,8 @@ def reveal(adapter, contexts, orders, which, allowed, generator=None, forced=Non
     """
     n = len(which)
     sampling = forced is None
+    if sampling and generator is None:
+        raise ValueError("sampling needs a seeded torch.Generator (generator=...); pass forced=... to score")
     traces = [[] for _ in range(n)] if sampling else [list(trace) for trace in forced]
     logprobs = [[] for _ in range(n)]
     adapter.begin_reveal(orders[0])
@@ -300,8 +303,9 @@ def decode_ar(
     next token after prompt_ids + its first s tokens. `chunk` defaults to the adapter's `sample_chunk`; the frozen
     pools scored P0 with `adapter.p0_chunk`.
 
-    Sampling (forced=None): every unfinished continuation draws its next token from its factor; it finishes on a
-    token in `stop_ids` (kept) or once it has `max_new` tokens. Scoring (forced = n token lists): the given tokens
+    Sampling (forced=None): every unfinished continuation draws its next token from its factor with `generator` (a
+    torch.Generator, required: ValueError without it); it finishes on a token in `stop_ids` (kept) or once it has
+    `max_new` tokens. Scoring (forced = n token lists): the given tokens
     are written in instead, and a continuation takes part in a step while it has a token for it.
     Returns the n token lists, their log-prob terms, and for each whether the budget ended it before a stop token
     (always False without stop ids, where max_new is the fixed length).
@@ -319,6 +323,8 @@ def decode_ar(
     sampling = forced is None
     if sampling and (max_new is None or max_new < 1):
         raise ValueError(f"sampling needs a token budget max_new >= 1, got {max_new}")
+    if sampling and generator is None:
+        raise ValueError("sampling needs a seeded torch.Generator (generator=...); pass forced=... to score")
     if not sampling and len(forced) != n:
         raise ValueError(f"expected {n} forced continuations, got {len(forced)}")
     traces = [[] for _ in range(n)] if sampling else [[int(token) for token in trace] for trace in forced]

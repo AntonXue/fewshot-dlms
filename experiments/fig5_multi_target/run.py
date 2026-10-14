@@ -20,7 +20,9 @@ finish. Every record carries the protocol_hash of its cell (pool_config: model, 
 rules; the hash a run of that cell alone writes, whatever other cells the run also samples). A rerun with the same
 protocol skips the families already in the file, so an interrupted run resumes; a file that holds records of another
 protocol (another K, chunk, revision, ...) is refused with exit status 2, naming the file, before the model is loaded,
-so that analyze.py never reads two protocols as one pool. <out>/<model>/manifest_<hash>.json records the run's
+so that analyze.py never reads two protocols as one pool. A family that raises is reported and counted, the others
+are written, and the run ends with RUN_FAILED and exit status 1; the next run samples only the failed families.
+<out>/<model>/manifest_<hash>.json records the run's
 configuration and hash, the hash of every pool, the seeds and the library versions. analyze.py reads the pools.
 
     python experiments/fig5_multi_target/run.py --model llada --M 4 --J 2 --K 16 --families 8 --out artifacts/reruns/fig5
@@ -356,6 +358,7 @@ def main():
     pool_hashes = {path.name: pool_digest for _, _, path, pool_digest, _ in pools}
     write_manifest(out / f"manifest_{digest}.json", config, digest, pool_hashes, families, args)
 
+    failed = 0
     for M, J, path, pool_digest, done in pools:
         written = 0
         job_start = time.time()
@@ -367,6 +370,7 @@ def main():
             except Exception as error:  # one failed family must not stop the cell; it is retried on the next run
                 print(f"FAILED {family['episode_id']} M={M} J={J}: {error}\n{traceback.format_exc()[-1500:]}", flush=True)
                 torch.cuda.empty_cache()
+                failed += 1
                 continue
             record = {
                 "episode_id": family["episode_id"],
@@ -401,6 +405,9 @@ def main():
                 flush=True,
             )
         print(f"CELL_DONE {args.model} M={M} J={J} new={written} {time.time() - job_start:.0f}s", flush=True)
+    if failed:
+        print(f"RUN_FAILED {args.model} {time.time() - started:.0f}s -> {out}; failed families: {failed}", flush=True)
+        sys.exit(1)
     print(f"RUN_DONE {args.model} {time.time() - started:.0f}s -> {out}", flush=True)
 
 

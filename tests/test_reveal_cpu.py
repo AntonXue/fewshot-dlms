@@ -215,6 +215,14 @@ def test_candidates_on_different_canvases_follow_their_own_order():
     assert [len(terms) for terms in logprobs] == [3, 2, 3]
 
 
+def test_sampling_without_a_generator_is_refused():
+    # Every draw must come from a seeded generator, never from torch's global RNG; scoring needs none.
+    with pytest.raises(ValueError, match="Generator"):
+        reveal(Toy(), [[0, 1, 4, 2, 4]], [[2, 4]], which=[0, 0], allowed=None)
+    traces, _ = reveal(Toy(), [[0, 1, 4, 2, 4]], [[2, 4]], which=[0], allowed=None, forced=[[1, 2]])
+    assert traces == [[1, 2]]
+
+
 # ---------------------------------------------------------------------------------------------
 # Support masking, the seeded draw order and the begin_reveal hook
 # ---------------------------------------------------------------------------------------------

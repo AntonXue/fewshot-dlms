@@ -69,11 +69,11 @@ def run_analyze(root, pools, out, *extra):
 
 
 @pytest.fixture(scope="module")
-def java(artifacts):
-    """The fetched Java artifacts: pools/, judging/, length/, zero_demo/."""
-    path = artifacts / "java"
+def java(artifact_root):
+    """The fetched Java artifacts: pools/, judging/, length/, zero_demo/ (the java group alone is enough)."""
+    path = artifact_root / "java"
     if not (path / "pools").exists():
-        pytest.skip("Java artifacts not fetched: run `python -m fewshot_dlms.fetch pools java`")
+        pytest.skip("Java artifacts not fetched: run `python -m fewshot_dlms.fetch java`")
     return path
 
 
@@ -453,4 +453,62 @@ def test_run_refuses_a_pool_of_another_configuration(root, tmp_path, study, pool
     result = subprocess.run(command, capture_output=True, text=True, cwd=root)
     assert result.returncode == 2, result.stderr
     assert str(path) in result.stderr
+    assert "loaded in" not in result.stdout
+
+
+@pytest.mark.parametrize("study", ["main", "zero_demo"])
+def test_run_counts_a_failed_unit_and_exits_non_zero(root, tmp_path, monkeypatch, capsys, study):
+    """An episode (ablation unit) that raises is reported and counted, the others are written, and the run ends with
+    RUN_FAILED and exit status 1 (no model: load and the per-unit function are replaced); the next run writes only the
+    failed unit."""
+    run = load_script(root, "run")
+    adapter = types.SimpleNamespace(model_id="GSAI-ML/LLaDA-1.5", revision="rev")
+    monkeypatch.setattr(run, "load", lambda name, device: adapter)
+    monkeypatch.setattr(run.torch.cuda, "is_available", lambda: False)
+    monkeypatch.setattr(run.torch.cuda, "empty_cache", lambda: None)
+    field = "episode_id" if study == "main" else "unit_id"
+    seen = []
+
+    def body_of(key):
+        return {field: key, "distinct_allocations": 1, "allocation_rejections": 0, "n_unique_text": 1,
+                "max_p1_replay_absdiff": 0.0, "seconds_gen": 0.0, "seconds_score": 0.0}
+
+    def flaky(adapter, unit, *arguments):
+        seen.append(unit[field])
+        if len(seen) == 2:
+            raise RuntimeError("injected failure")
+        return body_of(unit[field])
+
+    name = "run_main_episode" if study == "main" else "run_zero_demo_unit"
+    monkeypatch.setattr(run, name, flaky)
+    argv = ["run.py", "--study", study, "--K", "4", "--families", "2", "--out", str(tmp_path), "--device", "cpu"]
+    monkeypatch.setattr(sys, "argv", argv)
+    with pytest.raises(SystemExit) as exit:
+        run.main()
+    stdout = capsys.readouterr().out
+    assert exit.value.code == 1
+    assert f"FAILED {seen[1]}" in stdout
+    assert f"RUN_FAILED {study}" in stdout and "failed families: 1" in stdout
+    assert "RUN_DONE" not in stdout
+    pool = tmp_path / ("pools_oracle.jsonl" if study == "main" else "pools_zero_demo.jsonl")
+    written = [record[field] for record in read_jsonl(pool)]
+    assert seen[1] not in written and len(written) == len(seen) - 1
+
+    monkeypatch.setattr(run, name, lambda adapter, unit, *arguments: body_of(unit[field]))
+    run.main()
+    stdout = capsys.readouterr().out
+    assert "RUN_DONE" in stdout
+    assert [record[field] for record in read_jsonl(pool)] == written + [seen[1]]
+
+
+@pytest.mark.parametrize("option, group", [("--head", "heads"), ("--head-probs", "java")])
+def test_learned_run_without_its_head_names_the_fetch_command(root, tmp_path, option, group):
+    """run.py --regime learned exits with status 2 and the fetch command, before it loads a model, when the head
+    checkpoint (or the stored predictions) is missing."""
+    command = [sys.executable, str(root / "experiments/fig7_java/run.py"), "--regime", "learned"]
+    command += [option, str(tmp_path / "missing"), "--families", "1", "--out", str(tmp_path), "--device", "cpu"]
+    result = subprocess.run(command, capture_output=True, text=True, cwd=root)
+    assert result.returncode == 2, result.stderr
+    assert f"python -m fewshot_dlms.fetch {group}" in result.stderr
+    assert "Traceback" not in result.stderr
     assert "loaded in" not in result.stdout
