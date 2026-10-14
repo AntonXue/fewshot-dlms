@@ -94,14 +94,14 @@ re-judges through the Anthropic API, approximately and at a cost.
 ## Layout and size
 
     README.md AGENTS.md THIRD_PARTY.md LICENSE ARTIFACTS.md SHA256SUMS Makefile pyproject.toml
-    src/fewshot_dlms/   2,926   the library
+    src/fewshot_dlms/   2,928   the library
     examples/             241   walkthrough.py
-    experiments/        6,932   one pipeline per figure: run.py, analyze.py, plot.py, README
+    experiments/        6,937   one pipeline per figure: run.py, analyze.py, plot.py, README
     tests/              4,837   CPU, parity, GPU and API tests
     tools/              1,127   scripts that cut data/ and the artifacts from the authors' runs
     data/  artifacts_upload/  artifacts/   inputs and the paper's tables; the data card; downloads (not in git)
 
-Lines of Python. A reader needs `src/` and `examples/` (3,167 lines, kept under 5,000); parity tests hold the ports
+Lines of Python. A reader needs `src/` and `examples/` (3,169 lines, kept under 5,000); parity tests hold the ports
 in `experiments/` to the paper. A port's first line, `# ported from editdiff/<path> @ <commit>`, names its source in
 the authors' research repository.
 

@@ -29,8 +29,8 @@ is compared with.
     skipped and counted, never clipped: 3 families at J = 1 and 6 at J = 2 for Δ < 0. (`lengths.allocate("offset")`
     clips; `run.py` skips first.)
 - **K.** K = 64 / J candidates (64, 32, 16, 8), so every cell samples 64 targets per family. The oracle arm is the
-  K = 64 pool of the same families from the Section 4.1/4.2 sweep (the cross-benchmark study; Fig. 9, both builds), which
-  `run.py --mode oracle --K 64` reproduces token for token.
+  K = 64 pool of the same families from the Section 4.1/4.2 sweep (the cross-benchmark study; Fig. 9, both
+  builds), which `run.py --mode oracle --K 64` reproduces token for token.
 - **Sampling.** Candidates with the same allocation share a canvas, and candidate k is revealed on the canvas of its
   own allocation (`adapters.base.reveal` with one context per distinct allocation; Lemma 3.1, ascending positions, one
   token per step, ordinary support, chunks of 32 canvases). All K draws of a family come from one torch Generator
@@ -161,7 +161,8 @@ GPU sampling is statistical in general, so a rerun is judged by whether the froz
 
 ## Training a length head (optional)
 
-The paper's heads ship frozen; `train_head.py` retrains one (Appendix B, Length Allocation). Restated with `frozen_config.json`:
+The paper's heads ship frozen; `train_head.py` retrains one (Appendix B, Length Allocation). Restated with
+`frozen_config.json`:
 
 - **Architecture.** The backbone stays frozen. A trainable fp32 copy of its last transformer block and final norm
   (LLaDA-1.5: block 31 and ln_f; Nemotron: layer 33 and encoder.norm; dQwen3.5: layer 31 and model.norm) reads the

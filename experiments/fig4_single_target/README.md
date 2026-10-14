@@ -24,9 +24,9 @@ selection"), and the studies that reuse its pools:
   layout (`canvas.master_layout`; J = 1 keeps T1 at its master position).
 - **Model interfaces** (Appendix B, Experimental Setup). `llada` and `dqwen`: one canvas, the target masked with its
   oracle length (the token count of `" " + answer`). `nemotron_ar`: Nemotron's causal suffix, exactly the oracle
-  length, left to right. `qwen`: Qwen3-8B, free length, stopping at the first token that holds a newline or at `<|im_end|>` (200-token budget; graded on
-  its first line). The cross-benchmark study runs the three canvas models `llada`, `nemotron_pt` (causal prefix,
-  bidirectional tail) and `dqwen`.
+  length, left to right. `qwen`: Qwen3-8B, free length, stopping at the first token that holds a newline or at
+  `<|im_end|>` (200-token budget; graded on its first line). The cross-benchmark study runs the three canvas models
+  `llada`, `nemotron_pt` (causal prefix, bidirectional tail) and `dqwen`.
 - **Sampling.** K = 64 answers per family from P1 at temperature 1, all in one call: fixed-order decoding (Lemma 3.1,
   ascending canvas position) for canvases, left-to-right decoding for the causal interfaces. Seed of a family: the first
   16 hex digits of SHA-256(`algo_investigation|proposal|<model>|<episode_id>|<M>|<J>`) mod 2^31; the cross-benchmark
@@ -53,11 +53,11 @@ selection"), and the studies that reuse its pools:
   - `sec44_power.csv`: the same seed string, cell key `llada|<task>|44|J<J>`;
   - gold rows: `bootstrap.boot_sd` with seed string `4.1|<model>|<task>|<M>|rpt`.
 - **Appendix B, Likelihood Sharpening** (sharpening residuals). LLaDA-1.5, M = 4, J ∈ {1, 4, 8} (J = 1: the Section
-  4.1 pool; J = 4, 8: cross-benchmark pools). Guidance at (β, τ) has total exponent 1/τ + β on P1; `gain_vs_matched_power` compares it with ordinary power sampling
-  at τ_eff = 1 / (1/τ + β).
+  4.1 pool; J = 4, 8: cross-benchmark pools). Guidance at (β, τ) has total exponent 1/τ + β on P1;
+  `gain_vs_matched_power` compares it with ordinary power sampling at τ_eff = 1 / (1/τ + β).
 - **Appendix B, Guidance-Strength Sensitivity.** List Functions–Easy cross-benchmark pools (M = 4, K = 64), J ∈ {1, 4},
-  three DLMs, β ∈ {0, .25, .5, 1, 2}. Per family w = softmax(β R), A_all = Σ w·all_correct, H = −Σ w log w, D_eff = exp(H)/K; cell means, gains over
-  β = 0 paired with the cell's index matrix (`<model>|list_easy_fam`).
+  three DLMs, β ∈ {0, .25, .5, 1, 2}. Per family w = softmax(β R), A_all = Σ w·all_correct, H = −Σ w log w,
+  D_eff = exp(H)/K; cell means, gains over β = 0 paired with the cell's index matrix (`<model>|list_easy_fam`).
 
 ## Commands
 

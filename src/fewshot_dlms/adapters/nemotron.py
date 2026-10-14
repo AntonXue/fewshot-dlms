@@ -1,5 +1,6 @@
 # ported from editdiff/experiments/multimodel/mm_adapters.py::Nemotron (modes "block" and "ar") @ d276fa6
-"""Nemotron-Labs-Diffusion-8B: a causal prefix with a bidirectional tail, or a causal suffix (Appendix B, Experimental Setup).
+"""Nemotron-Labs-Diffusion-8B: a causal prefix with a bidirectional tail, or a causal suffix (Appendix B,
+Experimental Setup).
 
 Nemotron was trained as a block diffusion model: noisy tokens attend bidirectionally within their block
 and causally to the clean prefix before it. Both target-count studies of the paper (Figure 5 and the

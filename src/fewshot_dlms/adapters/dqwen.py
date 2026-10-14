@@ -1,5 +1,6 @@
 # ported from editdiff/experiments/multimodel/mm_adapters.py::DQwen9B and experiments/dx/dqwen_adapter.py::{DQwen, MASK_ID, BOS_ID} @ d276fa6
-"""dQwen3.5-9B-Base, a hybrid masked diffusion language model that infills the whole canvas (Appendix B, Experimental Setup).
+"""dQwen3.5-9B-Base, a hybrid masked diffusion language model that infills the whole canvas (Appendix B,
+Experimental Setup).
 
 dQwen3.5 is adapted from Qwen3.5: its full-attention layers (every fourth layer) attend bidirectionally
 over the canvas, its Gated-DeltaNet layers stay causal. It is a base model, so the canvas is plain text
