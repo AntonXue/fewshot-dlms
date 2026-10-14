@@ -1,0 +1,59 @@
+{
+ "episode_id": "M1J1_chec_b142dda_getMessage",
+ "commit10": "b142dda472",
+ "llada_dev": false,
+ "K": 16,
+ "L_ref": [
+  55
+ ],
+ "n_unique": 10,
+ "correct": {
+  "text_sha": "e84a6ebfebcc147c",
+  "multiplicity": 7,
+  "logp1": -0.6063659510646175,
+  "logp0": -2.6557539147806892,
+  "R": 2.0493879637160717,
+  "w_beta0": 0.4375,
+  "w_beta05": 0.15653385782236096,
+  "draws": [
+   4,
+   5,
+   7,
+   9,
+   12,
+   14,
+   15
+  ]
+ },
+ "highlighted_incorrect": {
+  "text_sha": "da1d2366d4946fe0",
+  "verdict": "incorrect",
+  "multiplicity": 1,
+  "logp1": -4.2029865798096395,
+  "logp0": -12.89121863939988,
+  "R": 8.688232059590241,
+  "w_beta0": 0.0625,
+  "w_beta05": 0.6181828140797311,
+  "draws": [
+   13
+  ]
+ },
+ "other_noncorrect_draws": 8,
+ "other_noncorrect_verdicts": {
+  "incorrect": 8
+ },
+ "sum_w0": 1.0,
+ "sum_w05": 1.0,
+ "U0": 0.4375,
+ "U05": 0.15653385782236096,
+ "logP1_diff_wrong_minus_correct": -3.596620628745022,
+ "P1_ratio_wrong_over_correct": 0.027416215645914458,
+ "R_diff_wrong_minus_correct": 6.63884409587417,
+ "idealQ_ratio_wrong_over_correct_beta05": 0.7579039769817107,
+ "idealQ_ratio_wrong_over_correct_beta1": 20.951777070308133,
+ "pool_weight_ratio_wrong_over_correct_total_beta05": 3.9491955458049364,
+ "pool_weight_ratio_check": 3.9491955458049355,
+ "beta_where_ideal_pair_ratio_crosses_1": 0.5417540428431219,
+ "P1_wrong": 0.014950858144698473,
+ "P1_correct": 0.5453290249023278
+}

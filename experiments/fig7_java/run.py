@@ -1,0 +1,533 @@
+# ported from editdiff/private-docs-redacted/20261011-012221-sec5-final-helper-run/scratch/fr_gen.py (main run) and private-docs-redacted/20261011-055211-s5-zero-demo-ablation/scratch/zd_gen.py (zero-demonstration ablation) @ d276fa6
+"""Sample and score the Java pools of Section 5 (Figure 7) on a GPU: LLaDA-1.5, one process, one GPU.
+
+Main run (--study main). For every episode of data/java in the chosen cells (M demonstrations, J targets) and a
+length regime:
+  oracle   every target gets its reference token count (episode["oracle_lengths"]): one canvas;
+  learned  each of the K candidates draws its own target lengths from length head C (Appendix C): candidate k,
+           target j gets F_j^{-1}(u) with u = SHA-256("s5-final-alloc-v1" | protocol hash | episode | J | k | j |
+           redraw) / 2^64 (allocation_uniform); a draw whose canvas would exceed 2,048 tokens is redrawn with the
+           next redraw counter (learned_allocations). One canvas per distinct allocation.
+For each distinct allocation, as in the paper's run:
+  1. Sample its candidates from P1 by fixed-order decoding (Lemma 3.1), all in one reveal, with one
+     torch.Generator seeded with generation_seed(regime, episode, allocation); logp1_sampletime is the sum taken
+     while sampling.
+  2. Teacher-force the distinct infills, in first-draw order, on the same canvas under P1 (logp1) and under P0,
+     the canvas with the demonstrations' accepted edits E masked (logp0); R = logp1 - logp0. Both use the batched
+     loop of sampling, so with K <= 16 (one chunk) the replayed logp1 equals logp1_sampletime exactly.
+
+Zero-demonstration ablation (--study zero_demo, Appendix C). Each M = 1 episode is an anchor; it is run with no
+demonstration (M = 0), with its demonstration (M = 1) and, when the cell M = 2 holds the same targets, with both
+demonstrations of that episode (M = 2), all under the neutral instruction canvas.JAVA_ZERO_DEMO_INSTRUCTION, at
+oracle lengths, K draws from P1 per arm, no P0 (beta = 0 only). Seed: zero_demo_seed(unit).
+
+Records are appended as episodes finish (a unit already in the file is skipped, so an interrupted run resumes):
+    main       <out>/pools_<regime>.jsonl          analyze.py --pools <out>
+    zero_demo  <out>/pools_zero_demo.jsonl          analyze.py --zero-demo <out>/..
+<out>/manifest_<hash>.json records the configuration, its hash, every seed and the library versions.
+
+    python experiments/fig7_java/run.py --regime oracle --M 1,2 --J 1,2 --K 16 --out artifacts/reruns/fig7/pools
+    python experiments/fig7_java/run.py --regime learned --head artifacts/heads/java_head_C.pt --out artifacts/reruns/fig7/pools
+    python experiments/fig7_java/run.py --study zero_demo --M 0,1,2 --J 1,2 --out artifacts/reruns/fig7/zero_demo/pools
+"""
+import argparse
+import collections
+import hashlib
+import json
+import os
+import platform
+import sys
+import time
+import traceback
+from pathlib import Path
+
+import numpy as np
+import torch
+import transformers
+
+from fewshot_dlms.adapters import load
+from fewshot_dlms.adapters.base import context_ids
+from fewshot_dlms.adapters.base import reveal
+from fewshot_dlms.adapters.base import reveal_order
+from fewshot_dlms.adapters.base import sample_fixed_order
+from fewshot_dlms.canvas import JAVA_ZERO_DEMO_INSTRUCTION
+from fewshot_dlms.canvas import build_java_canvas
+from fewshot_dlms.data import load_java_episodes
+from fewshot_dlms.lengths import compact_prompt
+from fewshot_dlms.lengths import hashed_uniform
+from fewshot_dlms.lengths import inverse_cdf
+
+MODEL = "llada"  # Section 5 uses LLaDA-1.5 only
+STUDIES = ("main", "zero_demo")
+REGIMES = ("oracle", "learned")
+K = 16
+CHUNK = 16  # most canvases per forward pass, as in the paper's run
+CTX_CAP = 2048  # most canvas tokens of a learned allocation (draws above it are redrawn)
+
+# The protocol hashes of the paper's two Java runs; every seed below is derived from them.
+PROTOCOL_HASH = "0e1d3c9040b09598"
+ZERO_DEMO_PROTOCOL_HASH = "c2a07e4a701f0a41"
+ALLOC_TAG = "s5-final-alloc-v1"
+
+# Length head C (Appendix C): the checkpoint's SHA-256 and the file of its stored predictions in java/length.
+HEAD_CKPT_SHA = "ea54c8b92110f4c5c4dbe838721d23961775082712247f8099b74e8d7d312309"
+HEAD_PROBS_FILE = "s5hc_C_s5final_G4.npz"
+
+
+# ---------------------------------------------------------------------------------------------
+# Seeds and learned lengths
+# ---------------------------------------------------------------------------------------------
+
+
+def key12(*parts):
+    """An integer from the first 12 hex digits of the SHA-256 of the parts joined by '|' (the run's key())."""
+    text = "|".join(str(part) for part in parts)
+    return int(hashlib.sha256(text.encode()).hexdigest()[:12], 16)
+
+
+def generation_seed(regime, episode_id, allocation):
+    """The seed of the candidates that share one allocation: key12(protocol hash, "s5final", regime, episode,
+    allocation as a tuple) mod 2**31."""
+    return key12(PROTOCOL_HASH, "s5final", regime, episode_id, tuple(int(L) for L in allocation)) % (2 ** 31)
+
+
+def zero_demo_seed(unit):
+    """The seed of one ablation arm: key12(ablation hash, "demo_ablation", anchor, target sites joined by '+', M) mod 2**31."""
+    parts = (ZERO_DEMO_PROTOCOL_HASH, "demo_ablation", unit["anchor_episode_id"], "+".join(unit["target_sites"]), unit["M"])
+    return key12(*parts) % (2 ** 31)
+
+
+def allocation_uniform(episode_id, J, k, j, redraw):
+    """The uniform of candidate k, target j, redraw r of a learned allocation."""
+    return hashed_uniform(ALLOC_TAG, PROTOCOL_HASH, episode_id, J, k, j, redraw)
+
+
+def learned_allocations(episode, probs, n_candidates):
+    """The target lengths of K candidates drawn from head C's per-site distributions, and the number of redraws.
+
+    probs maps "<episode_id>|<J>|<j>" to the head's probabilities over the lengths 1..256 (float64). Candidate k
+    takes, per target j, the inverse CDF at allocation_uniform(episode, J, k, j, r), starting at r = 0; if the
+    canvas would exceed CTX_CAP tokens (the oracle canvas minus the reference lengths plus the drawn lengths), the
+    whole allocation is redrawn with r + 1.
+    """
+    episode_id = episode["episode_id"]
+    J = episode["J"]
+    sites = [np.clip(np.asarray(probs[f"{episode_id}|{J}|{j}"], dtype=np.float64), 0, None) for j in range(J)]
+    base = episode["oracle_canvas_tokens"] - sum(episode["oracle_lengths"])
+    allocations = []
+    rejections = 0
+    for k in range(n_candidates):
+        redraw = 0
+        while True:
+            allocation = tuple(inverse_cdf(sites[j], allocation_uniform(episode_id, J, k, j, redraw)) for j in range(J))
+            if base + sum(allocation) <= CTX_CAP:
+                break
+            redraw += 1
+            rejections += 1
+        allocations.append(allocation)
+    return allocations, rejections
+
+
+def read_head_probs(path):
+    """Stored head predictions (an .npz with ids and P): "<episode_id>|<J>|<j>" -> float64 probabilities."""
+    stored = np.load(path, allow_pickle=False)
+    return dict(zip(stored["ids"].tolist(), stored["P"].astype(np.float64)))
+
+
+def file_sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for block in iter(lambda: handle.read(1 << 24), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def head_probs(adapter, head_path, episodes, device):
+    """Head C's distributions for the target sites of `episodes`, computed on the GPU (lengths.LengthHead).
+
+    The head reads each episode's compact prompt (one mask per target). The probabilities are rounded to float32
+    and back, the precision in which the paper's run stored them before drawing.
+    """
+    from fewshot_dlms.lengths import LengthHead
+
+    head = LengthHead.load(adapter, head_path, device)
+    examples = []
+    for episode in episodes:
+        canvas = build_java_canvas(adapter, episode, episode["M"], episode["J"], [1] * episode["J"])
+        examples.append(compact_prompt(canvas, adapter.mask_id))
+    predictions = head.predict_examples(examples)
+    probs = {}
+    for episode, prediction in zip(episodes, predictions):
+        stored = prediction.astype(np.float32).astype(np.float64)
+        for j in range(episode["J"]):
+            probs[f"{episode['episode_id']}|{episode['J']}|{j}"] = stored[j]
+    return probs
+
+
+# ---------------------------------------------------------------------------------------------
+# One episode
+# ---------------------------------------------------------------------------------------------
+
+
+def java_support(adapter):
+    """The token support of the paper's Java runs: the ordinary support plus the rows of the output layer beyond
+    the tokenizer.
+
+    LLaDA-1.5 has 126,464 logit rows and a tokenizer of 126,349 tokens. The adapter of the Section 5 runs did not
+    exclude the 115 rows beyond the tokenizer (they decode to nothing), so every factor of the frozen Java pools
+    is normalised over them too; adapter.support("ordinary") of the other figures excludes them. Their mass is
+    tiny but not zero: with the ordinary support a rerun draws the same tokens and its log-likelihoods differ from
+    the stored ones by about 1e-5 nats; with this support they are equal.
+    """
+    allowed = adapter.support("ordinary").clone()
+    allowed[len(adapter.tok) :] = True
+    allowed[sorted(adapter.control_ids)] = False
+    return allowed
+
+
+def prompt_sha(ids):
+    """The prompt hash of the main run's records: the first 12 hex digits of SHA-1 of the JSON list of token ids."""
+    return hashlib.sha1(json.dumps(ids, sort_keys=True).encode()).hexdigest()[:12]
+
+
+def short_sha1(text):
+    return hashlib.sha1(text.encode()).hexdigest()[:16]
+
+
+def target_keys(J):
+    return [f"t{j + 1}" for j in range(J)]
+
+
+def run_main_episode(adapter, episode, regime, n_candidates, chunk, probs):
+    """Sample and score one episode's pool in one regime; returns the record body (see the module docstring)."""
+    episode_id = episode["episode_id"]
+    M = episode["M"]
+    J = episode["J"]
+    keys = target_keys(J)
+    L_ref = [int(L) for L in episode["oracle_lengths"]]
+    reference = build_java_canvas(adapter, episode, M, J, L_ref)
+    if prompt_sha(reference.ids) != episode["prompt_sha_oracle"]:
+        raise ValueError(f"{episode_id}: the oracle canvas is not the paper's prompt")
+    if regime == "oracle":
+        allocations = [tuple(L_ref)] * n_candidates
+        rejections = 0
+    else:
+        allocations, rejections = learned_allocations(episode, probs, n_candidates)
+    groups = collections.OrderedDict()
+    for k, allocation in enumerate(allocations):
+        groups.setdefault(allocation, []).append(k)
+    allowed = java_support(adapter)
+    candidates = []
+    seconds_gen = 0.0
+    seconds_score = 0.0
+    for allocation, draws in groups.items():
+        if list(allocation) == L_ref:
+            canvas = reference
+        else:
+            canvas = build_java_canvas(adapter, episode, M, J, list(allocation))
+        order = reveal_order(canvas)
+        p1 = context_ids(adapter, canvas, hide_E=False)
+        p0 = context_ids(adapter, canvas, hide_E=True)
+        t0 = time.time()
+        infills = sample_fixed_order(adapter, canvas, len(draws), generation_seed(regime, episode_id, allocation), support=allowed, chunk=chunk)
+        seconds_gen += time.time() - t0
+        traces = [tuple(token for site in infill.toks for token in site) for infill in infills]
+        distinct = list(dict.fromkeys(traces))
+        t0 = time.time()
+        _, p1_terms = reveal(adapter, [p1], [order], [0] * len(distinct), allowed, forced=distinct, chunk=chunk)
+        _, p0_terms = reveal(adapter, [p0], [order], [0] * len(distinct), allowed, forced=distinct, chunk=chunk)
+        seconds_score += time.time() - t0
+        ell1 = {trace: float(sum(terms)) for trace, terms in zip(distinct, p1_terms)}
+        ell0 = {trace: float(sum(terms)) for trace, terms in zip(distinct, p0_terms)}
+        for k, trace, infill in zip(draws, traces, infills):
+            texts = {key: adapter.decode(site) for key, site in zip(keys, infill.toks)}
+            candidates.append({
+                "draw": k,
+                "allocation": list(allocation),
+                "allocation_exact": list(allocation) == L_ref,
+                "prompt_sha": prompt_sha(canvas.ids),
+                "n_tokens": len(canvas.ids),
+                "toks": list(trace),
+                "toks_sha": short_sha1(json.dumps(list(trace))),
+                "text_by_target": texts,
+                "text_sha": short_sha1("\t".join(texts[key] for key in keys)),
+                "logp1": ell1[trace],
+                "logp1_sampletime": infill.ell1_sample,
+                "logp0": ell0[trace],
+                "R": ell1[trace] - ell0[trace],
+                "p1_replay_absdiff_canvas": abs(ell1[trace] - infill.ell1_sample),
+            })
+    return {
+        "episode_id": episode_id,
+        "cell": episode["cell"],
+        "M": M,
+        "J": J,
+        "commit10": episode["commit10"],
+        "regime": regime,
+        "targets": keys,
+        "L_ref": L_ref,
+        "distinct_allocations": len(groups),
+        "allocation_rejections": rejections,
+        "candidates": candidates,
+        "n_unique_text": len({candidate["text_sha"] for candidate in candidates}),
+        "n_unique_toks": len({candidate["toks_sha"] for candidate in candidates}),
+        "seconds_gen": round(seconds_gen, 1),
+        "seconds_score": round(seconds_score, 1),
+        "max_p1_replay_absdiff": max(candidate["p1_replay_absdiff_canvas"] for candidate in candidates),
+    }
+
+
+def zero_demo_units(episodes, arms, Js):
+    """The ablation's units: per anchor (an M = 1 episode with J in Js, in data/java order), one unit per arm M.
+
+    M = 0 and M = 1 use the anchor's record; M = 2 uses the cell-(2, J) episode of the same helper group with the
+    same target sites (its first demonstration is the anchor's), and anchors without one have no M = 2 unit.
+    """
+    by_group = {(episode["source_group_id"], episode["cell"]): episode for episode in episodes}
+    units = []
+    for anchor in episodes:
+        if anchor["M"] != 1 or anchor["J"] not in Js:
+            continue
+        for M in arms:
+            if M in (0, 1):
+                source = anchor
+            else:
+                source = by_group.get((anchor["source_group_id"], f"M2J{anchor['J']}"))
+                if source is None or source["target_sites"] != anchor["target_sites"]:
+                    continue
+            units.append({
+                "unit_id": f"{anchor['episode_id']}|M{M}",
+                "anchor_episode_id": anchor["episode_id"],
+                "arm_source_episode": source["episode_id"],
+                "M": M,
+                "J": anchor["J"],
+                "commit10": anchor["commit10"],
+                "target_sites": list(anchor["target_sites"]),
+            })
+    return units
+
+
+def run_zero_demo_unit(adapter, unit, source, n_candidates, chunk):
+    """Sample one ablation arm (ordinary sampling from P1 at oracle lengths, neutral instruction)."""
+    M = unit["M"]
+    J = unit["J"]
+    keys = target_keys(J)
+    L_ref = [int(L) for L in source["oracle_lengths"]]
+    canvas = build_java_canvas(adapter, source, M, J, L_ref, instruction=JAVA_ZERO_DEMO_INSTRUCTION)
+    seed = zero_demo_seed(unit)
+    t0 = time.time()
+    infills = sample_fixed_order(adapter, canvas, n_candidates, seed, support=java_support(adapter), chunk=chunk)
+    seconds = time.time() - t0
+    candidates = []
+    for k, infill in enumerate(infills):
+        trace = [token for site in infill.toks for token in site]
+        texts = {key: adapter.decode(site) for key, site in zip(keys, infill.toks)}
+        candidates.append({
+            "draw": k,
+            "allocation": L_ref,
+            "toks": trace,
+            "toks_sha": short_sha1(json.dumps(trace)),
+            "text_by_target": texts,
+            "text_sha": short_sha1("\t".join(texts[key] for key in keys)),
+            "logp1_sampletime": infill.ell1_sample,
+        })
+    return {
+        **unit,
+        "protocol_hash": ZERO_DEMO_PROTOCOL_HASH,
+        "instruction_sha256": hashlib.sha256(JAVA_ZERO_DEMO_INSTRUCTION.encode()).hexdigest(),
+        "seed": seed,
+        "targets": keys,
+        "L_ref": L_ref,
+        "prompt_sha": prompt_sha(canvas.ids),
+        "n_tokens": len(canvas.ids),
+        "demo_sites_shown": source["demo_sites"][:M],
+        "candidates": candidates,
+        "n_unique_text": len({candidate["text_sha"] for candidate in candidates}),
+        "n_unique_toks": len({candidate["toks_sha"] for candidate in candidates}),
+        "seconds_gen": round(seconds, 1),
+    }
+
+
+# ---------------------------------------------------------------------------------------------
+# The run
+# ---------------------------------------------------------------------------------------------
+
+
+def config_of(args, adapter, head_sha):
+    """Everything that decides the records: its hash is the `config_hash` of every record."""
+    return {
+        "study": f"fig7_java/{args.study}",
+        "model": adapter.name,
+        "model_id": adapter.model_id,
+        "revision": adapter.revision,
+        "regime": args.regime if args.study == "main" else "oracle",
+        "M": args.M,
+        "J": args.J,
+        "K": args.K,
+        "chunk": args.chunk,
+        "protocol_hash": PROTOCOL_HASH if args.study == "main" else ZERO_DEMO_PROTOCOL_HASH,
+        "head_ckpt_sha": head_sha,
+        "head_probs": "stored" if args.head_probs else ("computed" if head_sha else None),
+        "support": "ordinary plus the logit rows beyond the tokenizer (the Java runs)",
+        "reveal_order": "ascending canvas position, one token per step",
+    }
+
+
+def config_hash(config):
+    """First 16 hex digits of SHA-256 of the configuration as sorted JSON."""
+    return hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()[:16]
+
+
+def write_manifest(path, config, digest, seeds, args):
+    """The run's manifest: configuration and hash, the seed of every unit, library and GPU versions."""
+    manifest = {
+        "config": config,
+        "config_hash": digest,
+        "seeds": seeds,
+        "versions": {
+            "python": platform.python_version(),
+            "torch": torch.__version__,
+            "transformers": transformers.__version__,
+            "numpy": np.__version__,
+            "cuda": torch.version.cuda,
+            "gpu": torch.cuda.get_device_name() if torch.cuda.is_available() else None,
+        },
+        "command": sys.argv,
+    }
+    path.write_text(json.dumps(manifest, indent=1))
+
+
+def done_units(path, field):
+    """Values of `field` already in a pool file (an interrupted run resumes after them)."""
+    if not path.exists():
+        return set()
+    done = set()
+    with open(path, encoding="utf-8") as handle:
+        for line in handle:
+            if line.strip():
+                done.add(json.loads(line)[field])
+    return done
+
+
+def append_record(path, record):
+    """Append one JSON line in a single write, so that a killed run leaves complete lines only."""
+    fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+    os.write(fd, (json.dumps(record) + "\n").encode())
+    os.close(fd)
+
+
+def int_list(text):
+    return [int(value) for value in text.split(",")]
+
+
+def run_main(args, adapter, episodes, out):
+    """The main run: one record per selected episode in one regime."""
+    selected = [e for e in episodes if e["M"] in args.M and e["J"] in args.J][: args.families]
+    probs = None
+    head_sha = ""
+    if args.regime == "learned":
+        if args.head_probs:
+            probs = read_head_probs(args.head_probs)
+            head_sha = str(np.load(args.head_probs, allow_pickle=False)["ckpt_sha"])
+        else:
+            head_sha = file_sha256(args.head)
+            if head_sha != HEAD_CKPT_SHA:
+                print(f"warning: {args.head} is not the paper's head C (sha256 {head_sha[:12]}...)", flush=True)
+            probs = head_probs(adapter, args.head, selected, args.device)
+    config = config_of(args, adapter, head_sha)
+    digest = config_hash(config)
+    seeds = {}
+    if args.regime == "oracle":
+        seeds = {e["episode_id"]: generation_seed("oracle", e["episode_id"], e["oracle_lengths"]) for e in selected}
+    write_manifest(out / f"manifest_{digest}.json", config, digest, seeds, args)
+    path = out / f"pools_{args.regime}.jsonl"
+    done = done_units(path, "episode_id")
+    for episode in selected:
+        if episode["episode_id"] in done:
+            continue
+        try:
+            body = run_main_episode(adapter, episode, args.regime, args.K, args.chunk, probs)
+        except Exception as error:  # one failed episode must not stop the run; it is retried on the next run
+            print(f"FAILED {episode['episode_id']} {args.regime}: {error}\n{traceback.format_exc()[-1500:]}", flush=True)
+            torch.cuda.empty_cache()
+            continue
+        record = {
+            **body,
+            "tag": args.tag,
+            "protocol_hash": PROTOCOL_HASH,
+            "config_hash": digest,
+            "head_ckpt_sha": head_sha,
+            "K": args.K,
+        }
+        append_record(path, record)
+        print(
+            f"[{args.regime}] {episode['episode_id']} J={episode['J']} allocations={body['distinct_allocations']}"
+            f" redraws={body['allocation_rejections']} distinct texts={body['n_unique_text']}"
+            f" replay {body['max_p1_replay_absdiff']:.1e} gen {body['seconds_gen']:.0f}s score {body['seconds_score']:.0f}s",
+            flush=True,
+        )
+
+
+def run_zero_demo(args, adapter, episodes, out):
+    """The zero-demonstration ablation: one record per (anchor, arm M)."""
+    by_id = {episode["episode_id"]: episode for episode in episodes}
+    units = zero_demo_units(episodes, args.M, args.J)
+    anchors = list(dict.fromkeys(unit["anchor_episode_id"] for unit in units))
+    keep = set(anchors[: args.families])
+    units = [unit for unit in units if unit["anchor_episode_id"] in keep]
+    config = config_of(args, adapter, "")
+    digest = config_hash(config)
+    write_manifest(out / f"manifest_{digest}.json", config, digest, {unit["unit_id"]: zero_demo_seed(unit) for unit in units}, args)
+    path = out / "pools_zero_demo.jsonl"
+    done = done_units(path, "unit_id")
+    for unit in units:
+        if unit["unit_id"] in done:
+            continue
+        try:
+            body = run_zero_demo_unit(adapter, unit, by_id[unit["arm_source_episode"]], args.K, args.chunk)
+        except Exception as error:
+            print(f"FAILED {unit['unit_id']}: {error}\n{traceback.format_exc()[-1500:]}", flush=True)
+            torch.cuda.empty_cache()
+            continue
+        append_record(path, {**body, "tag": args.tag, "config_hash": digest, "K": args.K})
+        print(f"[M{unit['M']}] {unit['unit_id']} J={unit['J']} distinct texts={body['n_unique_text']} gen {body['seconds_gen']:.0f}s", flush=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser.add_argument("--study", default="main", choices=STUDIES)
+    parser.add_argument("--regime", default="oracle", choices=REGIMES, help="target lengths of the main run")
+    parser.add_argument("--M", type=int_list, default=None, help="main: cells' M in {1, 2}; zero_demo: arms in {0, 1, 2}")
+    parser.add_argument("--J", type=int_list, default=[1, 2], help="targets J in {1, 2}")
+    parser.add_argument("--K", type=int, default=K, help="infills sampled per episode (per arm)")
+    parser.add_argument("--families", type=int, default=None, help="only the first N episodes (anchors) in data/java order")
+    parser.add_argument("--head", default="artifacts/heads/java_head_C.pt", help="length head C (learned regime)")
+    parser.add_argument("--head-probs", default=None, help="stored head predictions (.npz) instead of running the head")
+    parser.add_argument("--out", default=None, help="pool directory (default artifacts/reruns/fig7/pools, or .../zero_demo/pools)")
+    parser.add_argument("--tag", default="rerun")
+    parser.add_argument("--chunk", type=int, default=CHUNK)
+    parser.add_argument("--device", default="cuda")
+    args = parser.parse_args()
+    if args.M is None:
+        args.M = [1, 2] if args.study == "main" else [0, 1, 2]
+    if args.study == "main" and not set(args.M) <= {1, 2}:
+        parser.error("the main run has cells with M in {1, 2}; M = 0 is the zero_demo study")
+    if args.study == "zero_demo" and not set(args.M) <= {0, 1, 2}:
+        parser.error("the zero-demonstration ablation has arms M in {0, 1, 2}")
+    default_out = "artifacts/reruns/fig7/pools" if args.study == "main" else "artifacts/reruns/fig7/zero_demo/pools"
+    out = Path(args.out or default_out)
+    out.mkdir(parents=True, exist_ok=True)
+
+    episodes = load_java_episodes()
+    started = time.time()
+    adapter = load(MODEL, args.device)
+    print(f"[fig7] {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
+    if args.study == "main":
+        run_main(args, adapter, episodes, out)
+    else:
+        run_zero_demo(args, adapter, episodes, out)
+    print(f"RUN_DONE {args.study} {time.time() - started:.0f}s -> {out}", flush=True)
+
+
+if __name__ == "__main__":
+    main()
