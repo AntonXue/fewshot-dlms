@@ -74,8 +74,8 @@ selection"), and the studies that reuse its pools:
 It writes `sec41_accuracy.csv`, `gold_reward_cells.csv`, `gold_families.csv`, `dev_sec41.csv`, `dev_sec42.csv`,
 `beta_locks.json`, `sec44_power.csv`, `diagnostics.csv` and, with the flags, `cells_crossbench.csv` and `beta_sweep.csv`,
 in about 25 s on a CPU. With `--compare` it prints the largest difference per table against the paper's tables and, per
-Section 4.1 cell, whether the paper's ordinary accuracy lies inside the 95 % CI of the pools analysed. `plot.py` needs
-only `data/tables/fig4/`.
+Section 4.1 cell, whether the paper's accuracy lies inside the 95 % CI of the pools analysed, at β = 0 and at β = 0.5.
+`plot.py` needs only `data/tables/fig4/`.
 
 GPU, one model per process (`CUDA_VISIBLE_DEVICES` picks the GPU):
 
@@ -86,7 +86,8 @@ GPU, one model per process (`CUDA_VISIBLE_DEVICES` picks the GPU):
 
 `--families N` keeps the first N families. Records are appended to `<out>/<bank>/<model>/<task>_M{M}_J{J}[_il].jsonl` as
 families finish. Each carries its cell's `protocol_hash`, which depends on that cell alone; an interrupted run resumes
-after the families with that hash and refuses a file holding records of another protocol.
+after the families with that hash and, before loading the model, refuses a file holding records of another protocol
+(exit status 2, naming the file).
 `<out>/<bank>/<model>/manifest_<hash>.json` holds every cell's configuration and hash, every seed, and the library and
 GPU versions. A failed family is counted and the run exits non-zero. SST-2 and Movie Director need their text rebuilt
 first (`python data/benchmarks/build.py`).
@@ -125,8 +126,8 @@ GPU sampling is statistical in general, so a rerun is judged by whether the froz
 - **Platform and time.** One H100 NVL 96 GB, torch 2.7.1+cu128: 64 s wall-clock (57 s load the model, 5 s sample
   and score the cell).
 - **Numbers.** Frozen mean (`data/tables/fig4/sec41_accuracy.csv`) against the rerun's mean and 95 % CI
-  (`sec41_accuracy.csv` of the rerun). `--compare` prints the β = 0 verdict; the β = 0.5 row is read from the same
-  CI columns.
+  (`sec41_accuracy.csv` of the rerun). `--compare` prints the β = 0 and β = 0.5 accuracy verdicts, one line each;
+  the paired-gain row is read from the rerun's `paired_gain` CI columns.
 
   | β | quantity | frozen | rerun [95 % CI] | verdict |
   |---|---|---|---|---|

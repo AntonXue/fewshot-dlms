@@ -108,8 +108,11 @@ GPU (LLaDA-1.5, about 16 GiB):
 
 `--families N` keeps the first N episodes (anchors). `--head-probs artifacts/java/length/s5hc_C_s5final_G4.npz`
 draws the learned lengths from the stored predictions instead of running head C. Records are appended to
-`<out>/pools_<regime>.jsonl` (or `pools_zero_demo.jsonl`) as episodes finish, so an interrupted run resumes;
-`<out>/manifest_<hash>.json` holds the configuration, every seed and the library and GPU versions.
+`<out>/pools_<regime>.jsonl` (or `pools_zero_demo.jsonl`) as episodes finish. Each carries its pool's `config_hash`
+(model, revision, regime, K, chunk, head; not the cells selected); an interrupted run resumes after the episodes with
+that hash and, before loading the model, refuses a file holding records of another configuration or the frozen pools
+(exit status 2, naming the file). `<out>/manifest_<hash>.json` holds the configuration, the pool's hash, every seed
+and the library and GPU versions.
 
 ## Runtime
 

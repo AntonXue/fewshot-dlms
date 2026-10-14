@@ -287,16 +287,29 @@ def call_judge(client, model, rubric_text, packet_text):
 
 
 def judged_keys(path):
-    """Packet keys already in a verdict file (an interrupted run resumes after them)."""
+    """Packet keys already in a verdict file (an interrupted run resumes after them). A line that does not parse (an
+    interrupted write) is ignored, so its packet is judged again."""
     if not Path(path).exists():
         return set()
-    return {record["key"] for record in read_jsonl(path)}
+    keys = set()
+    with open(path, encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            try:
+                keys.add(json.loads(line)["key"])
+            except json.JSONDecodeError:
+                continue
+    return keys
 
 
 def append_record(path, record):
-    """Append one JSON line in a single write, so that a killed run leaves complete lines only."""
-    fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
-    os.write(fd, (json.dumps(record) + "\n").encode())
+    """Append one JSON line in a single write, so that a killed run leaves complete lines only. If the file ends in a
+    cut-off line (no final newline), the write starts with a newline, so the record never joins that line."""
+    fd = os.open(path, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o644)
+    size = os.fstat(fd).st_size
+    lead = b"\n" if size and os.pread(fd, 1, size - 1) != b"\n" else b""
+    os.write(fd, lead + (json.dumps(record) + "\n").encode())
     os.close(fd)
 
 

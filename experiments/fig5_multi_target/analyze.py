@@ -557,7 +557,8 @@ def max_abs_diff(a, b):
 
 def compare(frames, reference):
     """Print the largest |difference| per numeric column against the tables in `reference`, then the
-    resampling verdict of every cell: is the frozen ordinary A_all inside the 95 % CI computed here?
+    resampling verdicts of every cell: is the frozen A_all inside the 95 % CI computed here, for ordinary
+    sampling (beta = 0) and for guidance at BETA? One line each; the guided line names its beta.
 
     CSVs are parsed with float_precision="round_trip", so a value written by pandas reads back exactly.
     """
@@ -578,19 +579,24 @@ def compare(frames, reference):
     if "cells" not in frames or frames["cells"].empty or not path.exists():
         return
     frozen = pd.read_csv(path, float_precision="round_trip")
-    frozen = frozen[frozen.beta == 0.0].set_index(["model", "M", "J"])
-    rerun = frames["cells"][frames["cells"].beta == 0.0]
-    for _, cell in rerun.iterrows():
-        key = (cell.model, cell.M, cell.J)
-        if key not in frozen.index:
-            continue
-        value = frozen.loc[key, "A_all"]
-        inside = cell.A_all_lo <= value <= cell.A_all_hi
-        verdict = "inside" if inside else "outside"
-        print(
-            f"{cell.model} M={cell.M} J={cell.J}: frozen A_all {value:.3f}, rerun CI [{cell.A_all_lo:.3f}, {cell.A_all_hi:.3f}]"
-            f" -> frozen mean {verdict} the rerun's 95 % CI ({cell.families} families)"
-        )
+    frozen = frozen.set_index(["model", "M", "J", "beta"])
+    cells = frames["cells"]
+    guided = cells[cells.beta == BETA].set_index(["model", "M", "J"])
+    for _, ordinary in cells[cells.beta == 0.0].iterrows():
+        key = (ordinary.model, ordinary.M, ordinary.J)
+        rows = [(0.0, "", ordinary)]
+        if key in guided.index:
+            rows.append((BETA, f" beta={BETA:g}", guided.loc[key]))
+        for beta, label, cell in rows:
+            if key + (beta,) not in frozen.index:
+                continue
+            value = frozen.loc[key + (beta,), "A_all"]
+            inside = cell.A_all_lo <= value <= cell.A_all_hi
+            verdict = "inside" if inside else "outside"
+            print(
+                f"{ordinary.model} M={ordinary.M} J={ordinary.J}{label}: frozen A_all {value:.3f}, rerun CI"
+                f" [{cell.A_all_lo:.3f}, {cell.A_all_hi:.3f}] -> frozen mean {verdict} the rerun's 95 % CI ({int(cell.families)} families)"
+            )
 
 
 def main():

@@ -26,18 +26,17 @@ Usage:
 
 import argparse
 import json
-import re
 import shutil
 import sys
 from pathlib import Path
+
+from fewshot_dlms.leakcheck import find_private
 
 DEFAULT_DEST = Path(__file__).resolve().parents[1] / "data" / "java"
 
 COPIED_CSV = ["episode_cells.csv", "exclusion_ledger.csv", "reference_validity.csv", "source_groups.csv"]
 # Keys of a record that describe the machine and the moment of a run, not the episode.
 RUN_METADATA = ("host", "gpu_env", "wall_time")
-# Patterns that must not reach the repository: absolute paths and run metadata naming a machine.
-PRIVATE_PATTERNS = (r"/(?:hdd|ssd)\d", r"/home/", r"/mnt/", r'"host":', r'"gpu_env":')
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -103,10 +102,9 @@ def export_episode(record: dict, fr_lib, tokenizer) -> dict:
 
 
 def check_no_private_strings(path: Path) -> None:
-    """Stop if an exported file contains a private path, user name or host name."""
-    text = path.read_text(encoding="utf-8")
-    for pattern in PRIVATE_PATTERNS:
-        assert re.search(pattern, text) is None, f"{pattern!r} matches {path.name}"
+    """Stop if an exported file contains a machine path or machine metadata (fewshot_dlms.leakcheck)."""
+    hits = find_private(path.read_text(encoding="utf-8"))
+    assert not hits, f"{hits} in {path.name}"
 
 
 def export(src: Path, dest: Path) -> None:

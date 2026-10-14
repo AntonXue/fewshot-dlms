@@ -31,10 +31,10 @@ What changes on the way; everything else is copied byte for byte:
     new SHA-256s; the stored pools and predictions keep recording the original ones.
 Then it hashes the tree into SHA256SUMS (also written to the repository root, where fetch.py verifies downloads
 against it) and checks it: no record keeps a key of RUN_METADATA, no SST-2 or MIT Movie record keeps prompt text,
-and no file, text or binary, matches PRIVATE_PATTERN (in JSONL files, sampled candidate texts excepted). With --check
-it also requires the tree to match the repository's SHA256SUMS and writes nothing. It exits with status 1 if a check
-fails or a source is missing, and with status 2 if tools/sources.local.json is missing or incomplete (with --check
-it needs only upload_dir).
+and no file, text or binary, holds private text (private_hits: fewshot_dlms.leakcheck plus LOCAL_PRIVATE; in JSONL
+files, sampled candidate texts excepted). With --check it also requires the tree to match the repository's SHA256SUMS
+and writes nothing. It exits with status 1 if a check fails or a source is missing, and with status 2 if
+tools/sources.local.json is missing or incomplete (with --check it needs only upload_dir).
 
 Re-running is safe: unchanged outputs are not rewritten; files that are no longer planned and leftover temporary
 files (*.tmp) are removed, and any other file outside the plan stops the run. The
@@ -59,6 +59,7 @@ import torch
 
 from extract_fixtures import without_benchmark_text  # tools/ is on sys.path when this script runs
 from fewshot_dlms.data import TEXT_FREE_BENCHMARKS
+from fewshot_dlms.leakcheck import find_private
 
 # The authors' private run directories are not in the repository: tools/sources.local.json (git-ignored) maps each
 # key of SOURCE_KEYS to a directory; tools/sources.example.json lists the keys with placeholder paths.
@@ -102,8 +103,9 @@ RUN_METADATA = ("host", "hostname", "gpu_env", "gpu", "device", "pid", "cwd", "r
 CONFIG_DROPPED = ("root", "gpu")  # a head's training config (JSON): the run directory and the GPU index
 HEAD_CONFIG_DROPPED = ("root",)  # the config pickled in a head checkpoint: the run directory only; weights unchanged
 MANIFEST_DROPPED = ("input_ids", "mask_positions")  # head C's corpus rows: the tokenised code
-# Text that must not reach the tree: machine paths and internal working notes (generic, no names).
-PRIVATE_PATTERN = re.compile(rb"/(?:hdd|ssd)\d|/home/|/mnt/|hand-off|\.claude")
+# Text that must not reach the tree: the generic machine paths and metadata keys of fewshot_dlms.leakcheck, and
+# (this site's own) the vocabulary of internal working notes. No names.
+LOCAL_PRIVATE = re.compile(r"hand-off|\.claude")
 GROUPS = ("pools/fig4", "pools/fig5", "pools/fig6", "java", "heads", "head_training", "README.md")
 TOP_LEVEL = ("pools", "java", "heads", "head_training", "SHA256SUMS")
 MAX_BYTES = 12 * 10 ** 9
@@ -283,17 +285,24 @@ def same_tensors(original, resaved):
     return True
 
 
+def private_hits(text):
+    """The distinct private strings of `text` (leakcheck.find_private and LOCAL_PRIVATE), sorted; empty if clean."""
+    local = {match.group() for match in LOCAL_PRIVATE.finditer(text)}
+    return sorted(set(find_private(text)) | local)
+
+
 def resaved_head(source, dest):
     """Write the head checkpoint `source` to `dest` without HEAD_CONFIG_DROPPED in its training config.
 
     The checkpoint is {"branch": state dict, "config": training config} (lengths.LengthHead.load). It is saved under
     its final file name, which torch.save writes into the archive, so the bytes depend only on the content. The new
     file must load with weights_only=True, hold the same tensors byte for byte and the same config minus
-    HEAD_CONFIG_DROPPED, and no string of the config may match PRIVATE_PATTERN. Returns True if `dest` was written.
+    HEAD_CONFIG_DROPPED, and no string of the config may hold private text (private_hits). Returns True if `dest` was
+    written.
     """
     original = torch.load(source, map_location="cpu", weights_only=True)
     config = {key: value for key, value in original["config"].items() if key not in HEAD_CONFIG_DROPPED}
-    if PRIVATE_PATTERN.search(json.dumps(config).encode("utf-8")):
+    if private_hits(json.dumps(config)):
         raise ValueError(f"{source}: the training config still holds a private path")
     dest.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=dest.parent) as staging:
@@ -409,22 +418,22 @@ def write_sums(dest, text):
 
 
 def sampled_matches(data):
-    """The sampled candidate texts of a JSONL file that match PRIVATE_PATTERN, or None if any match lies elsewhere.
+    """The sampled candidate texts of a JSONL file that hold private text, or None if any match lies elsewhere.
 
     A model's sample can contain a path it made up (a Nemotron pool of Figure 6 holds a made-up home-directory path);
     such text is model output, which the analysis grades, and stays. Any match outside candidates' texts fails.
     """
     samples = []
     for line in jsonl_lines(data):
-        if not PRIVATE_PATTERN.search(line.encode("utf-8")):
+        if not private_hits(line):
             continue
         record = json.loads(line)
         candidates = record.get("candidates") or []
         texts = [text for candidate in candidates for text in candidate.get("texts", [])]
         rest = dict(record, candidates=[{key: value for key, value in candidate.items() if key != "texts"} for candidate in candidates])
-        if PRIVATE_PATTERN.search(json.dumps(rest).encode("utf-8")):
+        if private_hits(json.dumps(rest)):
             return None
-        samples.extend(text for text in texts if PRIVATE_PATTERN.search(text.encode("utf-8")))
+        samples.extend(text for text in texts if private_hits(text))
     return samples
 
 
@@ -433,7 +442,7 @@ def check(dest, paths):
     failures = []
     for path in paths:
         data = (dest / path).read_bytes()
-        hits = sorted({match.group().decode() for match in PRIVATE_PATTERN.finditer(data)})
+        hits = private_hits(data.decode("latin-1"))  # latin-1: one character per byte, binary files too
         samples = sampled_matches(data) if hits and path.endswith(".jsonl") else None
         if hits and samples:
             print(f"note: {path}: {hits} only inside sampled candidate texts (model output, kept): {samples}")

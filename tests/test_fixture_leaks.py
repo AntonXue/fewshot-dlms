@@ -14,18 +14,13 @@ import pytest
 from fewshot_dlms.data import BANKS
 from fewshot_dlms.data import TEXT_FREE_BENCHMARKS
 from fewshot_dlms.data import load_families
+from fewshot_dlms.leakcheck import find_private
 
 FIXTURE_DIRS = ("fig4",)  # fixture directories cut from SST-2 / MIT Movie pools
 
-# Generic patterns (lower-cased text): machine paths, run metadata that names a machine, internal-note vocabulary.
-PRIVATE_PATTERNS = [
-    r"/(?:hdd|ssd)\d",
-    r"/home/",
-    r"/mnt/",
-    r'"host":',
-    r'"hostname":',
-    r'"gpu_env":',
-    r'"cwd":',
+# This site's patterns (lower-cased text), next to leakcheck's generic ones (machine paths, run metadata that names a
+# machine): the vocabulary of the authors' internal notes.
+LOCAL_PATTERNS = [
     r"hand-?\s?off",
     r"\.claude",
 ]
@@ -90,5 +85,6 @@ def test_no_fixture_holds_private_strings(root):
     assert {"walkthrough.jsonl", "fig6/head_predictions_llada.json"} <= names
     for path in paths:
         text = path.read_bytes().decode("utf-8", errors="replace").lower()
-        for pattern in PRIVATE_PATTERNS:
+        assert not find_private(text), f"{find_private(text)} in {path.name}"
+        for pattern in LOCAL_PATTERNS:
             assert re.search(pattern, text) is None, f"{pattern!r} matches {path.name}"

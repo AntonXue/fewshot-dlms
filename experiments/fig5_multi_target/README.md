@@ -54,8 +54,8 @@ The M × J grid of Section 4.2 and three appendix figures that use the same mach
 
 It writes `families.csv`, `cells.csv`, `gold.csv`, `diagnostics.csv`, `sharpening.csv`, `mechanism.csv`,
 `candidates.csv.gz` and `coverage.json`, takes about 10 s on a CPU, and with `--compare` prints the largest
-difference per column against the paper's tables and, per cell, whether the paper's ordinary A_all lies inside
-the 95 % CI of the pools analysed. `plot.py` needs only `data/tables/fig5/`.
+difference per column against the paper's tables and, per cell, whether the paper's A_all lies inside the 95 % CI
+of the pools analysed, at β = 0 and at β = 0.5. `plot.py` needs only `data/tables/fig5/`.
 
 GPU, one model per process:
 
@@ -63,9 +63,11 @@ GPU, one model per process:
     make rerun-fig5        # LLaDA-1.5, cell M = 4, J = 2, first 8 families, then analyze.py --compare
 
 `--families N` keeps the first N families. Records are appended to
-`<out>/<model>/list_easy_fam_M{M}_J{J}.jsonl` as families finish, so an interrupted run resumes;
-`<out>/<model>/manifest_<hash>.json` holds the configuration, its hash (the records' `protocol_hash`), every
-seed, and the library and GPU versions.
+`<out>/<model>/list_easy_fam_M{M}_J{J}.jsonl` as families finish. Each carries its cell's `protocol_hash`, which
+depends on that cell alone; an interrupted run resumes after the families with that hash and, before loading the
+model, refuses a file holding records of another protocol (exit status 2, naming the file).
+`<out>/<model>/manifest_<hash>.json` holds the run's configuration and hash, every pool's hash, every seed, and the
+library and GPU versions.
 
 ## Runtime
 
@@ -105,7 +107,8 @@ GPU sampling is statistical in general, so a rerun is judged by whether the froz
 - **Platform and time.** One H100 NVL 96 GB, torch 2.7.1+cu128: 7.4 min wall-clock (444 s, of which 57 s load the
   model).
 - **Numbers.** Frozen mean (`data/tables/fig5/cells.csv`) against the rerun's mean and 95 % CI (`cells.csv` of the
-  rerun). `--compare` prints the β = 0 verdict; the β = 0.5 row is read from the same CI columns.
+  rerun). `--compare` prints the β = 0 and β = 0.5 A_all verdicts, one line each; the gain row is read from the
+  rerun's `gain_all` CI columns.
 
   | β | quantity | frozen | rerun [95 % CI] | verdict |
   |---|---|---|---|---|

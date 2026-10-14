@@ -9,18 +9,25 @@ Run from the repository root (the tests and every analyze.py read artifacts/ the
     python -m fewshot_dlms.fetch                  # print this usage and the group table; download nothing
 
 A group is a top-level directory of the dataset. Every download is at PINNED_REVISION, the dataset commit
-recorded in data/artifacts_revision.txt and ARTIFACTS.md (--revision overrides it), and lands under artifacts/
-(--dest) with the dataset's layout, e.g. artifacts/pools/fig5/llada/list_easy_fam_M4_J2.jsonl. SHA256SUMS and
-README.md (the data card) come with every group, so the check below also works offline later.
+recorded in data/artifacts_revision.txt and ARTIFACTS.md, and lands under artifacts/ (--dest) with the dataset's
+layout, e.g. artifacts/pools/fig5/llada/list_easy_fam_M4_J2.jsonl. SHA256SUMS and README.md (the data card) come
+with every group, so the check below also works offline later.
 
 After the download, every file present under artifacts/ is checked against SHA256SUMS ("<sha256>  <path>" per
 line, the format of sha256sum): the downloaded copy, whose own SHA-256 must be SUMS_SHA256 at the pinned
 revision, or the repository's root copy when none was downloaded. A file of a requested group that is absent
-also fails the run; files of groups not requested are not needed. huggingface_hub keeps its download metadata
-in artifacts/.cache/huggingface/, so a second run skips the files it already has.
+also fails the run; files of groups not requested are not needed. A file that fails the check is listed; delete
+the listed files and run the fetch again. huggingface_hub keeps its download metadata in
+artifacts/.cache/huggingface/, so a second run skips the files it already has.
+
+--revision downloads (or, with --check, checks) another dataset revision. Its SHA256SUMS cannot be the pinned
+one, so the check of SHA256SUMS against SUMS_SHA256 is skipped, with a warning, and the files are checked against
+the SHA256SUMS of that revision only: nothing ties them to the paper's artifacts.
 
 While the dataset is private, downloading needs a Hugging Face login with access to it; huggingface_hub finds
-the token (`hf auth login` or HF_TOKEN) by itself.
+the token (`hf auth login` or HF_TOKEN) by itself. When the Hub refuses the login or cannot be reached, the
+fetch prints one line with the cause and the remedy (download_failure) and exits with status 1; it never prints
+the token or the Hub's own message.
 """
 import argparse
 import hashlib
@@ -29,6 +36,7 @@ import sys
 from pathlib import Path
 
 import huggingface_hub
+from huggingface_hub import errors as hub_errors
 
 REPO_ID = "UT-IFML/fewshot-dlms"
 REPO_TYPE = "dataset"
@@ -75,6 +83,50 @@ def download(groups, revision=PINNED_REVISION, dest=Path("artifacts")):
         local_dir=dest,
     )
     return Path(dest)
+
+
+def network_errors():
+    """The exception classes of an unreachable Hub: huggingface_hub's LocalEntryNotFoundError (raised when it cannot
+    reach the Hub and has no local copy, or HF_HUB_OFFLINE=1), the built-in connection and timeout errors, and the
+    transport errors of the HTTP library of the installed huggingface_hub (httpx from 1.0, requests before)."""
+    errors = [hub_errors.LocalEntryNotFoundError, ConnectionError, TimeoutError]
+    try:
+        import httpx
+
+        errors.append(httpx.TransportError)
+    except ImportError:
+        pass
+    try:
+        import requests
+
+        errors.extend([requests.exceptions.ConnectionError, requests.exceptions.Timeout])
+    except ImportError:
+        pass
+    return tuple(errors)
+
+
+def download_failure(error, revision, dest):
+    """One line naming why the download failed and what to do, or None for an error this module does not explain.
+
+    Built from the error's class and HTTP status only, never from its message, so it cannot carry the token.
+    """
+    cannot = f"cannot download {REPO_ID}:"
+    login = "run `hf auth login` or set HF_TOKEN to a token with access to it, then run the fetch again"
+    status = getattr(getattr(error, "response", None), "status_code", None)
+    if isinstance(error, hub_errors.GatedRepoError):
+        return f"{cannot} the dataset is gated and this login has no access: {login}"
+    if isinstance(error, hub_errors.RevisionNotFoundError):
+        return f"{cannot} it has no revision {revision} (the pinned one is {PINNED_REVISION}): check --revision"
+    if isinstance(error, hub_errors.RepositoryNotFoundError):
+        return f"{cannot} the dataset is private (or not visible to this login): {login}"
+    if isinstance(error, hub_errors.HfHubHTTPError) and status in (401, 403):
+        return f"{cannot} the dataset is private and the Hub refused this login (HTTP {status}): {login}"
+    if isinstance(error, network_errors()):
+        return (
+            f"{cannot} no network (or HF_HUB_OFFLINE=1, or the Hub is down) and {dest}/ holds no copy: connect and run "
+            "the fetch again, or copy a fetched artifacts/ here and run python -m fewshot_dlms.fetch --check"
+        )
+    return None
 
 
 def sha256_file(path):
@@ -153,7 +205,8 @@ def main(argv=None):
         description=f"Download groups of the frozen artifacts ({REPO_ID}) and check them against SHA256SUMS.",
     )
     parser.add_argument("groups", nargs="*", metavar="group", help=f"one or more of: {', '.join(GROUPS)}")
-    parser.add_argument("--revision", default=PINNED_REVISION, help="dataset revision (default: the pinned one)")
+    revision_help = "dataset revision (default: the pinned one; another skips the pin check of SHA256SUMS)"
+    parser.add_argument("--revision", default=PINNED_REVISION, help=revision_help)
     parser.add_argument("--dest", default="artifacts", help="download directory (default: artifacts)")
     parser.add_argument("--check", action="store_true", help="only check the files already under --dest")
     args = parser.parse_args(argv)
@@ -171,14 +224,26 @@ def main(argv=None):
     if args.check and not dest.is_dir():
         print(f"no artifacts in {dest}; run: python -m fewshot_dlms.fetch pools java", file=sys.stderr)
         return 1
+    pinned = args.revision == PINNED_REVISION
+    if not pinned:
+        print(
+            f"warning: revision {args.revision} is not the pinned {PINNED_REVISION}: the check of {SUMS_NAME} against "
+            f"the pinned SHA-256 is skipped, so the files are checked only against the {SUMS_NAME} of that revision",
+            file=sys.stderr,
+        )
     if not args.check:
-        if args.revision != PINNED_REVISION:
-            print(f"warning: revision {args.revision} is not the pinned {PINNED_REVISION}", file=sys.stderr)
         print(f"downloading {', '.join(args.groups)} from {REPO_ID}@{args.revision} into {dest}/")
-        download(args.groups, revision=args.revision, dest=dest)
+        try:
+            download(args.groups, revision=args.revision, dest=dest)
+        except Exception as error:
+            message = download_failure(error, args.revision, dest)
+            if message is None:
+                raise
+            print(message, file=sys.stderr)
+            return 1
 
     downloaded_sums = dest / SUMS_NAME
-    if downloaded_sums.is_file() and args.revision == PINNED_REVISION and sha256_file(downloaded_sums) != SUMS_SHA256:
+    if downloaded_sums.is_file() and pinned and sha256_file(downloaded_sums) != SUMS_SHA256:
         print(f"{downloaded_sums} is not the SHA256SUMS of the pinned revision {PINNED_REVISION}", file=sys.stderr)
         return 1
     sums_path = sums_file(dest)
@@ -191,7 +256,9 @@ def main(argv=None):
     for name in absent:
         print(f"missing: {dest / name}", file=sys.stderr)
     if mismatched or absent:
-        print(f"{len(mismatched)} mismatched, {len(absent)} missing of the files in {sums_path}", file=sys.stderr)
+        remedy = "delete the listed files and run the fetch again" if mismatched else "run the fetch again"
+        counts = f"{len(mismatched)} mismatched, {len(absent)} missing of the files in {sums_path}"
+        print(f"{counts}: {remedy}", file=sys.stderr)
         return 1
     print(f"OK: {len(present)} of the {len(sums)} files listed in {sums_path} are under {dest}/ and match")
     return 0
