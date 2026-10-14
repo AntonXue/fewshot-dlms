@@ -1,0 +1,37 @@
+{
+  "model": "llada",
+  "M": 4,
+  "J": 2,
+  "source": "families.csv of the authors' Section 4.2 grid run",
+  "protocol_hash": "98fe06a36f6b6503",
+  "families": {
+    "list_easy_fam:report:000": {
+      "0.0": {
+        "A_target": 0.9375,
+        "A_all": 0.875,
+        "ess": 16.0,
+        "max_w": 0.0625
+      },
+      "0.5": {
+        "A_target": 0.9673451351327764,
+        "A_all": 0.9346902702655528,
+        "ess": 15.49302090388066,
+        "max_w": 0.06676359073325377
+      }
+    },
+    "list_easy_fam:report:001": {
+      "0.0": {
+        "A_target": 1.0,
+        "A_all": 1.0,
+        "ess": 16.0,
+        "max_w": 0.0625
+      },
+      "0.5": {
+        "A_target": 1.0,
+        "A_all": 1.0,
+        "ess": 16.0,
+        "max_w": 0.0625
+      }
+    }
+  }
+}
