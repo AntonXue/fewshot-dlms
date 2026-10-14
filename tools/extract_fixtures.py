@@ -18,10 +18,27 @@ tests/test_fixture_fig5.py recomputes those numbers from the pool records of eac
 and grading.py and requires agreement to 1e-12. tests/test_gpu_replay.py rebuilds the canvas of every
 record with the real tokenizer and re-scores the stored tokens of each model on a GPU.
 
+Figure 4 (single target, SST-2, M = 4 demonstrations) writes, for the two causal interfaces (nemotron_ar =
+Nemotron's causal suffix, qwen = Qwen3-8B's free-length continuation),
+
+  fig4/<model>_sst2_M4.jsonl         the first two complete pool records of the report families (K = 64
+                                     continuations each, with token ids, ell1 and ell0), run metadata removed
+                                     as above. These two records carry the frozen run's prompt checks (the
+                                     decoded P1 and P0 prompts).
+
+The text of SST-2 and MIT Movie is not redistributed (data/benchmarks/README.md). In records of those
+benchmarks every field that holds their text (the target inputs and the decoded prompts) is replaced by its
+SHA-256 digest, under the same key with "_sha256" appended; the answers stay (SST-2's are letter codes).
+tests/test_canvas.py compares the digest of the Nemotron prompt text it builds with the stored one;
+tests/test_gpu_replay.py does the same for both models and re-scores their stored continuations on a GPU;
+tests/test_fixture_leaks.py checks that no benchmark sentence is left.
+
 Usage:
     python tools/extract_fixtures.py --src <run directory of the Section 4.2 grid>
+    python tools/extract_fixtures.py --fig4-src <run directory of the single-target sweep>
 
-The run directory holds pools/<model>/list_easy_fam_M4_J2.jsonl and analysis/families.csv.
+The Section 4.2 run directory holds pools/<model>/list_easy_fam_M4_J2.jsonl and analysis/families.csv; the
+single-target one holds pools/report/<model>/sst2_fam_M4_J1.jsonl.
 
 Figure 6 (target lengths, Section 4.3) writes
 
@@ -61,6 +78,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+from fewshot_dlms.data import TEXT_FREE_BENCHMARKS
 
 DEFAULT_DEST = Path(__file__).resolve().parents[1] / "data" / "fixtures"
 
@@ -81,10 +99,10 @@ FIG5_FIXTURES = [
 ]
 
 
-def first_complete_records(pool_path: Path, n: int) -> list[dict]:
+def first_complete_records(pool_path: Path, n: int, k: int = K) -> list[dict]:
     """The first complete record of each family, for the first `n` families, without run metadata.
 
-    A record is complete when it has all K candidates. Pool files are appended to by parallel
+    A record is complete when it has all `k` candidates (K by default). Pool files are appended to by parallel
     workers, so lines are not in manifest order; the episode ids (list_easy_fam:report:000, ...)
     sort in manifest order. Apart from the keys in RUN_METADATA, every record is returned as stored
     (same keys in the same order).
@@ -95,10 +113,55 @@ def first_complete_records(pool_path: Path, n: int) -> list[dict]:
             if not line.strip():
                 continue
             record = json.loads(line)
-            if len(record["candidates"]) == K and record["episode_id"] not in record_of_family:
+            if len(record["candidates"]) == k and record["episode_id"] not in record_of_family:
                 record_of_family[record["episode_id"]] = record
     records = [record_of_family[episode_id] for episode_id in sorted(record_of_family)[:n]]
     return [{key: value for key, value in record.items() if key not in RUN_METADATA} for record in records]
+
+
+# Figure 4: one entry per fixture, as for Figure 5; K = 64 continuations per complete record.
+FIG4_K = 64
+FIG4_FIXTURES = [
+    {"stem": "nemotron_ar_sst2_M4", "pool": "pools/report/nemotron_ar/sst2_fam_M4_J1.jsonl"},
+    {"stem": "qwen_sst2_M4", "pool": "pools/report/qwen/sst2_fam_M4_J1.jsonl"},
+]
+
+
+# Fields of a pool record that hold benchmark text: a list of target inputs, and the decoded prompts in "checks".
+TEXT_FIELDS = ("target_inputs",)
+CHECK_TEXT_FIELDS = ("p1_prompt_text", "p0_prompt_text")
+
+
+def sha256_text(text: str) -> str:
+    """SHA-256 of a text in UTF-8, as hex."""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def without_benchmark_text(record: dict) -> dict:
+    """The record with each field in TEXT_FIELDS / CHECK_TEXT_FIELDS replaced by its digest(s), key + "_sha256".
+
+    Applies to SST-2 and MIT Movie records (data.TEXT_FREE_BENCHMARKS); other records are returned unchanged.
+    Keys keep their order. Raises ValueError if prompt text ("Input:") is left anywhere in the result.
+    """
+    if record["source"] not in TEXT_FREE_BENCHMARKS:
+        return record
+    hashed = {}
+    for key, value in record.items():
+        if key in TEXT_FIELDS:
+            hashed[key + "_sha256"] = [sha256_text(text) for text in value]
+        elif key == "checks" and value:
+            checks = {}
+            for check, result in value.items():
+                if check in CHECK_TEXT_FIELDS:
+                    checks[check + "_sha256"] = sha256_text(result)
+                else:
+                    checks[check] = result
+            hashed[key] = checks
+        else:
+            hashed[key] = value
+    if "Input:" in json.dumps(hashed):
+        raise ValueError(f"{record['episode_id']}: prompt text left after hashing")
+    return hashed
 
 
 def authors_numbers(families_csv: Path, model: str, episode_ids: list[str]) -> dict:
@@ -222,21 +285,44 @@ def extract_fig6_head(src: Path, dest: Path) -> None:
     print(f"fig6/{spec['stem']}: {len(canvases)} families {episode_ids[0]} .. {episode_ids[-1]}")
 
 
+def extract_fig4(src: Path, dest: Path) -> None:
+    """Write the Figure 4 pool fixture of every causal interface in FIG4_FIXTURES."""
+    out_dir = dest / "fig4"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for fixture in FIG4_FIXTURES:
+        records = first_complete_records(src / fixture["pool"], N_FAMILIES, FIG4_K)
+        missing = [record["episode_id"] for record in records if not record.get("checks")]
+        records = [without_benchmark_text(record) for record in records]
+        if missing:
+            raise ValueError(f"{fixture['stem']}: records without the prompt checks: {missing}")
+        with (out_dir / f"{fixture['stem']}.jsonl").open("w", encoding="utf-8") as handle:
+            for record in records:
+                handle.write(json.dumps(record) + "\n")
+        print(f"fig4/{fixture['stem']}: {len(records)} families {[record['episode_id'] for record in records]}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
         "--src",
         type=Path,
-        required=True,
         help="run directory of the Section 4.2 grid (fig5) or of the Section 4.3 length project (fig6_head)",
     )
+    parser.add_argument("--fig4-src", type=Path, help="run directory of the single-target sweep (Figure 4 fixtures)")
     parser.add_argument("--dest", type=Path, default=DEFAULT_DEST, help="default: data/fixtures of this repository")
     parser.add_argument("--fixture", choices=["fig5", "fig6_head"], default="fig5", help="which fixture to write (default: fig5)")
     args = parser.parse_args()
     if args.fixture == "fig6_head":
+        if args.src is None:
+            parser.error("--fixture fig6_head needs --src")
         extract_fig6_head(args.src, args.dest)
-    else:
+        return
+    if args.src is None and args.fig4_src is None:
+        parser.error("give --src, --fig4-src or both")
+    if args.src is not None:
         extract_fig5(args.src, args.dest)
+    if args.fig4_src is not None:
+        extract_fig4(args.fig4_src, args.dest)
 
 
 if __name__ == "__main__":

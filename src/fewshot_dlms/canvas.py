@@ -1,4 +1,4 @@
-# ported from editdiff/experiments/multimodel/mm_common.py, experiments/sec42_mj/mj_worker.py, experiments/sec42_mj/mj_build.py::extend, experiments/example_tilting/et_common.py and, for build_java_canvas, experiments/swe_explore/sx_common.py::{site_parts,render} with the Section 5 package's scratch/fr_lib.py @ d276fa6
+# ported from editdiff/experiments/multimodel/mm_common.py, experiments/sec42_mj/mj_worker.py, experiments/sec42_mj/mj_build.py::extend, experiments/example_tilting/et_common.py, for build_ar_prompt experiments/multimodel/mm_common.py::compile_ar with experiments/preflight/pf_common.py::{compile_ar_perhole,AR_PERHOLE_NOTE} and experiments/algo_investigation/dr_worker.py::make_aep, and, for build_java_canvas, experiments/swe_explore/sx_common.py::{site_parts,render} with the Section 5 package's scratch/fr_lib.py @ d276fa6
 """From a frozen family to the canvas a diffusion language model fills in.
 
 A family (see data.py) holds an instruction, 16 ordered demonstrations D1..D16 and 8 ordered targets
@@ -26,6 +26,11 @@ Where the records sit: `master_layout`. This module builds the Figure 5 canvas (
 authors' code, one chat turn, J >= 1 targets) for tasks whose outputs are text: List Functions-Easy
 (checked against the authors' run), SALT and MIT Movie. The classification canvas of SST-2 (opaque
 output codes) and the one-target canvas of Figure 4 are added with their figures.
+
+`build_ar_prompt` and `ar_prompt_ids` build the prompt of the two causal interfaces of Figure 4 (Appendix
+B.1): Nemotron's fixed-length causal suffix and Qwen3-8B's free-length continuation. The same records as
+the canvas, demonstrations first, end at the target's "Output:"; the model continues from there. P0
+deletes the demonstration outputs from the prompt instead of masking them.
 
 `build_java_canvas` builds the canvas of Section 5 (Appendix C) from a Java episode of data/java: the
 helper the developer introduced, then the demonstrations (accepted before/after edits of other sites that
@@ -237,6 +242,91 @@ def build_canvas(adapter, family, M, J, lengths, placement="interleaved"):
         "slots": [entry["slot"] for entry in episode["entries"]],
     }
     return Canvas(ids=ids, sites=sites, E=E, gold=gold, meta=meta)
+
+
+# ---------------------------------------------------------------------------------------------
+# The single-target prompt of a causal model (Figure 4)
+# ---------------------------------------------------------------------------------------------
+
+# The per-hole instruction note (placeholder_note=True), with the hole number filled in twice.
+AR_PERHOLE_NOTE = (
+    " Some records have their output replaced by a numbered placeholder [[k]]."
+    " Write the output for placeholder [[%d]] only, as '[[%d]]: <output>'."
+)
+
+
+def _ar_pieces(adapter, family, M, j, placeholder_note):
+    """The single-target prompt as (text, is_demonstration_output) pieces, in prompt order.
+
+    Each piece is tokenized on its own (`ar_prompt_ids`). Raises ValueError unless 1 <= M <= the number of
+    demonstrations and 1 <= j <= the number of targets.
+    """
+    if not 1 <= M <= len(family["demos"]):
+        raise ValueError(f"M must be between 1 and {len(family['demos'])}, got {M}")
+    if not 1 <= j <= len(family["targets"]):
+        raise ValueError(f"j must be between 1 and {len(family['targets'])}, got {j}")
+
+    target = family["targets"][j - 1]
+    pieces = []
+    if placeholder_note:
+        opening = adapter.chat_user_open() + family["instruction"] + AR_PERHOLE_NOTE % (1, 1) + "\n\n"
+        pieces.append((opening, False))
+    else:
+        pieces.append((adapter.chat_header(family["instruction"]), False))
+    for demo in family["demos"][:M]:
+        pieces.append((f"Input: {demo['input']}\nOutput:", False))
+        pieces.append((" " + demo["output"], True))
+        pieces.append(("\n\n", False))
+    pieces.append((f"Input: {target['input']}\nOutput:", False))
+    if placeholder_note:
+        pieces.append((" [[1]]", False))
+        pieces.append((adapter.chat_user_close_assistant_open(), False))
+        pieces.append(("[[1]]:", False))
+    return pieces
+
+
+def build_ar_prompt(adapter, family, M, j, placeholder_note=False):
+    """The prompt text a causal model continues for target j of a family, and the reference answer.
+
+    The prompt holds the first M demonstrations and then target Tj (j = 1 in Figure 4), as the canvas holds
+    them, and stops where the target's answer would start:
+
+      chat header + instruction
+      for each demonstration: "Input: <input>\nOutput:" " <output>" "\n\n"
+      "Input: <target input>\nOutput:"
+
+    Nemotron's causal suffix (`nemotron_ar`) continues it with exactly as many tokens as " <reference>" has
+    (the oracle length); Qwen3-8B (`qwen`) continues it freely until a stop token. Every record sits in the
+    assistant turn, which stays open.
+
+    placeholder_note=True gives the per-hole wording of the authors' preflight instead: the instruction and the
+    records in the user turn, the instruction told that outputs replaced by a numbered placeholder [[k]] are to be
+    written as '[[1]]: <output>', the target's output shown as "[[1]]", and the assistant turn opened with the
+    forced "[[1]]:". It is not used for any figure of the paper (no autoregressive multi-target baseline was run).
+
+    Returns (prompt text, [reference answer of target j]). The text is for reading and checking; the model gets
+    `ar_prompt_ids`, which tokenizes the pieces one by one (a real tokenizer can merge across piece boundaries).
+    `adapter` supplies `chat_header`, `chat_user_open`, `chat_user_close_assistant_open`. Raises ValueError
+    unless 1 <= M <= the number of demonstrations and 1 <= j <= the number of targets.
+    """
+    pieces = _ar_pieces(adapter, family, M, j, placeholder_note)
+    text = "".join(piece for piece, _ in pieces)
+    return text, [family["targets"][j - 1]["output"]]
+
+
+def ar_prompt_ids(adapter, family, M, j, placeholder_note=False, hide_E=False):
+    """The token ids of `build_ar_prompt`: P1's prompt, or P0's with hide_E=True.
+
+    Every piece of text is tokenized on its own and the token lists are concatenated, as for the canvas.
+    hide_E=True deletes each demonstration's " <output>" tokens and keeps everything else, the "Output:"
+    labels and the blank lines included: P0 of a causal model (Appendix B.1).
+    """
+    ids = []
+    for piece, is_demonstration_output in _ar_pieces(adapter, family, M, j, placeholder_note):
+        if hide_E and is_demonstration_output:
+            continue
+        ids.extend(adapter.encode(piece))
+    return ids
 
 
 # ---------------------------------------------------------------------------------------------

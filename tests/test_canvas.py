@@ -4,17 +4,25 @@ The tests run on CPU with `FakeAdapter`, whose tokenizer maps every character to
 canvas can be compared with the text it should spell. List Functions-Easy families are read from
 data/benchmarks/; the small hand-made family below is there to make the expected text readable.
 """
+import hashlib
+import os
+
 import pytest
 
+from fewshot_dlms.adapters.nemotron import Nemotron
+from fewshot_dlms.canvas import AR_PERHOLE_NOTE
 from fewshot_dlms.canvas import BASE_DEMOS
 from fewshot_dlms.canvas import JAVA_INSTRUCTION
 from fewshot_dlms.canvas import JAVA_ZERO_DEMO_INSTRUCTION
 from fewshot_dlms.canvas import active_episode
+from fewshot_dlms.canvas import ar_prompt_ids
+from fewshot_dlms.canvas import build_ar_prompt
 from fewshot_dlms.canvas import build_canvas
 from fewshot_dlms.canvas import build_java_canvas
 from fewshot_dlms.canvas import extend_layout
 from fewshot_dlms.canvas import master_layout
 from fewshot_dlms.data import load_families
+from fewshot_dlms.data import read_jsonl
 from tests.fakes import FakeAdapter
 
 LIST_REPORT = load_families("list_easy_fam", "report")
@@ -396,3 +404,147 @@ def test_java_canvas_rejects_bad_arguments():
         build_java_canvas(adapter, episode, 2, 3, [3, 2, 1])
     with pytest.raises(ValueError):
         build_java_canvas(adapter, episode, 2, 0, [])
+
+
+# ---------------------------------------------------------------------------------------------
+# The single-target prompt of the causal interfaces (Figure 4)
+# ---------------------------------------------------------------------------------------------
+
+
+class RecordingAdapter(FakeAdapter):
+    """The fake adapter, keeping every piece of text it is asked to tokenize, in order."""
+
+    def __init__(self):
+        self.pieces = []
+
+    def encode(self, text):
+        self.pieces.append(text)
+        return super().encode(text)
+
+
+class NemotronText(FakeAdapter):
+    """The byte-level fake with Nemotron's chat strings, so a prompt reads back as Nemotron's prompt text."""
+
+    chat_header = Nemotron.chat_header
+    chat_user_open = Nemotron.chat_user_open
+    chat_user_close_assistant_open = Nemotron.chat_user_close_assistant_open
+    chat_end = Nemotron.chat_end
+
+
+def sst2_report_families():
+    """The SST-2 report families; they need the rebuilt text: skip locally, fail under CI when it is missing."""
+    try:
+        return {family["episode_id"]: family for family in load_families("sst2_fam", "report")}
+    except FileNotFoundError:
+        message = 'SST-2 text not built: run `pip install -e ".[data]"` and `python data/benchmarks/build.py`'
+        if os.environ.get("CI", "").lower() not in ("", "0", "false"):
+            pytest.fail(message, pytrace=False)
+        pytest.skip(message)
+
+
+def test_ar_prompt_contains_demos_and_placeholder():
+    family = tiny_family()
+    text, gold = build_ar_prompt(FakeAdapter(), family, M=2, j=1)
+    assert text.endswith("Input: [4, 5]\nOutput:")
+    assert all(" " + demo["output"] + "\n\n" in text for demo in family["demos"])
+    assert gold == ["[5, 4]"]
+
+    text, gold = build_ar_prompt(FakeAdapter(), family, M=2, j=1, placeholder_note=True)
+    assert AR_PERHOLE_NOTE % (1, 1) in text
+    assert text.endswith("Input: [4, 5]\nOutput: [[1]]<a>[[1]]:")
+    assert all(" " + demo["output"] + "\n\n" in text for demo in family["demos"])
+    assert gold == ["[5, 4]"]
+
+
+def test_ar_prompt_spells_the_causal_suffix_prompt():
+    text, _ = build_ar_prompt(FakeAdapter(), tiny_family(), M=2, j=2)
+    assert text == (
+        "<h>Reverse the list."
+        "Input: [1, 2]\nOutput: [2, 1]\n\n"
+        "Input: [3]\nOutput: [3]\n\n"
+        "Input: [6, 7, 8]\nOutput:"
+    )
+
+
+def test_ar_prompt_spells_the_per_hole_prompt():
+    text, _ = build_ar_prompt(FakeAdapter(), tiny_family(), M=1, j=1, placeholder_note=True)
+    assert text == (
+        "<u>Reverse the list."
+        " Some records have their output replaced by a numbered placeholder [[k]]."
+        " Write the output for placeholder [[1]] only, as '[[1]]: <output>'.\n\n"
+        "Input: [1, 2]\nOutput: [2, 1]\n\n"
+        "Input: [4, 5]\nOutput: [[1]]"
+        "<a>[[1]]:"
+    )
+
+
+def test_ar_prompt_ids_spell_the_prompt_text():
+    adapter = FakeAdapter()
+    for placeholder_note in (False, True):
+        text, _ = build_ar_prompt(adapter, FAM, M=4, j=3, placeholder_note=placeholder_note)
+        ids = ar_prompt_ids(adapter, FAM, M=4, j=3, placeholder_note=placeholder_note)
+        assert adapter.decode(ids) == text
+
+
+def test_ar_prompt_ids_are_tokenized_piece_by_piece():
+    # Real tokenizers merge across piece boundaries (Qwen3 reads "]\n\n" as one token), so every piece is
+    # tokenized on its own, as the authors' compiler did; the demonstration outputs are pieces of their own.
+    adapter = RecordingAdapter()
+    ar_prompt_ids(adapter, tiny_family(), M=2, j=1)
+    assert adapter.pieces == [
+        "<h>Reverse the list.",
+        "Input: [1, 2]\nOutput:", " [2, 1]", "\n\n",
+        "Input: [3]\nOutput:", " [3]", "\n\n",
+        "Input: [4, 5]\nOutput:",
+    ]
+
+
+def test_P0_prompt_deletes_the_demonstration_outputs_and_keeps_the_labels():
+    adapter = FakeAdapter()
+    p1 = ar_prompt_ids(adapter, tiny_family(), M=2, j=1)
+    p0 = ar_prompt_ids(adapter, tiny_family(), M=2, j=1, hide_E=True)
+    assert adapter.decode(p0) == (
+        "<h>Reverse the list."
+        "Input: [1, 2]\nOutput:\n\n"
+        "Input: [3]\nOutput:\n\n"
+        "Input: [4, 5]\nOutput:"
+    )
+    assert len(p1) - len(p0) == len(adapter.encode(" [2, 1]")) + len(adapter.encode(" [3]"))
+
+
+def test_ar_prompt_uses_the_first_M_demos_and_target_j():
+    text, gold = build_ar_prompt(FakeAdapter(), FAM, M=3, j=5)
+    for demo in FAM["demos"][:3]:
+        assert f"Input: {demo['input']}\nOutput: {demo['output']}\n\n" in text
+    for demo in FAM["demos"][3:]:
+        assert f"Input: {demo['input']}\n" not in text
+    assert text.endswith(f"Input: {FAM['targets'][4]['input']}\nOutput:")
+    assert gold == [FAM["targets"][4]["output"]]
+
+
+def test_ar_prompt_rejects_bad_arguments():
+    adapter = FakeAdapter()
+    for M, j in ((0, 1), (17, 1), (4, 0), (4, 9)):
+        with pytest.raises(ValueError):
+            build_ar_prompt(adapter, FAM, M=M, j=j)
+        with pytest.raises(ValueError):
+            ar_prompt_ids(adapter, FAM, M=M, j=j)
+
+
+def sha256_of_text(text):
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def test_ar_prompt_is_the_frozen_nemotron_prompt_text(root):
+    # The first two records of each frozen Figure 4 pool store the decoded P1 and P0 prompts of their episode; the
+    # fixtures keep their SHA-256 (SST-2 text is not redistributed).
+    families = sst2_report_families()
+    adapter = NemotronText()
+    for record in read_jsonl(root / "data" / "fixtures" / "fig4" / "nemotron_ar_sst2_M4.jsonl"):
+        family = families[record["episode_id"]]
+        text, gold = build_ar_prompt(adapter, family, record["M"], 1)
+        p0_text = adapter.decode(ar_prompt_ids(adapter, family, record["M"], 1, hide_E=True))
+        assert sha256_of_text(text) == record["checks"]["p1_prompt_text_sha256"]
+        assert sha256_of_text(p0_text) == record["checks"]["p0_prompt_text_sha256"]
+        assert record["target_inputs_sha256"] == [sha256_of_text(family["targets"][0]["input"])]
+        assert gold == record["gold"]

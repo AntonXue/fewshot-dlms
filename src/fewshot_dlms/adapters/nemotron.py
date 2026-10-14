@@ -1,5 +1,5 @@
-# ported from editdiff/experiments/multimodel/mm_adapters.py::Nemotron (mode "block") @ d276fa6
-"""Nemotron-Labs-Diffusion-8B with a causal prefix and a bidirectional tail (Appendix B.1).
+# ported from editdiff/experiments/multimodel/mm_adapters.py::Nemotron (modes "block" and "ar") @ d276fa6
+"""Nemotron-Labs-Diffusion-8B: a causal prefix with a bidirectional tail, or a causal suffix (Appendix B.1).
 
 Nemotron was trained as a block diffusion model: noisy tokens attend bidirectionally within their block
 and causally to the clean prefix before it. Both target-count studies of the paper (Figure 5 and the
@@ -15,10 +15,19 @@ b is fixed for a whole reveal, under P1 and P0 alike: the reveal loop announces 
 32-token blocks. There is no KV cache: every forward pass recomputes the prefix. The model's diffusion
 head reads the hidden state at the masked position itself (no shift). The mask token is id 100.
 
+The single-target study (Figure 4) uses Nemotron through a second interface, the causal suffix
+("nemotron_ar", mode="causal"). Every layer is switched to the model's autoregressive mode
+(diffusion_lm=False: causal SDPA over the whole sequence, no explicit mask, no KV cache), and the model
+continues a prompt left to right (canvas.ar_prompt_ids; adapters.base.sample_ar): the next token after a
+sequence of length T is read from the diffusion head at the hidden state of position T - 1. The suffix has
+exactly as many tokens as the reference answer (the oracle length) and no stop token. P0 deletes the
+demonstration outputs from the prompt.
+
 The checkpoint is nvidia/Nemotron-Labs-Diffusion-8B at a pinned revision, loaded in bf16 with its own
 modelling code (trust_remote_code). The attention pattern above is passed to the model through a
 registered attention function (`padmask_sdpa`), the authors' shim; see `_register_mask_attention`.
-Several Nemotron instances can live in one process: each keeps its own mask.
+Several Nemotron instances can live in one process, a prefix/tail and a causal one included: each keeps
+its own mask, and the causal instance's mask stays empty.
 """
 import weakref
 
@@ -34,13 +43,19 @@ MASK_ID = 100  # <SPECIAL_100>, the config's mask_token_id
 CONTROL_MAX = 999  # ids 0..999 are the control block: every registered special token and the mask
 EOS_ID = 11  # <|im_end|>
 
-# Interfaces of this model; the causal-suffix interface ("nemotron_ar") is added with Figure 4.
-MODES = {"prefix_tail": "nemotron_pt"}
+# Interfaces of this model (Appendix B.1) and their names in records and file names.
+MODES = {"prefix_tail": "nemotron_pt", "causal": "nemotron_ar"}
+
+# How the Figure 4 pools of the causal suffix were decoded: over the ordinary support, sampling 32 sequences per
+# forward pass and scoring P0 16 per pass (read by adapters.base.sample_ar / logprob_ar / decode_ar).
+CAUSAL_SUPPORT = "ordinary"
+CAUSAL_SAMPLE_CHUNK = 32
+CAUSAL_P0_CHUNK = 16
 
 
 # Attention layer -> the explicit-mask holder of the Nemotron instance that owns the layer. The attention
 # function is registered once per process under one name, so it looks up the calling layer here: every
-# instance (the prefix/tail interface, and later the causal-suffix one) sees only its own mask.
+# instance (the prefix/tail interface and the causal-suffix one) sees only its own mask.
 _MASK_HOLDERS = weakref.WeakKeyDictionary()
 
 
@@ -71,7 +86,12 @@ def _register_mask_attention(attention_layers, explicit_mask):
 
 
 class Nemotron(Adapter):
-    """Nemotron-Labs-Diffusion-8B; `mode="prefix_tail"` is the interface of the target-count studies."""
+    """Nemotron-Labs-Diffusion-8B.
+
+    mode="prefix_tail" ("nemotron_pt") is the interface of the target-count studies (Figure 5 and the
+    cross-benchmark sweep); mode="causal" ("nemotron_ar") is the causal suffix of the single-target study
+    (Figure 4).
+    """
 
     model_id = "nvidia/Nemotron-Labs-Diffusion-8B"
     revision = "16c67f0560b912e93e0cabb6e0c4f5c3086d95fc"
@@ -83,6 +103,7 @@ class Nemotron(Adapter):
         if mode not in MODES:
             raise ValueError(f"unknown Nemotron mode {mode!r}; expected one of {sorted(MODES)}")
         self.name = MODES[mode]
+        self.kind = "dlm" if mode == "prefix_tail" else "ar"
         self.device = device
         # trust_remote_code only silences an interactive prompt: the tokenizer is the same with or without it.
         self.tok = AutoTokenizer.from_pretrained(self.model_id, revision=self.revision, trust_remote_code=True)
@@ -100,9 +121,16 @@ class Nemotron(Adapter):
         config._attn_implementation = "padmask_sdpa"
         for layer in self.layers:
             layer.self_attn.config._attn_implementation = "padmask_sdpa"
-        self.block_start = None  # b, the first target position; set by begin_reveal
-        # Every layer in diffusion mode (is_causal=False); the explicit mask makes the prefix causal.
-        self.set_mode("dlm")
+        self.block_start = None  # b, the first target position; set by begin_reveal (prefix/tail only)
+        if mode == "prefix_tail":
+            # Every layer in diffusion mode (is_causal=False); the explicit mask makes the prefix causal.
+            self.set_mode("dlm")
+        else:
+            # Every layer in autoregressive mode (is_causal=True); the explicit mask stays None.
+            self.set_mode("ar")
+            self.default_support = CAUSAL_SUPPORT
+            self.sample_chunk = CAUSAL_SAMPLE_CHUNK
+            self.p0_chunk = CAUSAL_P0_CHUNK
         self.eos_id = EOS_ID
         self.V = config.vocab_size
         self.control_ids = set(range(CONTROL_MAX + 1))
@@ -132,7 +160,14 @@ class Nemotron(Adapter):
         return "<|im_end|>\n"
 
     def begin_reveal(self, order):
-        """Fix the start b of the bidirectional tail to the first target position of this reveal."""
+        """Fix the start b of the bidirectional tail to the first target position of this reveal.
+
+        b keeps its value after the reveal (the authors' worker reset it to None). That is harmless: every
+        reveal calls this hook before its first forward pass, so a later canvas never sees a stale b.
+        The causal-suffix interface has no canvas: it decodes left to right (adapters.base.sample_ar).
+        """
+        if self.mode == "ar":
+            raise ValueError("the causal-suffix interface has no canvas to reveal; use sample_ar / logprob_ar")
         self.block_start = order[0]
 
     def _hidden(self, batch_ids):
@@ -161,9 +196,35 @@ class Nemotron(Adapter):
             self.explicit_mask["mask"] = None
         return output.last_hidden_state
 
+    def _causal_hidden(self, batch_ids):
+        """Final hidden states [B, T, d] with every layer causal: the encoder's own forward, no explicit mask."""
+        self.explicit_mask["mask"] = None
+        output = self.model.encoder(input_ids=batch_ids.to(self.device), use_cache=False)
+        return output.last_hidden_state
+
+    def _causal_logits(self, batch_ids, positions):
+        """Causal suffix: the logits for the token at position p come from the hidden state at p - 1.
+
+        A position may be T = the sequence length: the next token after the sequence (all the decoding
+        loop asks for).
+        """
+        with torch.inference_mode():
+            hidden = self._causal_hidden(batch_ids)
+            rows = torch.arange(len(positions), device=self.device)[:, None]
+            columns = torch.tensor(positions, device=self.device) - 1
+            selected = hidden[rows, columns]
+            batch, n_positions, width = selected.shape
+            logits = self.model.diffusion_head(selected.reshape(batch * n_positions, width)).float()
+            return logits.reshape(batch, n_positions, -1)
+
     def logits(self, batch_ids, positions):
-        """The diffusion head at `positions` of each canvas under the prefix/tail mask, as fp32."""
-        assert self.mode == "dlm"
+        """The diffusion head at `positions` of each canvas under the prefix/tail mask, as fp32.
+
+        In causal mode the logits for the token at each position come from the hidden state one position
+        earlier (`_causal_logits`).
+        """
+        if self.mode == "ar":
+            return self._causal_logits(batch_ids, positions)
         with torch.inference_mode():
             hidden = self._hidden(batch_ids)
             rows = torch.arange(len(positions), device=self.device)[:, None]

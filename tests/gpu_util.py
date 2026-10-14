@@ -23,10 +23,19 @@ import torch
 # 0.16 (LLaDA-1.5), 0.43 (Nemotron) and 0.62 (dQwen3.5, worst of two processes); the mean was 0.01, 0.07
 # and 0.05. The deviation does not grow with |ell| (LLaDA's largest is at |ell| = 8), so the tolerance is
 # absolute: about 1.6 to 1.9 times the largest measured value.
+#
+# The causal interfaces of Figure 4 were measured the same way on the frozen single-target M = 4 pools, every
+# distinct continuation of the first 8 SST-2 and the first 4 List Functions-Easy report families ({ell1, ell0}
+# each; 214 + 150 values for nemotron_ar, 180 + 98 for qwen). Nemotron's causal suffix was exact on SST-2 (one
+# answer token, so every forward pass held one sequence anyway) and deviated by at most 0.33 (mean 0.08) on the
+# multi-token List Functions answers; Qwen3-8B deviated by at most 0.18 (mean 0.02) on SST-2 and 0.54 (mean
+# 0.08) on List Functions. The tolerances are about 1.8 times the largest value.
 TOLERANCES = {
     "llada": 0.3,
     "nemotron_pt": 0.75,
     "dqwen": 1.0,
+    "nemotron_ar": 0.6,
+    "qwen": 1.0,
 }
 
 REFERENCE_GPU = "NVIDIA H100 NVL"  # the GPU of the authors' runs
@@ -36,10 +45,14 @@ REFERENCE_TORCH = "2.7.1+cu128"  # the torch build of the authors' runs
 # bit-exact there. dQwen3.5 depends on the process: in 10 separate processes (two H100 NVLs) replaying the
 # two fixture records (every candidate's ell1 and ell0, the reference answer's ell0), 7 reproduced
 # every value exactly and 3 differed by at most 0.372; the tolerance leaves a margin of about a third.
+# The causal interfaces reproduce every one of the values above (and resample the stored draws token for token)
+# when the distinct continuations are scored together with the frozen batch sizes.
 BATCHED_TOLERANCES = {
     "llada": 0.0,
     "nemotron_pt": 0.0,
     "dqwen": 0.5,
+    "nemotron_ar": 0.0,
+    "qwen": 0.0,
 }
 
 

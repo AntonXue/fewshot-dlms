@@ -1,4 +1,4 @@
-# ported from editdiff/experiments/multimodel/mm_adapters.py, experiments/multimodel/mm_common.py, experiments/llada_pilot/lp_common.py and experiments/algo_investigation/dr_worker.py @ d276fa6
+# ported from editdiff/experiments/multimodel/mm_adapters.py, experiments/multimodel/mm_common.py (incl. ar_sample), experiments/llada_pilot/lp_common.py, experiments/preflight/pf_common.py::ar_score_prefix and experiments/algo_investigation/dr_worker.py (incl. free_steps) @ d276fa6
 """Fixed-order decoding (Lemma 3.1 of the paper): sample and score complete infills of a canvas.
 
 A canvas z has masked target positions T (`canvas.sites`). Fix an order sigma of T. An infill u puts
@@ -27,6 +27,12 @@ Each factor is the model's distribution at the position being revealed: an fp32 
 support, by default `adapter.support("ordinary")` (every real token except the mask, special tokens
 and chat markers). The model files (llada.py, nemotron.py, dqwen.py) load a pinned checkpoint and
 supply `Adapter.logits` and the chat framing; the loop itself is model-independent.
+
+Causal models (Figure 4 only; Appendix B.1): Nemotron's causal suffix and Qwen3-8B continue a prompt
+(canvas.ar_prompt_ids) left to right, one token per step, with the same fp32 log-softmax over a support
+(`decode_ar`, `sample_ar`, `logprob_ar`). The suffix has the fixed oracle length; Qwen3's free-length
+continuation stops at its first stop token. Their P0 prompt deletes the demonstration outputs rather than
+masking them, so R = log P1 - log P0 compares the same continuation under two prompts.
 """
 from dataclasses import dataclass
 from dataclasses import field
@@ -217,6 +223,179 @@ def _fill(ids, positions, tokens):
 
 
 # ---------------------------------------------------------------------------------------------
+# Causal models: left-to-right decoding of a prompt's continuation (Figure 4)
+# ---------------------------------------------------------------------------------------------
+
+
+@dataclass
+class ARInfill(Infill):
+    """One sampled continuation of a causal model's prompt: one site, its tokens in generation order."""
+
+    truncated: bool = False  # stopped by the token budget before any stop token (free-length decoding only)
+
+
+def sample_ar(adapter, prompt_ids, K, seed, max_new, stop_ids, support=None, chunk=None):
+    """Draw K continuations of the prompt from P1, token by token at temperature 1.
+
+    A continuation ends at its first token in `stop_ids`, which it keeps (Qwen3-8B: <|im_end|> or any token
+    whose text holds a newline), or after `max_new` tokens. With no stop ids every continuation has exactly
+    `max_new` tokens: Nemotron's causal suffix of the oracle length, which is never truncated. One
+    torch.Generator, seeded with `seed`, serves all K draws. `support` is a kind for `adapter.support` or a boolean
+    mask over the vocabulary; by default the adapter's `default_support` (Qwen3-8B: "free", which admits
+    <|im_end|>). `chunk` is the most sequences per forward pass; by default the adapter's `sample_chunk`, the
+    frozen pools' (with both defaults, the same seed draws the stored continuations again on the authors'
+    platform).
+
+    Returns the K continuations in draw order: toks = [tokens], ell1_sample = log P1 of the tokens (the
+    pools' ell1), ell1_tokens its terms, truncated = ended by the budget while stop ids were in force.
+    """
+    generator = torch.Generator().manual_seed(seed)
+    traces, logprobs, truncated = decode_ar(
+        adapter,
+        prompt_ids,
+        K,
+        support,
+        generator=generator,
+        max_new=max_new,
+        stop_ids=stop_ids,
+        chunk=chunk,
+    )
+    infills = []
+    for trace, terms, cut in zip(traces, logprobs, truncated):
+        infills.append(ARInfill(toks=[trace], ell1_sample=float(sum(terms)), ell1_tokens=terms, truncated=cut))
+    return infills
+
+
+def logprob_ar(adapter, prompt_ids, toks, hide_E_prompt_ids=None, support=None):
+    """Score one continuation with the factors it would be sampled from, its tokens written in (teacher forcing).
+
+    Without hide_E_prompt_ids this is log P1 under `prompt_ids`, which replays the pools' ell1. With
+    hide_E_prompt_ids, the P0 prompt (canvas.ar_prompt_ids(..., hide_E=True): the demonstration outputs
+    deleted), it is log P0 under that prompt, the pools' ell0; the P0 prompt must be `prompt_ids` with tokens
+    deleted, else ValueError. `toks` is ARInfill.toks or one flat list. `support` defaults to the adapter's
+    `default_support`, the support the continuation was sampled over. Returns the total and the per-token terms.
+
+    One continuation per forward pass: equal to the frozen values up to bf16 batch noise. The frozen pools
+    scored all distinct draws of an episode together; `decode_ar(..., forced=...)` with the distinct draws in
+    first-occurrence order forms those batches again.
+    """
+    trace = _flat_continuation(toks)
+    context = list(prompt_ids)
+    if hide_E_prompt_ids is not None:
+        if not _is_deletion(hide_E_prompt_ids, prompt_ids):
+            raise ValueError("hide_E_prompt_ids must be prompt_ids with some tokens deleted (P0 deletes E)")
+        context = list(hide_E_prompt_ids)
+    _, logprobs, _ = decode_ar(adapter, context, 1, support, forced=[trace])
+    terms = logprobs[0]
+    return float(sum(terms)), terms
+
+
+def decode_ar(
+    adapter, prompt_ids, n, support=None, generator=None, forced=None, max_new=None, stop_ids=frozenset(), chunk=None
+):
+    """Left-to-right decoding of n continuations of one prompt at once (sampling or scoring).
+
+    At step s, continuation k's factor is the log-softmax over the support (a kind for `adapter.support` or a
+    boolean mask over the vocabulary; by default the adapter's `default_support`) of the model's logits for the
+    next token after prompt_ids + its first s tokens. `chunk` defaults to the adapter's `sample_chunk`; the frozen
+    pools scored P0 with `adapter.p0_chunk`.
+
+    Sampling (forced=None): every unfinished continuation draws its next token from its factor; it finishes on a
+    token in `stop_ids` (kept) or once it has `max_new` tokens. Scoring (forced = n token lists): the given tokens
+    are written in instead, and a continuation takes part in a step while it has a token for it.
+    Returns the n token lists, their log-prob terms, and for each whether the budget ended it before a stop token
+    (always False without stop ids, where max_new is the fixed length).
+
+    Continuations that agree on every token so far form the same sequence, which is run once; sequences go to the
+    model `chunk` at a time, in the order of their first continuation. The draws a seed reproduces: step by step;
+    within a step, one multinomial call per distinct sequence in that order; each call draws one token per
+    continuation on it, handed out in continuation order. Scoring the distinct draws of a sampling call, in
+    first-occurrence order, repeats that call's batches.
+    """
+    if adapter.kind != "ar":
+        raise ValueError(f"{adapter.name!r} fills canvases; left-to-right decoding needs a causal interface")
+    allowed = _allowed(adapter, adapter.default_support if support is None else support)
+    chunk = adapter.sample_chunk if chunk is None else chunk
+    sampling = forced is None
+    if sampling and (max_new is None or max_new < 1):
+        raise ValueError(f"sampling needs a token budget max_new >= 1, got {max_new}")
+    if not sampling and len(forced) != n:
+        raise ValueError(f"expected {n} forced continuations, got {len(forced)}")
+    traces = [[] for _ in range(n)] if sampling else [[int(token) for token in trace] for trace in forced]
+    logprobs = [[] for _ in range(n)]
+    done = [False] * n
+    truncated = [False] * n
+    step = 0
+    while True:
+        if sampling:
+            active = [k for k in range(n) if not done[k]]
+        else:
+            active = [k for k in range(n) if len(traces[k]) > step]
+        if not active:
+            break
+        groups = {}
+        for k in active:
+            groups.setdefault(tuple(traces[k][:step]), []).append(k)
+        keys = list(groups)
+        step_logprobs = _next_token_logprobs(adapter, prompt_ids, keys, allowed, chunk)
+        for row, key in enumerate(keys):
+            members = groups[key]
+            factor = step_logprobs[row]
+            if sampling:
+                probs = factor.exp()
+                probs = torch.where(torch.isfinite(factor), probs, torch.zeros_like(probs)).cpu()
+                draws = torch.multinomial(probs, len(members), replacement=True, generator=generator).tolist()
+                for k, token in zip(members, draws):
+                    traces[k].append(int(token))
+                    logprobs[k].append(float(factor[token]))
+                    if token in stop_ids:
+                        done[k] = True
+                    elif len(traces[k]) >= max_new:
+                        done[k] = True
+                        truncated[k] = bool(stop_ids)
+            else:
+                for k in members:
+                    logprobs[k].append(float(factor[traces[k][step]]))
+        step += 1
+    return traces, logprobs, truncated
+
+
+def _next_token_logprobs(adapter, prompt_ids, keys, allowed, chunk):
+    """The factor of the next token after prompt_ids + keys[i], for each distinct continuation so far.
+
+    All keys of a step have the same length, so the sequences have equal length. They are run `chunk` at a time,
+    in the order of `keys`; the model is asked for the token at position len(sequence), the next one. Returns
+    one row of fp32 log-probs per key.
+    """
+    sequences = [list(prompt_ids) + list(key) for key in keys]
+    rows = []
+    for start in range(0, len(sequences), chunk):
+        batch = sequences[start:start + chunk]
+        positions = [[len(sequence)] for sequence in batch]
+        logits = adapter.counted_logits(torch.tensor(batch, dtype=torch.long), positions)
+        rows.append(logits[:, 0])
+    logits = torch.cat(rows, 0).float()
+    if allowed is not None:
+        logits = logits.masked_fill(~allowed.to(logits.device), float("-inf"))
+    return torch.log_softmax(logits, -1)
+
+
+def _flat_continuation(toks):
+    """A continuation as one token list, from ARInfill.toks ([tokens]) or the flat list itself."""
+    if toks and all(isinstance(site_toks, (list, tuple)) for site_toks in toks):
+        if len(toks) != 1:
+            raise ValueError(f"a causal continuation has one site, got {len(toks)}")
+        return [int(token) for token in toks[0]]
+    return [int(token) for token in toks]
+
+
+def _is_deletion(shorter, longer):
+    """True when `shorter` is `longer` with zero or more tokens deleted (an order-preserving subsequence)."""
+    remaining = iter(longer)
+    return len(shorter) <= len(longer) and all(any(token == other for other in remaining) for token in shorter)
+
+
+# ---------------------------------------------------------------------------------------------
 # Argument checks
 # ---------------------------------------------------------------------------------------------
 
@@ -268,6 +447,13 @@ class Adapter:
     mask_id: int = -1  # the mask token; -1 for a left-to-right model, which has none
     kind = None  # "dlm" (fills a masked canvas) or "ar" (generates left to right)
     close_slot = False  # one-target canvas: end the turn right after the masks (the authors' slot rule)
+
+    # Left-to-right decoding only (sample_ar, logprob_ar, decode_ar), when the call names no support or chunk: the
+    # support kind of every step, and the sequences per forward pass while sampling (P1 is replayed in the same
+    # batches) and while scoring P0. The causal adapters set the values their Figure 4 pools were made with.
+    default_support = "ordinary"
+    sample_chunk = 16
+    p0_chunk = 16
 
     tok = None  # Hugging Face tokenizer
     V = 0  # size of the logit dimension (can exceed the tokenizer's vocabulary)
