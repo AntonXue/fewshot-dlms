@@ -1,0 +1,37 @@
+{
+  "model": "nemotron_pt",
+  "M": 4,
+  "J": 2,
+  "source": "families.csv of the authors' Section 4.2 grid run",
+  "protocol_hash": "98fe06a36f6b6503",
+  "families": {
+    "list_easy_fam:report:000": {
+      "0.0": {
+        "A_target": 0.84375,
+        "A_all": 0.6875,
+        "ess": 16.0,
+        "max_w": 0.0625
+      },
+      "0.5": {
+        "A_target": 0.9747566281110849,
+        "A_all": 0.9495132562221695,
+        "ess": 12.100523683149486,
+        "max_w": 0.08631938692928814
+      }
+    },
+    "list_easy_fam:report:001": {
+      "0.0": {
+        "A_target": 0.46875,
+        "A_all": 0.25,
+        "ess": 16.0,
+        "max_w": 0.0625
+      },
+      "0.5": {
+        "A_target": 0.7265681049154564,
+        "A_all": 0.519376467261244,
+        "ess": 9.355219089767562,
+        "max_w": 0.1596965969014702
+      }
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "model": "dqwen",
+  "M": 4,
+  "J": 2,
+  "source": "families.csv of the authors' Section 4.2 grid run",
+  "protocol_hash": "98fe06a36f6b6503",
+  "families": {
+    "list_easy_fam:report:000": {
+      "0.0": {
+        "A_target": 0.84375,
+        "A_all": 0.75,
+        "ess": 16.0,
+        "max_w": 0.0625
+      },
+      "0.5": {
+        "A_target": 0.9713100503018577,
+        "A_all": 0.9485759842546537,
+        "ess": 13.206456960919192,
+        "max_w": 0.07904799868788781
+      }
+    },
+    "list_easy_fam:report:001": {
+      "0.0": {
+        "A_target": 0.40625,
+        "A_all": 0.0,
+        "ess": 16.0,
+        "max_w": 0.0625
+      },
+      "0.5": {
+        "A_target": 0.4623924060910849,
+        "A_all": 0.0,
+        "ess": 11.788298322984485,
+        "max_w": 0.12481703368729889
+      }
+    }
+  }
+}

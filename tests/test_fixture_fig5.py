@@ -4,7 +4,8 @@ data/fixtures/fig5/llada_M4_J2.jsonl holds the first two report families of the 
 at M = 4 demonstrations and J = 2 targets: K = 16 candidate infills each, with token ids, texts, and
 the log-likelihoods ell1 (demonstration outputs visible) and ell0 (masked).
 expected_llada_M4_J2.json holds the authors' own numbers for these families. The tests recompute them
-from the pool records with grading.py and scoring.py and require agreement to 1e-12.
+from the pool records with grading.py and scoring.py and require agreement to 1e-12. The same holds for
+the Nemotron (prefix/tail) and dQwen3.5 fixtures, which the GPU replay test also uses.
 """
 import json
 
@@ -21,17 +22,21 @@ from fewshot_dlms.scoring import pool_weights
 from tests.fakes import FakeAdapter
 
 TOLERANCE = 1e-12
+MODELS = ["llada", "nemotron_pt", "dqwen"]
+
+
+def records_of(root, model):
+    return read_jsonl(root / "data" / "fixtures" / "fig5" / f"{model}_M4_J2.jsonl")
+
+
+def expected_of(root, model):
+    path = root / "data" / "fixtures" / "fig5" / f"expected_{model}_M4_J2.json"
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 @pytest.fixture(scope="module")
 def records(root):
-    return read_jsonl(root / "data" / "fixtures" / "fig5" / "llada_M4_J2.jsonl")
-
-
-@pytest.fixture(scope="module")
-def expected(root):
-    path = root / "data" / "fixtures" / "fig5" / "expected_llada_M4_J2.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    return records_of(root, "llada")
 
 
 def correctness(record):
@@ -52,7 +57,10 @@ def metrics_at(record, beta):
     return family_metrics(correctness(record), weights)
 
 
-def test_fixture_holds_two_complete_families(records, expected):
+@pytest.mark.parametrize("model", MODELS)
+def test_fixture_holds_two_complete_families(root, model):
+    records = records_of(root, model)
+    expected = expected_of(root, model)
     assert [record["episode_id"] for record in records] == list(expected["families"])
     assert len(records) == 2
     for record in records:
@@ -60,13 +68,16 @@ def test_fixture_holds_two_complete_families(records, expected):
         assert (record["M"], record["J"]) == (expected["M"], expected["J"]) == (4, 2)
 
 
-def test_fixture_carries_no_run_metadata(records):
-    for record in records:
+@pytest.mark.parametrize("model", MODELS)
+def test_fixture_carries_no_run_metadata(root, model):
+    for record in records_of(root, model):
         assert not {"host", "gpu_env", "wall_time"} & set(record)
 
 
-def test_metrics_match_the_authors_run(records, expected):
-    for record in records:
+@pytest.mark.parametrize("model", MODELS)
+def test_metrics_match_the_authors_run(root, model):
+    expected = expected_of(root, model)
+    for record in records_of(root, model):
         for beta, authors in expected["families"][record["episode_id"]].items():
             ours = metrics_at(record, float(beta))
             for name, value in authors.items():

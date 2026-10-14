@@ -9,8 +9,9 @@ pass. The paper studies how to prompt such a model well: how to use the demonstr
 get. This repository reproduces the paper's figures from frozen artifacts on a CPU in minutes, and
 re-runs the experiments on GPUs with the same seeds.
 
-> Status: work in progress. Built so far: benchmark families, scoring, bootstrap, grading and the
-> canvas for List Functions. Parts marked *coming* are built in later milestones.
+> Status: work in progress. Built so far: benchmark families, scoring, bootstrap, grading, the
+> canvas for List Functions, the fixed-order sampling loop and the three diffusion-model adapters.
+> Parts marked *coming* are built in later milestones.
 
 ## The three ideas
 
@@ -49,6 +50,22 @@ the oracle setting; Section 4.3 predicts it with a small head on the frozen mode
 
 Frozen benchmark families are in `data/benchmarks/` (see its README).
 
+## Requirements
+
+Python 3.12 with the pinned packages of `pyproject.toml` (torch 2.7.1, transformers 5.13.0). The CPU steps
+need nothing else. The GPU steps (`make test-gpu`, the experiments' `run.py`) load three checkpoints from
+the Hugging Face Hub at pinned revisions (`src/fewshot_dlms/adapters/`):
+
+| name | model | revision | size |
+|---|---|---|---|
+| `llada` | `GSAI-ML/LLaDA-1.5` | `84346fd91ba60252d260022201ad6fc5a3468fb2` | 15 GB |
+| `nemotron_pt` | `nvidia/Nemotron-Labs-Diffusion-8B` (causal prefix, bidirectional tail) | `16c67f0560b912e93e0cabb6e0c4f5c3086d95fc` | 16 GB |
+| `dqwen` | `UT-IFML/dQwen3.5-9B-Base` | `f193fa20e341504f8d9e2b4b8342048c466e6590` | 17 GB |
+
+They are downloaded into the Hugging Face cache (`$HF_HOME`) on first use. Without network access, cache
+them beforehand and set `HF_HUB_OFFLINE=1`. All three run their own modelling code (`trust_remote_code`).
+The paper's runs used one H100 (96 GB) per model; scoring one candidate at a time peaks at 15–17 GiB.
+
 ## Reproduce in three commands
 
     pip install -e .
@@ -61,7 +78,9 @@ Today `make test` runs the CPU unit tests, which need no downloads.
 
 1. **Replay (GPU, exact tokens).** The frozen pools store each candidate's token ids and both
    log-likelihoods. The ported canvas and adapter must reproduce them for the stored tokens within
-   bf16 tolerance. This checks canvas, reveal order and scoring together (`make test-gpu`).
+   bf16 tolerance. This checks canvas, reveal order and scoring together (`make test-gpu`). Scored in
+   the batches of the authors' run on an H100 NVL, LLaDA-1.5 and Nemotron reproduce them bit for bit;
+   dQwen3.5 varies slightly from process to process (autotuned Triton kernels; `tests/gpu_util.py`).
 2. **Analysis parity (CPU, exact).** Each `analyze.py` reproduces the paper's tables from the frozen
    pools to 1e-9 (`make test-parity`); a two-family fixture is checked to 1e-12 on every `make test`.
 3. **Resampling (GPU, statistical).** `make rerun-fig5` samples a cell again from scratch. A rerun is

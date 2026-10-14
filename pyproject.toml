@@ -25,5 +25,11 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 markers = ["gpu: needs a CUDA GPU and model weights", "parity: needs fetched artifacts"]
+# Third-party warnings: sentencepiece (imported by the tokenizers) is a SWIG extension that warns on import
+# under Python 3.12; Nemotron's own configuration code calls a rope helper that transformers 5 deprecates.
+filterwarnings = [
+  "ignore:builtin type Swig:DeprecationWarning",
+  "ignore:`rope_config_validation` is deprecated:FutureWarning",
+]
 testpaths = ["tests"]
 pythonpath = ["."]

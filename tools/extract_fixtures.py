@@ -3,7 +3,8 @@
 One-off script, kept for the record; the repository works without it. The fixtures let the CPU tests
 reproduce a frozen result with this repository's own code, without downloading any artifacts.
 
-Figure 5 (multi-target, M = 4 demonstrations, J = 2 targets) writes, per model,
+Figure 5 (multi-target, M = 4 demonstrations, J = 2 targets) writes, for each of the three models
+(llada = LLaDA-1.5, nemotron_pt = Nemotron prefix/tail, dqwen = dQwen3.5),
 
   fig5/<model>_M4_J2.jsonl           the first two complete pool records of the report families
                                      (K = 16 candidates each, with token ids and both
@@ -13,8 +14,9 @@ Figure 5 (multi-target, M = 4 demonstrations, J = 2 targets) writes, per model,
                                      max_w at beta = 0 and beta = 0.5), copied from the families.csv
                                      of the same run
 
-tests/test_fixture_fig5.py recomputes those numbers from the pool records with scoring.py and
-grading.py and requires agreement to 1e-12.
+tests/test_fixture_fig5.py recomputes those numbers from the pool records of each model with scoring.py
+and grading.py and requires agreement to 1e-12. tests/test_gpu_replay.py rebuilds the canvas of every
+record with the real tokenizer and re-scores the stored tokens of each model on a GPU.
 
 Usage:
     python tools/extract_fixtures.py --src <run directory of the Section 4.2 grid>
@@ -41,6 +43,8 @@ RUN_METADATA = ("host", "gpu_env", "wall_time")
 # One entry per fixture: its file stem, the model name in families.csv, and the pool file in the run.
 FIG5_FIXTURES = [
     {"stem": "llada_M4_J2", "model": "llada", "pool": "pools/llada/list_easy_fam_M4_J2.jsonl"},
+    {"stem": "nemotron_pt_M4_J2", "model": "nemotron_pt", "pool": "pools/nemotron_pt/list_easy_fam_M4_J2.jsonl"},
+    {"stem": "dqwen_M4_J2", "model": "dqwen", "pool": "pools/dqwen/list_easy_fam_M4_J2.jsonl"},
 ]
 
 
