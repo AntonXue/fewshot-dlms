@@ -2,8 +2,23 @@
 
 The frozen pools, length heads, head-training data and judge verdicts live on the Hugging Face dataset
 [`UT-IFML/fewshot-dlms`](https://huggingface.co/datasets/UT-IFML/fewshot-dlms) (5.14 GB). Its README is the data card:
-provenance, seeds, protocol hashes and licenses per group. `python -m fewshot_dlms.fetch` downloads it at the pinned
-revision into `artifacts/` and checks every file against `SHA256SUMS`.
+provenance, seeds, protocol hashes and licenses per group. `python -m fewshot_dlms.fetch` downloads groups of it at the
+pinned revision into `artifacts/` and checks every file against `SHA256SUMS`.
+
+## Fetching
+
+Run from the repository root:
+
+    python -m fewshot_dlms.fetch pools java       # make test-parity, make figures, every analyze.py (386 MB)
+    python -m fewshot_dlms.fetch heads            # the length heads for the GPU runs (3.47 GB)
+    python -m fewshot_dlms.fetch head_training    # the heads' training data (1.28 GB)
+    python -m fewshot_dlms.fetch --check          # re-check what is under artifacts/, no download
+    python -m fewshot_dlms.fetch                  # the group table; downloads nothing
+
+Each group arrives with `SHA256SUMS` and the data card `README.md`. The fetcher checks the downloaded `SHA256SUMS`
+against the SHA-256 below, then every file present against it, and fails on a mismatch or on a missing file of a
+requested group. `--revision` and `--dest` override the pinned revision and `artifacts/`. While the dataset is
+private, the download needs a Hugging Face login with access (`hf auth login` or `HF_TOKEN`).
 
 | | |
 |---|---|
