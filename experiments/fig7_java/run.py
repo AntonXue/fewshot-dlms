@@ -21,10 +21,16 @@ demonstration (M = 0), with its demonstration (M = 1) and, when the cell M = 2 h
 demonstrations of that episode (M = 2), all under the neutral instruction canvas.JAVA_ZERO_DEMO_INSTRUCTION, at
 oracle lengths, K draws from P1 per arm, no P0 (beta = 0 only). Seed: zero_demo_seed(unit).
 
-Records are appended as episodes finish (a unit already in the file is skipped, so an interrupted run resumes):
+Records are appended as episodes finish:
     main       <out>/pools_<regime>.jsonl          analyze.py --pools <out>
     zero_demo  <out>/pools_zero_demo.jsonl          analyze.py --zero-demo <out>/..
-<out>/manifest_<hash>.json records the configuration, its hash, every seed and the library versions.
+Every record carries the config_hash of its pool (pool_config: model, revision, study, regime, K, chunk, head, rules;
+not which cells or episodes the run selects); protocol_hash stays the paper's run hash, from which the seeds derive. A
+rerun with the same configuration skips the units already in the file, so an interrupted run resumes; a file that
+holds records of another configuration (another K, chunk, head, ...; or the frozen pools, which carry no config_hash)
+is refused with exit status 2, naming the file, before the model is loaded, so that analyze.py never reads two
+configurations as one pool. <out>/manifest_<hash>.json records the run's configuration and hash, the pool's hash,
+every seed and the library versions.
 
     python experiments/fig7_java/run.py --regime oracle --M 1,2 --J 1,2 --K 16 --out artifacts/reruns/fig7/pools
     python experiments/fig7_java/run.py --regime learned --head artifacts/heads/java_head_C.pt --out artifacts/reruns/fig7/pools
@@ -40,11 +46,13 @@ import sys
 import time
 import traceback
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import torch
 import transformers
 
+from fewshot_dlms.adapters import adapter_class
 from fewshot_dlms.adapters import load
 from fewshot_dlms.adapters.base import context_ids
 from fewshot_dlms.adapters.base import reveal
@@ -358,7 +366,8 @@ def run_zero_demo_unit(adapter, unit, source, n_candidates, chunk):
 
 
 def config_of(args, adapter, head_sha):
-    """Everything that decides the records: its hash is the `config_hash` of every record."""
+    """Everything that decides the records of a run (not which episodes, where, or on which device). `adapter` is the
+    loaded adapter or anything with its name, model_id and revision; pool_config narrows the result to the pool."""
     return {
         "study": f"fig7_java/{args.study}",
         "model": adapter.name,
@@ -382,11 +391,22 @@ def config_hash(config):
     return hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()[:16]
 
 
-def write_manifest(path, config, digest, seeds, args):
-    """The run's manifest: configuration and hash, the seed of every unit, library and GPU versions."""
+def pool_config(config):
+    """What decides the records of the pool file: the run's configuration without the cells (M, J) it selects.
+
+    A pool file holds every selected cell of one regime (or every arm of the ablation), and a unit's record does not
+    depend on which other units the run samples. Its hash is the config_hash of the pool's records, so a pool is resumed
+    only by a run with the same configuration, whatever cells that run selects.
+    """
+    return {key: value for key, value in config.items() if key not in ("M", "J")}
+
+
+def write_manifest(path, config, digest, pool_hashes, seeds, args):
+    """The run's manifest: configuration and hash, the pool's hash, the seed of every unit, library and GPU versions."""
     manifest = {
         "config": config,
         "config_hash": digest,
+        "pool_config_hash": pool_hashes,
         "seeds": seeds,
         "versions": {
             "python": platform.python_version(),
@@ -401,15 +421,38 @@ def write_manifest(path, config, digest, seeds, args):
     path.write_text(json.dumps(manifest, indent=1))
 
 
-def done_units(path, field):
-    """Values of `field` already in a pool file (an interrupted run resumes after them)."""
+class ProtocolMismatch(Exception):
+    """A pool file holds records of another configuration than the run that would append to it."""
+
+
+def done_units(path, field, digest):
+    """Values of `field` (episode_id or unit_id) already in a pool file, which a run of pool configuration `digest`
+    resumes after.
+
+    Every record of the file must carry config_hash == digest; otherwise ProtocolMismatch names the file and the hashes
+    found. Lines that do not parse (an interrupted write) are ignored, so their unit is sampled again.
+    """
     if not path.exists():
         return set()
     done = set()
+    others = set()
     with open(path, encoding="utf-8") as handle:
         for line in handle:
-            if line.strip():
-                done.add(json.loads(line)[field])
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if record.get("config_hash") == digest:
+                done.add(record[field])
+            else:
+                others.add(str(record.get("config_hash")))
+    if others:
+        raise ProtocolMismatch(
+            f"{path} holds records of configuration {', '.join(sorted(others))}, but this run's pool is {digest} "
+            "(another K, chunk, head or code). Write to another --out, or move the file away to start the pool afresh."
+        )
     return done
 
 
@@ -424,28 +467,40 @@ def int_list(text):
     return [int(value) for value in text.split(",")]
 
 
-def run_main(args, adapter, episodes, out):
-    """The main run: one record per selected episode in one regime."""
+def head_sha_of(args):
+    """The SHA-256 of length head C that a learned main run uses (the stored predictions' ckpt_sha with --head-probs,
+    else the checkpoint file's), or "" for the oracle regime and the ablation. Read before the model is loaded."""
+    if args.study != "main" or args.regime != "learned":
+        return ""
+    if args.head_probs:
+        return str(np.load(args.head_probs, allow_pickle=False)["ckpt_sha"])
+    head_sha = file_sha256(args.head)
+    if head_sha not in (HEAD_CKPT_SHA, TRAINED_HEAD_CKPT_SHA):
+        print(f"warning: {args.head} is not the paper's head C (sha256 {head_sha[:12]}...)", flush=True)
+    return head_sha
+
+
+def pool_path(args, out):
+    """The pool file of the run: <out>/pools_<regime>.jsonl, or <out>/pools_zero_demo.jsonl for the ablation."""
+    return out / (f"pools_{args.regime}.jsonl" if args.study == "main" else "pools_zero_demo.jsonl")
+
+
+def run_main(args, adapter, episodes, out, config, done, head_sha):
+    """The main run: one record per selected episode in one regime, skipping the episodes in `done`."""
     selected = [e for e in episodes if e["M"] in args.M and e["J"] in args.J][: args.families]
     probs = None
-    head_sha = ""
     if args.regime == "learned":
         if args.head_probs:
             probs = read_head_probs(args.head_probs)
-            head_sha = str(np.load(args.head_probs, allow_pickle=False)["ckpt_sha"])
         else:
-            head_sha = file_sha256(args.head)
-            if head_sha not in (HEAD_CKPT_SHA, TRAINED_HEAD_CKPT_SHA):
-                print(f"warning: {args.head} is not the paper's head C (sha256 {head_sha[:12]}...)", flush=True)
             probs = head_probs(adapter, args.head, selected, args.device)
-    config = config_of(args, adapter, head_sha)
     digest = config_hash(config)
+    pool_digest = config_hash(pool_config(config))
+    path = pool_path(args, out)
     seeds = {}
     if args.regime == "oracle":
         seeds = {e["episode_id"]: generation_seed("oracle", e["episode_id"], e["oracle_lengths"]) for e in selected}
-    write_manifest(out / f"manifest_{digest}.json", config, digest, seeds, args)
-    path = out / f"pools_{args.regime}.jsonl"
-    done = done_units(path, "episode_id")
+    write_manifest(out / f"manifest_{digest}.json", config, digest, {path.name: pool_digest}, seeds, args)
     for episode in selected:
         if episode["episode_id"] in done:
             continue
@@ -459,7 +514,7 @@ def run_main(args, adapter, episodes, out):
             **body,
             "tag": args.tag,
             "protocol_hash": PROTOCOL_HASH,
-            "config_hash": digest,
+            "config_hash": pool_digest,
             "head_ckpt_sha": head_sha,
             "K": args.K,
         }
@@ -472,18 +527,18 @@ def run_main(args, adapter, episodes, out):
         )
 
 
-def run_zero_demo(args, adapter, episodes, out):
-    """The zero-demonstration ablation: one record per (anchor, arm M)."""
+def run_zero_demo(args, adapter, episodes, out, config, done):
+    """The zero-demonstration ablation: one record per (anchor, arm M), skipping the units in `done`."""
     by_id = {episode["episode_id"]: episode for episode in episodes}
     units = zero_demo_units(episodes, args.M, args.J)
     anchors = list(dict.fromkeys(unit["anchor_episode_id"] for unit in units))
     keep = set(anchors[: args.families])
     units = [unit for unit in units if unit["anchor_episode_id"] in keep]
-    config = config_of(args, adapter, "")
     digest = config_hash(config)
-    write_manifest(out / f"manifest_{digest}.json", config, digest, {unit["unit_id"]: zero_demo_seed(unit) for unit in units}, args)
-    path = out / "pools_zero_demo.jsonl"
-    done = done_units(path, "unit_id")
+    pool_digest = config_hash(pool_config(config))
+    path = pool_path(args, out)
+    seeds = {unit["unit_id"]: zero_demo_seed(unit) for unit in units}
+    write_manifest(out / f"manifest_{digest}.json", config, digest, {path.name: pool_digest}, seeds, args)
     for unit in units:
         if unit["unit_id"] in done:
             continue
@@ -493,7 +548,7 @@ def run_zero_demo(args, adapter, episodes, out):
             print(f"FAILED {unit['unit_id']}: {error}\n{traceback.format_exc()[-1500:]}", flush=True)
             torch.cuda.empty_cache()
             continue
-        append_record(path, {**body, "tag": args.tag, "config_hash": digest, "K": args.K})
+        append_record(path, {**body, "tag": args.tag, "config_hash": pool_digest, "K": args.K})
         print(f"[M{unit['M']}] {unit['unit_id']} J={unit['J']} distinct texts={body['n_unique_text']} gen {body['seconds_gen']:.0f}s", flush=True)
 
 
@@ -520,16 +575,27 @@ def main():
         parser.error("the zero-demonstration ablation has arms M in {0, 1, 2}")
     default_out = "artifacts/reruns/fig7/pools" if args.study == "main" else "artifacts/reruns/fig7/zero_demo/pools"
     out = Path(args.out or default_out)
-    out.mkdir(parents=True, exist_ok=True)
 
+    # The pool this run appends to, checked before the model is loaded: resume a pool of the same configuration only.
     episodes = load_java_episodes()
+    adapter_cls, _ = adapter_class(MODEL)
+    head_sha = head_sha_of(args)
+    config = config_of(args, SimpleNamespace(name=MODEL, model_id=adapter_cls.model_id, revision=adapter_cls.revision), head_sha)
+    path = pool_path(args, out)
+    try:
+        done = done_units(path, "episode_id" if args.study == "main" else "unit_id", config_hash(pool_config(config)))
+    except ProtocolMismatch as error:
+        print(f"refusing to append: {error}", file=sys.stderr)
+        sys.exit(2)
+
     started = time.time()
     adapter = load(MODEL, args.device)
     print(f"[fig7] {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
+    out.mkdir(parents=True, exist_ok=True)
     if args.study == "main":
-        run_main(args, adapter, episodes, out)
+        run_main(args, adapter, episodes, out, config, done, head_sha)
     else:
-        run_zero_demo(args, adapter, episodes, out)
+        run_zero_demo(args, adapter, episodes, out, config, done)
     print(f"RUN_DONE {args.study} {time.time() - started:.0f}s -> {out}", flush=True)
 
 

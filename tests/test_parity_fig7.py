@@ -406,3 +406,51 @@ def test_length_draw_rule(root):
     allocations, rejections = run.learned_allocations(episode, {"E|1|0": uniform}, 4)
     assert all(2048 - 7 + a[0] <= run.CTX_CAP for a in allocations)  # draws above the canvas cap are redrawn
     assert rejections > 0
+
+
+LLADA = types.SimpleNamespace(name="llada", model_id="GSAI-ML/LLaDA-1.5", revision="rev")
+
+
+def pool_hash(run, study="main", regime="oracle", M=(1, 2), J=(1, 2), K=16):
+    """The config_hash of the records of a run of run.py (no GPU, no model)."""
+    args = argparse.Namespace(study=study, regime=regime, M=list(M), J=list(J), K=K, chunk=run.CHUNK, head_probs=None)
+    return run.config_hash(run.pool_config(run.config_of(args, LLADA, "")))
+
+
+def test_pool_config_hash_depends_on_what_decides_the_records(root):
+    """A pool's config hash changes with K, the regime or the study, not with the cells (M, J) a run selects."""
+    run = load_script(root, "run")
+    paper = pool_hash(run)
+    assert pool_hash(run, M=[1], J=[2]) == paper
+    assert pool_hash(run, K=4) != paper
+    assert pool_hash(run, regime="learned") != paper
+    assert pool_hash(run, study="zero_demo", M=[0, 1, 2]) != paper
+
+
+def test_resume_skips_only_records_of_the_same_configuration(root, tmp_path):
+    """done_units returns the units a run of the same pool configuration may skip, and refuses a file of another one
+    (the frozen pools carry the paper's protocol_hash but no config_hash, so a rerun never appends to them)."""
+    run = load_script(root, "run")
+    digest = pool_hash(run)
+    path = tmp_path / "pools_oracle.jsonl"
+    assert run.done_units(path, "episode_id", digest) == set()
+    good = [json.dumps({"episode_id": name, "config_hash": digest}) for name in ("a", "b")]
+    path.write_text("\n".join(good) + '\n{"episode_id": "c", "conf', encoding="utf-8")  # an interrupted write
+    assert run.done_units(path, "episode_id", digest) == {"a", "b"}
+    path.write_text(good[0] + "\n" + json.dumps({"episode_id": "b", "protocol_hash": run.PROTOCOL_HASH}) + "\n")
+    with pytest.raises(run.ProtocolMismatch, match="None"):
+        run.done_units(path, "episode_id", digest)
+
+
+@pytest.mark.parametrize("study, pool", [("main", "pools_oracle.jsonl"), ("zero_demo", "pools_zero_demo.jsonl")])
+def test_run_refuses_a_pool_of_another_configuration(root, tmp_path, study, pool):
+    """run.py exits with status 2, naming the file, before it loads a model, when its pool holds records of another
+    configuration (here a record as the frozen pools hold them, without config_hash)."""
+    path = tmp_path / pool
+    path.write_text(json.dumps({"episode_id": "E", "unit_id": "E|M0", "protocol_hash": "0e1d3c9040b09598"}) + "\n")
+    command = [sys.executable, str(root / "experiments/fig7_java/run.py"), "--study", study, "--K", "4"]
+    command += ["--families", "2", "--out", str(tmp_path), "--device", "cpu"]
+    result = subprocess.run(command, capture_output=True, text=True, cwd=root)
+    assert result.returncode == 2, result.stderr
+    assert str(path) in result.stderr
+    assert "loaded in" not in result.stdout
