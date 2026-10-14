@@ -1,4 +1,4 @@
-# ported from editdiff/private-docs-redacted/20261011-012221-sec5-final-helper-run/scratch/{fr_packets.py, gather_judgments.py, calib_controls.py, calib_score.py} and judging/rubric_r1.md @ d276fa6
+# ported from editdiff/<the authors' Section 5 run package>: fr_packets.py, gather_judgments.py, calib_controls.py, calib_score.py and rubric_r1.md @ d276fa6
 """The judge of Section 5 (Appendix C): blind packets, rubric r1, JSON verdicts.
 
 A Java candidate is correct when it applies the demonstrated refactoring to the target; there is no test oracle

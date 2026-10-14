@@ -1,4 +1,4 @@
-# ported from editdiff/private-docs-redacted/20261011-012221-sec5-final-helper-run/scratch/fr_gen.py (main run) and private-docs-redacted/20261011-055211-s5-zero-demo-ablation/scratch/zd_gen.py (zero-demonstration ablation) @ d276fa6
+# ported from editdiff/<the authors' Section 5 run package>: fr_gen.py (main run) and zd_gen.py (zero-demonstration ablation) @ d276fa6
 """Sample and score the Java pools of Section 5 (Figure 7) on a GPU: LLaDA-1.5, one process, one GPU.
 
 Main run (--study main). For every episode of data/java in the chosen cells (M demonstrations, J targets) and a

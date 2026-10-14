@@ -1,4 +1,4 @@
-# ported from editdiff/private-docs-redacted/20261011-012221-sec5-final-helper-run/scratch/{analyze.py, length_metrics.py}, private-docs-redacted/20261011-055211-s5-zero-demo-ablation/scratch/zd_analyze.py and private-docs-redacted/20261011-122203-s5-pool-taxonomy-audit/s5_pool_audit.py @ d276fa6
+# ported from editdiff/<the authors' Section 5 run package>: analyze.py, length_metrics.py, zd_analyze.py (zero-demonstration ablation) and s5_pool_audit.py (pool taxonomy) @ d276fa6
 """Figure 7 (Section 5) and its Appendix C tables, from the frozen Java pools and judge verdicts (CPU only).
 
 Section 5: LLaDA-1.5 propagates a developer's helper refactoring. Each of the 127 episodes of data/java shows the
