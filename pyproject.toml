@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +7,8 @@ name = "fewshot-dlms"
 version = "0.1.0"
 description = "Multi-target few-shot prompting with diffusion language models: code and reproduction for the paper"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.12"
 dependencies = [
   "torch==2.7.1", "transformers==5.13.0", "numpy==1.26.4", "pandas==2.3.3",
