@@ -1,19 +1,19 @@
 # Figure 4: one target, example guidance (Section 4.1)
 
-The single-target study of Section 4.1, the development-bank choice of β (Appendix B, Single-Target Prompting), and
-the studies that reuse its pools:
+The single-target study of Section 4.1, the development-bank choice of β (Appendix B, Experimental Setup, "Guidance
+selection"), and the studies that reuse its pools:
 
 | Paper | Content | Output of `plot.py` | Table in `data/tables/` |
 |---|---|---|---|
 | Figure 4 (Section 4.1) | ordinary accuracy and its paired gain at β = 0.5 against M, four benchmarks, four model interfaces | `fig4.pdf` | `fig4/sec41_accuracy.csv` |
-| Appendix (gold row) | gold example reward per target token, (log P1 − log P0) / T of the reference answer | `gold_reward_row.pdf` | `fig4/gold_reward_cells.csv` |
-| Figure 11 (Appendix B, Guidance-Strength Sensitivity) | guidance-strength sweep: A_all gain and effective support exp(H)/K against β | `fig11_beta_sweep.pdf` | `fig4/beta_sweep.csv` |
-| Figure 9 (Appendix B, Multi-Target Prompting) | cross-benchmark study, M = 4, J ∈ {1, 2, 4, 8}: drawn by `experiments/fig5_multi_target/plot.py` | — | `fig5/cells_crossbench.csv` |
-| Appendix B, Single-Target Prompting | the development-only β of every model | — | `fig4/beta_locks.json`, `fig4/dev_sec41.csv`, `fig4/dev_sec42.csv` |
+| Appendix B, Single-Target Prompting (gold row) | gold example reward per target token, (log P1 − log P0) / T of the reference answer | `gold_reward_row.pdf` | `fig4/gold_reward_cells.csv` |
+| Guidance-strength sweep figure (Fig. 10, arXiv version only; Appendix B, Guidance-Strength Sensitivity) | guidance-strength sweep: A_all gain and effective support exp(H)/K against β | `fig11_beta_sweep.pdf` | `fig4/beta_sweep.csv` |
+| Cross-benchmark figure (Fig. 9, both builds; Appendix B, Multi-Target Prompting) | cross-benchmark study, M = 4, J ∈ {1, 2, 4, 8}: drawn by `experiments/fig5_multi_target/plot.py` | — | `fig5/cells_crossbench.csv` |
+| Appendix B, Experimental Setup (Guidance selection) | the development-only β of every model | — | `fig4/beta_locks.json`, `fig4/dev_sec41.csv`, `fig4/dev_sec42.csv` |
 | Appendix B, Likelihood Sharpening | sharpening residuals: guidance against power sampling at the matched exponent (LLaDA-1.5) | — | `fig4/sec44_power.csv` |
 
-`analyze.py --crossbench` writes `cells_crossbench.csv` (the paper's `sec42_all.csv`), which Figure 9 reads from
-`data/tables/fig5/`.
+`analyze.py --crossbench` writes `cells_crossbench.csv` (the paper's `sec42_all.csv`), which the cross-benchmark figure
+(Fig. 9, both builds) reads from `data/tables/fig5/`.
 
 ## Protocol
 

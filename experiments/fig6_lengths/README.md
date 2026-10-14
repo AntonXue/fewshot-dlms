@@ -29,7 +29,7 @@ is compared with.
     skipped and counted, never clipped: 3 families at J = 1 and 6 at J = 2 for Δ < 0. (`lengths.allocate("offset")`
     clips; `run.py` skips first.)
 - **K.** K = 64 / J candidates (64, 32, 16, 8), so every cell samples 64 targets per family. The oracle arm is the
-  K = 64 pool of the same families from the Section 4.1/4.2 sweep (the cross-benchmark study of Figure 9), which
+  K = 64 pool of the same families from the Section 4.1/4.2 sweep (the cross-benchmark study; Fig. 9, both builds), which
   `run.py --mode oracle --K 64` reproduces token for token.
 - **Sampling.** Candidates with the same allocation share a canvas, and candidate k is revealed on the canvas of its
   own allocation (`adapters.base.reveal` with one context per distinct allocation; Lemma 3.1, ascending positions, one

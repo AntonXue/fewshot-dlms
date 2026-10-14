@@ -1,5 +1,5 @@
 """Analysis parity (fidelity level 2 of README.md) for Figure 4, its development-bank beta selection and the
-appendix tables that share its pools (Figures 9 and 11).
+appendix tables that share its pools (cross-benchmark and guidance-strength sweep figures).
 
 experiments/fig4_single_target/analyze.py recomputes the paper's tables from the frozen pools and must
 reproduce them to 1e-9 in every numeric column (and exactly in every other column):
@@ -9,8 +9,8 @@ reproduce them to 1e-9 in every numeric column (and exactly in every other colum
   dev_sec41.csv          the same cells on the development bank (beta selection)
   dev_sec42.csv          the cross-benchmark cells on the development bank (beta selection)
   sec44_power.csv        sharpening residuals: guidance against the matched-exponent power control (LLaDA-1.5)
-  cells_crossbench.csv   Figure 9 (Appendix B, Multi-Target Prompting), in data/tables/fig5/: the cross-benchmark study, M = 4, K = 64
-  beta_sweep.csv         Figure 11 (Appendix B, Guidance-Strength Sensitivity): the guidance-strength sweep on List Functions-Easy
+  cells_crossbench.csv   cross-benchmark figure (Fig. 9, both builds), in data/tables/fig5/: the cross-benchmark study, M = 4, K = 64
+  beta_sweep.csv         guidance-strength sweep figure (Fig. 10, arXiv version only): the guidance-strength sweep on List Functions-Easy
   beta_locks.json        the development-only beta of each model, recomputed from the development bank
 
 The parity tests need the fetched pools (`python -m fewshot_dlms.fetch pools java`). The other tests run on
@@ -193,7 +193,7 @@ def test_missing_optional_pools_name_the_input_and_the_fetch_command(root, tmp_p
 
 
 def test_plot_writes_the_figures(root, tmp_path):
-    """plot.py draws Figure 4, its gold-reward row and Figure 11 from the committed tables alone (no pools, no GPU)."""
+    """plot.py draws Figure 4, its gold-reward row and the guidance-strength sweep figure from the committed tables alone (no pools, no GPU)."""
     command = [sys.executable, str(root / "experiments/fig4_single_target/plot.py"), "--out", str(tmp_path)]
     result = subprocess.run(command, capture_output=True, text=True, cwd=root)
     assert result.returncode == 0, result.stderr

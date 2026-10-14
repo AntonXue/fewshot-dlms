@@ -1,4 +1,5 @@
-"""Analysis parity (fidelity level 2 of README.md) for Figure 5 and its appendix Figures 8 and 10.
+"""Analysis parity (fidelity level 2 of README.md) for Figure 5 and its appendix mechanism and M x J
+sharpening figures.
 
 experiments/fig5_multi_target/analyze.py recomputes the paper's tables from the frozen pools and must
 reproduce data/tables/fig5/ to 1e-9 in every numeric column (and exactly in every other column):
@@ -6,8 +7,8 @@ reproduce data/tables/fig5/ to 1e-9 in every numeric column (and exactly in ever
   cells.csv        Figure 5 and Section 4.2: A_all, A_target and the paired gains per (model, M, J, beta)
   gold.csv         gold-answer support per (model, M, J)
   diagnostics.csv  pool coverage, reward spread, ESS per (model, M, J)
-  sharpening.csv   Figure 10 (Appendix B, Likelihood Sharpening): sharpening control vs example guidance per (model, M, J)
-  mechanism.csv    Figure 8 (Appendix B, Multi-Target Prompting): gold NLL by reveal position, cross-benchmark study, J = 8
+  sharpening.csv   M x J sharpening figure (Fig. 10 ACL / Fig. 11 arXiv): sharpening control vs example guidance per (model, M, J)
+  mechanism.csv    mechanism figure (Fig. 8, both builds): gold NLL by reveal position, cross-benchmark study, J = 8
 
 The parity tests need the fetched pools (`python -m fewshot_dlms.fetch pools java`). The other tests run
 on every `make test`: the --compare report of a resampled cell (fidelity level 3) on the two-family
@@ -135,7 +136,7 @@ def test_missing_pools_name_the_fetch_command(root, tmp_path):
 
 
 def test_plot_writes_the_four_figures(root, tmp_path):
-    """plot.py draws Figures 5, 8, 9 and 10 from the committed tables alone (no pools, no GPU)."""
+    """plot.py draws Figure 5 and the three appendix figures from the committed tables alone (no pools, no GPU)."""
     command = [sys.executable, str(root / "experiments/fig5_multi_target/plot.py"), "--out", str(tmp_path)]
     result = subprocess.run(command, capture_output=True, text=True, cwd=root)
     assert result.returncode == 0, result.stderr

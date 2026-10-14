@@ -1,6 +1,6 @@
 # ported from editdiff/experiments/algo_investigation/dr_worker.py::{seed_of, run_canvas, run_ar_oracle, free_steps, run_qwen} and experiments/gold_reward/gr_worker.py::{gold_canvas, gold_ar, gold_qwen, stop_ids} @ d276fa6
-"""Sample and score the pools of Figure 4 (Section 4.1) and of the cross-benchmark study (Figure 9) on a GPU: one
-process, one model, one GPU.
+"""Sample and score the pools of Figure 4 (Section 4.1) and of the cross-benchmark study (Fig. 9, both builds) on a
+GPU: one process, one model, one GPU.
 
 For every family and cell, K answers are sampled from P1 and scored under P0, as in the paper:
 

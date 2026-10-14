@@ -22,10 +22,11 @@ Three things on a Canvas carry the paper's quantities:
          example reward of the paper (see scoring.py).
   gold   the reference answers. They are for grading and never appear in `ids`.
 
-Where the records sit: `master_layout`. This module builds the Figure 5 canvas ("layout A" of the
-authors' code, one chat turn, J >= 1 targets) for tasks whose outputs are text: List Functions-Easy
-(checked against the authors' run), SALT and MIT Movie. The classification canvas of SST-2 (opaque
-output codes) and the one-target canvas of Figure 4 are added with their figures.
+`build_canvas` builds the canvas of all four benchmarks ("layout A" of the authors' code, one chat turn,
+J >= 1 targets): List Functions-Easy, SALT, MIT Movie and SST-2, whose outputs are opaque code letters.
+Where the records sit: the Figure 5 grid, the cross-benchmark study and Section 4.3 use the family's
+master layout (`master_layout`, placement "interleaved"); the one-target canvas of Figure 4 puts the M
+demonstrations first and the target last (placement "demos_first", J = 1).
 
 `build_ar_prompt` and `ar_prompt_ids` build the prompt of the two causal interfaces of Figure 4 (Appendix
 B, Experimental Setup): Nemotron's fixed-length causal suffix and Qwen3-8B's free-length continuation. The

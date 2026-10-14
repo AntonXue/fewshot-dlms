@@ -23,10 +23,12 @@ Outputs in --out:
     gold.csv         per (model, M, J): the reference answers scored under P1 and P0 (gold reward per token)
     diagnostics.csv  per (model, M, J): pool coverage, reward spread, ESS, prompt sizes
     candidates.csv.gz, coverage.json
-    sharpening.csv   Figure 10 (Appendix B, Likelihood Sharpening): the sharpening control w = softmax(0.5 * ell1), i.e. the
-                     target P1^{3/2} (temperature 2/3), against example guidance at beta = 0.5
-    mechanism.csv    Figure 8 (Appendix B, Multi-Target Prompting): gold NLL per token by reveal position under P1 and P0 in the
-                     cross-benchmark study (M = 4, J = 8); read from --gold-pools when present
+    sharpening.csv   M x J sharpening figure (Fig. 10 ACL / Fig. 11 arXiv; Appendix B, Likelihood Sharpening):
+                     the sharpening control w = softmax(0.5 * ell1), i.e. the target P1^{3/2} (temperature 2/3),
+                     against example guidance at beta = 0.5
+    mechanism.csv    mechanism figure (Fig. 8, both builds; Appendix B, Multi-Target Prompting): gold NLL per
+                     token by reveal position under P1 and P0 in the cross-benchmark study (M = 4, J = 8); read
+                     from --gold-pools when present
 
 --compare DIR prints, for every table also in DIR, the largest |difference| per numeric column, and for
 every cell a resampling verdict (README.md, fidelity level 3): is the frozen A_all inside the 95 % CI of
@@ -73,8 +75,9 @@ BOOTSTRAP_SEED = "mtfsp-20261011-mj-bootstrap-v1"  # cell key f"{model}|{M}|{J}"
 SHARPENING_TAU = 2 / 3
 SHARPENING_SEED = "agentC-appA-20261011-mj-v1"
 
-# Appendix B, Multi-Target Prompting, Figure 8: the cross-benchmark study (M = 4, J = 8, K = 64) with its reference answers scored
-# under P1 and P0, one record per family in <gold-pools>/<model>/<task>_M4_J8_il.jsonl.
+# Appendix B, Multi-Target Prompting, mechanism figure (Fig. 8, both builds): the cross-benchmark study (M = 4, J = 8,
+# K = 64) with its reference answers scored under P1 and P0, one record per family in
+# <gold-pools>/<model>/<task>_M4_J8_il.jsonl.
 MECHANISM_MODELS = ["llada", "nemotron_pt", "dqwen"]
 MECHANISM_TASKS = [
     ("sst2_fam", "SST-2"),
@@ -397,7 +400,7 @@ def sharpening_indices(model, M, J, n, nboot):
 
 
 def sharpening_row(model, M, J, K, F, nboot):
-    """Sharpening control vs example guidance in one cell (sharpening.csv, Figure 10).
+    """Sharpening control vs example guidance in one cell (sharpening.csv, the M x J sharpening figure).
 
     Per family: A at beta = 0 (ordinary), at beta = 0.5 (guidance, Q ∝ P1^{3/2} P0^{-1/2}) and under the
     sharpening control (Q ∝ P1^{3/2}, pool weights pool_weights(ell1, ell0, 0, tau=2/3) ∝ P1^{1/2}).
@@ -432,7 +435,7 @@ def sharpening_row(model, M, J, K, F, nboot):
 
 
 def mechanism_rows(gold_pools, nboot):
-    """Gold NLL per token by reveal position (mechanism.csv, Figure 8).
+    """Gold NLL per token by reveal position (mechanism.csv, the mechanism figure).
 
     In the cross-benchmark study (M = 4, J = 8) the reference answers were scored target by target in the
     fixed reveal order, so gold_ell1_t[k] (ell1_t in the gold records) is the log P1 of target k given the

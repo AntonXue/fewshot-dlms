@@ -5,9 +5,9 @@ The M × J grid of Section 4.2 and three appendix figures that use the same mach
 | Paper | Content | Output of `plot.py` | Table in `data/tables/fig5/` |
 |---|---|---|---|
 | Figure 5 (Section 4.2) | ordinary A_all, ordinary A_avg, guidance gain in A_all at β = 0.5 | `fig5.pdf` | `cells.csv` |
-| Figure 8 (Appendix B, Multi-Target Prompting) | gold NLL per token by reveal position, P1 vs P0 (cross-benchmark study, J = 8) | `fig8_mechanism.pdf` | `mechanism.csv` |
-| Figure 9 (Appendix B, Multi-Target Prompting) | cross-benchmark study: ordinary A_all and its gain at β = 0.5 against J | `fig9_crossbench.pdf` | `cells_crossbench.csv` |
-| Figure 10 (Appendix B, Likelihood Sharpening) | sharpening control (target P1^{3/2}) vs example guidance | `fig10_sharpening.pdf` | `sharpening.csv` |
+| Mechanism figure (Fig. 8, both builds; Appendix B, Multi-Target Prompting) | gold NLL per token by reveal position, P1 vs P0 (cross-benchmark study, J = 8) | `fig8_mechanism.pdf` | `mechanism.csv` |
+| Cross-benchmark figure (Fig. 9, both builds; Appendix B, Multi-Target Prompting) | cross-benchmark study: ordinary A_all and its gain at β = 0.5 against J | `fig9_crossbench.pdf` | `cells_crossbench.csv` |
+| M × J sharpening figure (Fig. 10 ACL / Fig. 11 arXiv; Appendix B, Likelihood Sharpening) | sharpening control (target P1^{3/2}) vs example guidance | `fig10_sharpening.pdf` | `sharpening.csv` |
 
 `gold.csv` and `diagnostics.csv` hold the gold-answer support and the pool diagnostics of every cell
 (coverage, reward spread, effective sample size).
@@ -36,10 +36,11 @@ The M × J grid of Section 4.2 and three appendix figures that use the same mach
   - `sharpening.csv`: seed SHA-256(`agentC-appA-20261011-mj-v1|<model>|<M>|<J>`), first 16 hex digits mod 2^32
     (`analyze.sharpening_indices`);
   - `mechanism.csv`: seed string `gold|<model>|<task>|8` (`bootstrap.boot_sd`).
-- **Cross-benchmark study (Figures 8 and 9).** A separate study of Section 4.1's pipeline: SST-2, List
-  Functions–Easy, SALT and Movie Director, M = 4, J ∈ {1, 2, 4, 8}, K = 64, three DLMs. Its pools are not
-  mixed with the K = 16 grid. Figure 9 plots its cell table (`cells_crossbench.csv`, produced by the Figure 4
-  pipeline); Figure 8 uses its reference answers scored target by target under P1 and P0.
+- **Cross-benchmark study (mechanism and cross-benchmark figures, Figs. 8 and 9 in both builds).** A separate
+  study of Section 4.1's pipeline: SST-2, List Functions–Easy, SALT and Movie Director, M = 4, J ∈ {1, 2, 4, 8},
+  K = 64, three DLMs. Its pools are not mixed with the K = 16 grid. The cross-benchmark figure plots its cell table
+  (`cells_crossbench.csv`, produced by the Figure 4 pipeline); the mechanism figure uses its reference answers
+  scored target by target under P1 and P0.
 
 ## Commands
 
@@ -49,7 +50,7 @@ The M × J grid of Section 4.2 and three appendix figures that use the same mach
 `analyze.py` needs the frozen pools (`python -m fewshot_dlms.fetch pools java`):
 
     artifacts/pools/fig5/<model>/list_easy_fam_M{M}_J{J}.jsonl            one record per family (the grid)
-    artifacts/pools/fig5/crossbench_gold/<model>/<task>_M4_J8_il.jsonl    reference answers scored (Figure 8)
+    artifacts/pools/fig5/crossbench_gold/<model>/<task>_M4_J8_il.jsonl    reference answers scored (mechanism figure)
 
 It writes `families.csv`, `cells.csv`, `gold.csv`, `diagnostics.csv`, `sharpening.csv`, `mechanism.csv`,
 `candidates.csv.gz` and `coverage.json`, takes about 10 s on a CPU, and with `--compare` prints the largest

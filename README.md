@@ -7,7 +7,7 @@ A diffusion language model (DLM) fills masked positions anywhere in a sequence, 
 M few-shot demonstrations and J masked targets, and the model fills all J targets jointly. The paper uses the
 demonstrations as evidence for the infill (example guidance), places several targets on one canvas, and allocates a
 length to every target. This repository recomputes every table of the paper and its experimental figures (Figures
-4–11 and two appendix rows) on a CPU from the stored candidate pools, replays the stored candidates on a GPU, and
+4–7 and the Appendix B figures) on a CPU from the stored candidate pools, replays the stored candidates on a GPU, and
 samples new pools with the paper's seeds.
 
 ## Reproduce in three commands
@@ -73,14 +73,15 @@ so it cancels from R. Code: `lengths.py` (`allocate`, `LengthHead`, `sample_allo
 | Section 4.2, Figure 5 | M × J grid of demonstrations and targets on one canvas | [`experiments/fig5_multi_target`](experiments/fig5_multi_target/README.md) |
 | Section 4.3, Figure 6; Appendix B, Length Allocation | oracle, learned and offset lengths; the length head and its trainer | [`experiments/fig6_lengths`](experiments/fig6_lengths/README.md) |
 | Section 5, Figure 7; Appendix C, Table 1 | Java helper refactoring, LLM-judged; strata, β sensitivity, zero-demonstration ablation | [`experiments/fig7_java`](experiments/fig7_java/README.md) |
-| Appendix B, Experimental Setup; Single-Target Prompting | model interfaces, development-only β, gold example reward | `fig4_single_target` |
-| Appendix B, Multi-Target Prompting (Figures 8, 9) | cross-benchmark study, gold NLL by reveal position | `fig5_multi_target` |
-| Appendix B, Likelihood Sharpening (Figure 10) | sharpening control; residuals against matched power sampling | `fig5_multi_target`; `fig4_single_target` |
-| Appendix B, Guidance-Strength Sensitivity (Figure 11, arXiv version) | guidance-strength sweep | `fig4_single_target/analyze.py --beta-sweep` |
+| Appendix B, Experimental Setup (Guidance selection); Single-Target Prompting | model interfaces, development-only β; gold example reward row | `fig4_single_target` |
+| Appendix B, Multi-Target Prompting | mechanism figure (Fig. 8, both builds); cross-benchmark figure (Fig. 9, both builds) | `fig5_multi_target` |
+| Appendix B, Likelihood Sharpening | M × J sharpening figure (Fig. 10 ACL / Fig. 11 arXiv); residuals against matched power sampling | `fig5_multi_target`; `fig4_single_target` |
+| Appendix B, Guidance-Strength Sensitivity (arXiv version only) | guidance-strength sweep figure (Fig. 10 arXiv) | `fig4_single_target/analyze.py --beta-sweep` |
 
-Appendix subsections are named by title (their numbers differ between the paper's builds). Each experiment README
-gives its protocol, seeds, commands, runtime and fidelity. `examples/walkthrough.py` follows one pool (M = 2, J = 2,
-K = 8) from the canvas to ℓ1, ℓ0, R, the weights and the ordinary and guided picks; `--cached` runs it on a CPU.
+Appendix subsections and figures are named by topic: their numbers differ between the ACL and arXiv builds. Each
+experiment README gives its protocol, seeds, commands, runtime and fidelity. `examples/walkthrough.py` follows one
+pool (M = 2, J = 2, K = 8) from the canvas to ℓ1, ℓ0, R, the weights and the ordinary and guided picks; `--cached`
+runs it on a CPU.
 
 ## Three levels of fidelity
 
@@ -132,16 +133,16 @@ spends API credits.
 ## Layout and size
 
     README.md  AGENTS.md  THIRD_PARTY.md  LICENSE  Makefile  pyproject.toml  ARTIFACTS.md  SHA256SUMS
-    src/fewshot_dlms/      2,922 lines   the library: canvas, adapters, scoring, bootstrap, grading, lengths, fetch
+    src/fewshot_dlms/      2,923 lines   the library: canvas, adapters, scoring, bootstrap, grading, lengths, fetch
     examples/                241 lines   walkthrough.py
-    experiments/figN_*/    6,907 lines   one pipeline per figure: run.py (GPU), analyze.py, plot.py (CPU), README
-    tests/                 4,832 lines   CPU unit and fixture tests, parity (fetched pools), GPU replay, API
+    experiments/figN_*/    6,926 lines   one pipeline per figure: run.py (GPU), analyze.py, plot.py (CPU), README
+    tests/                 4,833 lines   CPU unit and fixture tests, parity (fetched pools), GPU replay, API
     tools/                 1,125 lines   the scripts that cut data/ and assembled the artifacts from the authors' runs
     data/                                benchmarks/, java/ (episodes, licenses), tables/ (frozen), fixtures/
     artifacts_upload/                    the artifacts' data card (the dataset's README.md)
     artifacts/                           written by the fetcher and make reproduce, not in git
 
-Counts are lines of Python. The library a reader needs is `src/` and `examples/` (3,163 lines, kept under 5,000);
+Counts are lines of Python. The library a reader needs is `src/` and `examples/` (3,164 lines, kept under 5,000);
 the pipelines in `experiments/` are ports of the authors' scripts, held to the paper's numbers by the parity tests.
 A ported file's first line, `# ported from editdiff/<path> @ <commit>`, names its source in the authors' research
 repository at a fixed commit.

@@ -5,7 +5,8 @@ PYTEST_ARGS ?=
 figures: ; $(PY) experiments/fig4_single_target/plot.py && $(PY) experiments/fig5_multi_target/plot.py && $(PY) experiments/fig6_lengths/plot.py && $(PY) experiments/fig7_java/plot.py
 # The same figures from the download (python -m fewshot_dlms.fetch pools java): every analyze.py recomputes its tables
 # from artifacts/ into $(REPRO)/tables/<fig>/ and prints its difference to data/tables/, then every plot.py draws from
-# those tables into $(REPRO)/figures/. Figure 9 (fig5's plot.py) reads the table that fig4's analyze.py --crossbench writes.
+# those tables into $(REPRO)/figures/. The cross-benchmark figure (fig5's plot.py) reads the table that fig4's
+# analyze.py --crossbench writes.
 REPRO ?= artifacts/reproduce
 reproduce:
 	$(PY) experiments/fig4_single_target/analyze.py --pools artifacts/pools/fig4 --crossbench --beta-sweep --out $(REPRO)/tables/fig4 --compare data/tables/fig4 data/tables/fig5

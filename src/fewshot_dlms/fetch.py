@@ -43,7 +43,7 @@ CARD_NAME = "README.md"
 ROOT = Path(__file__).resolve().parents[2]
 # group -> (download size, what reads it); the sizes are those of ARTIFACTS.md.
 GROUPS = {
-    "pools": ("376 MB", "Figures 4-6 and 8-11: analyze.py of fig4_single_target, fig5_multi_target, fig6_lengths"),
+    "pools": ("376 MB", "Figures 4-6 and the Appendix B figures: analyze.py of fig4_single_target, fig5_multi_target, fig6_lengths"),
     "java": ("10 MB", "Figure 7: analyze.py and judge.py of fig7_java"),
     "heads": ("3.47 GB", "the four length heads: run.py --mode learned (fig6), --regime learned (fig7), make test-gpu"),
     "head_training": ("1.28 GB", "the heads' training prompts and configs: fig6_lengths/train_head.py"),
