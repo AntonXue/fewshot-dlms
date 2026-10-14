@@ -34,6 +34,7 @@ from fewshot_dlms.data import (
     BANKS,
     BENCHMARK_DIR,
     BENCHMARKS,
+    TEXT_FREE_BENCHMARKS,
     family_sha,
     load_families,
     read_jsonl,
@@ -210,7 +211,7 @@ def write_built(bank: str, task: str, families: list[dict]) -> None:
 
 
 # task -> (download the source, rebuild one family from it)
-TEXT_FREE_TASKS = {
+SOURCES = {
     "sst2_fam": (fetch_sst2_train, rebuild_sst2),
     "movie_dir_fam": (fetch_movie_lines, rebuild_movie),
 }
@@ -218,7 +219,8 @@ TEXT_FREE_TASKS = {
 
 def main() -> None:
     """Rebuild, verify and cache SST-2 and MIT Movie for both banks."""
-    for task, (fetch, rebuild) in TEXT_FREE_TASKS.items():
+    for task in TEXT_FREE_BENCHMARKS:
+        fetch, rebuild = SOURCES[task]
         source = fetch()
         for bank in BANKS:
             ids_file = BENCHMARK_DIR / bank / f"{task}.ids.jsonl"

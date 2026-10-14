@@ -14,6 +14,8 @@ import json
 from pathlib import Path
 
 BENCHMARKS = ["sst2_fam", "list_easy_fam", "salt_rep_fam", "movie_dir_fam"]
+# The benchmarks that ship as ids only; data/benchmarks/build.py rebuilds their text.
+TEXT_FREE_BENCHMARKS = ["sst2_fam", "movie_dir_fam"]
 BANKS = ("dev", "report")
 
 # The directory is found relative to this file, so the package must be installed from a checkout

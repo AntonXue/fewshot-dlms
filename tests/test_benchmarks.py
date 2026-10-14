@@ -5,7 +5,13 @@ import json
 import pytest
 
 from data.benchmarks import build
-from fewshot_dlms.data import BANKS, BENCHMARK_DIR, BENCHMARKS, load_families
+from fewshot_dlms.data import (
+    BANKS,
+    BENCHMARK_DIR,
+    BENCHMARKS,
+    TEXT_FREE_BENCHMARKS,
+    load_families,
+)
 
 FAMILY_KEYS = {
     "episode_id",
@@ -22,8 +28,6 @@ FAMILY_KEYS = {
     "grader",
     "meta",
 }
-
-TEXT_FREE_TASKS = ["sst2_fam", "movie_dir_fam"]
 
 
 def test_four_tasks_64_families():
@@ -58,7 +62,7 @@ def test_builder_detects_tampered_text():
 
 
 def test_text_free_files_ship_ids_only():
-    for task in TEXT_FREE_TASKS:
+    for task in TEXT_FREE_BENCHMARKS:
         for bank in BANKS:
             path = BENCHMARK_DIR / bank / f"{task}.ids.jsonl"
             with path.open(encoding="utf-8") as handle:

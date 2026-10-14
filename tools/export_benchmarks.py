@@ -21,9 +21,14 @@ import json
 import shutil
 from pathlib import Path
 
-from fewshot_dlms.data import BANKS, BENCHMARK_DIR, BENCHMARKS, family_sha, read_jsonl
-
-TEXT_FREE_TASKS = ["sst2_fam", "movie_dir_fam"]
+from fewshot_dlms.data import (
+    BANKS,
+    BENCHMARK_DIR,
+    BENCHMARKS,
+    TEXT_FREE_BENCHMARKS,
+    family_sha,
+    read_jsonl,
+)
 
 # The upstream record of each demonstration / target is listed in the family's meta, in entry order.
 # (The entry ids of SST-2 are positional, d00..d15 and t0..t7, so they cannot be the reference.)
@@ -60,7 +65,7 @@ def export(src: Path, dest: Path) -> None:
             for family in families:
                 shas[f"{bank}/{task}/{family['episode_id']}"] = family_sha(family)
 
-            if task in TEXT_FREE_TASKS:
+            if task in TEXT_FREE_BENCHMARKS:
                 write_jsonl(dest / bank / f"{task}.ids.jsonl", [strip_text(f) for f in families])
             else:
                 (dest / bank).mkdir(parents=True, exist_ok=True)

@@ -12,6 +12,7 @@ targets (24 distinct inputs). Experiments use the prefixes `demos[:M]` and `targ
 | `movie_dir_fam` | MIT Movie, director extraction | 32 | 64 | ids only, text rebuilt |
 
 373 families in total. The dev bank is used to select beta; every reported number comes from the
+report bank. List Functions has 85 easy functions, one family each: 21 form the dev bank and 64 the
 report bank.
 
 ## Use
@@ -49,13 +50,10 @@ distributions. In `*.ids.jsonl` the `input` and `output` of every demonstration 
 text, and checks each family against `sha256.json` before caching it in `_built/`:
 
 ```bash
-pip install -e ".[data]"
+pip install -e ".[data]"                                             # from a checkout
 python data/benchmarks/build.py                                      # needs network
 python -c "from data.benchmarks import build; build.verify_all()"   # prints 373/373 families OK
 ```
-
-Both downloads are pinned (the GLUE revision above; the movie file by commit and SHA-256 in
-`build.py`), so the rebuilt families are the frozen ones.
 
 | | `sst2_fam` | `movie_dir_fam` |
 |---|---|---|
@@ -63,6 +61,9 @@ Both downloads are pinned (the GLUE revision above; the movie file by commit and
 | `source_ref` | `train:N`, row N counted from 0 | `movies_train:N`, line N counted from 0, blank lines included |
 | `input` | the sentence, stripped of surrounding whitespace | the words of the line joined by single spaces |
 | `output` | the family's code for the row's label (`meta.codes`; label 0 is negative, 1 is positive) | the words of the line's single `Director` span |
+
+Both downloads are pinned (the movie file also by SHA-256, in `build.py`), so the rebuilt
+families are the frozen ones.
 
 The entry ids of SST-2 are positional (`d00`..`d15`, `t0`..`t7`); the same record ids are also
 listed in `meta.demo_record_ids` and `meta.target_record_ids`.
