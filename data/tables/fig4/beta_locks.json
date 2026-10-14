@@ -1,0 +1,248 @@
+{
+ "rule": "per model: mean A_target over cells (benchmark x grid point: 4.1 M in {2,4,8,16}; 4.2 J in {1,2,4,8}; Qwen3: 4.1 only), equal cell weights; best positive beta; ties within 0.25 pp -> smallest beta",
+ "bank": "dev",
+ "betas": [
+  0,
+  0.025,
+  0.05,
+  0.125,
+  0.25,
+  0.5,
+  1,
+  2
+ ],
+ "models": {
+  "llada": {
+   "beta": 0.5,
+   "n_cells": 28,
+   "cells": [
+    "list_easy_fam:M=2",
+    "list_easy_fam:M=4",
+    "list_easy_fam:M=8",
+    "list_easy_fam:M=16",
+    "movie_dir_fam:M=2",
+    "movie_dir_fam:M=4",
+    "movie_dir_fam:M=8",
+    "movie_dir_fam:M=16",
+    "salt_rep_fam:M=2",
+    "salt_rep_fam:M=4",
+    "salt_rep_fam:M=8",
+    "salt_rep_fam:M=16",
+    "sst2_fam:M=2",
+    "sst2_fam:M=4",
+    "sst2_fam:M=8",
+    "sst2_fam:M=16",
+    "list_easy_fam:J=1",
+    "list_easy_fam:J=2",
+    "list_easy_fam:J=4",
+    "movie_dir_fam:J=1",
+    "movie_dir_fam:J=2",
+    "movie_dir_fam:J=4",
+    "salt_rep_fam:J=1",
+    "salt_rep_fam:J=2",
+    "salt_rep_fam:J=4",
+    "sst2_fam:J=1",
+    "sst2_fam:J=2",
+    "sst2_fam:J=4"
+   ],
+   "dev_mean_by_beta": {
+    "0": 0.6751555358471514,
+    "0.025": 0.682679099275186,
+    "0.05": 0.6890323646068415,
+    "0.125": 0.7031018247759521,
+    "0.25": 0.7163600221888121,
+    "0.5": 0.7246391149480181,
+    "1": 0.7204673261458633,
+    "2": 0.7079186844426938
+   },
+   "dev_gain_vs_ordinary_pp": 4.948357910086676,
+   "best_positive_below_ordinary": false,
+   "partial_cells_excluded": [
+    "list_easy_fam:8:13fam"
+   ],
+   "sections": [
+    "41",
+    "42"
+   ],
+   "frozen_file": "beta_lock.json",
+   "frozen_sha256": "9c8fc4dbf6852604c65d8ca506f848cf16c7dce07b56dc784ae439f6e13dbc2e"
+  },
+  "dqwen": {
+   "beta": 0.5,
+   "n_cells": 32,
+   "cells": [
+    "list_easy_fam:M=2",
+    "list_easy_fam:M=4",
+    "list_easy_fam:M=8",
+    "list_easy_fam:M=16",
+    "movie_dir_fam:M=2",
+    "movie_dir_fam:M=4",
+    "movie_dir_fam:M=8",
+    "movie_dir_fam:M=16",
+    "salt_rep_fam:M=2",
+    "salt_rep_fam:M=4",
+    "salt_rep_fam:M=8",
+    "salt_rep_fam:M=16",
+    "sst2_fam:M=2",
+    "sst2_fam:M=4",
+    "sst2_fam:M=8",
+    "sst2_fam:M=16",
+    "list_easy_fam:J=1",
+    "list_easy_fam:J=2",
+    "list_easy_fam:J=4",
+    "list_easy_fam:J=8",
+    "movie_dir_fam:J=1",
+    "movie_dir_fam:J=2",
+    "movie_dir_fam:J=4",
+    "movie_dir_fam:J=8",
+    "salt_rep_fam:J=1",
+    "salt_rep_fam:J=2",
+    "salt_rep_fam:J=4",
+    "salt_rep_fam:J=8",
+    "sst2_fam:J=1",
+    "sst2_fam:J=2",
+    "sst2_fam:J=4",
+    "sst2_fam:J=8"
+   ],
+   "dev_mean_by_beta": {
+    "0": 0.5729739779517764,
+    "0.025": 0.5801077573021202,
+    "0.05": 0.5862323557903697,
+    "0.125": 0.5996795409112317,
+    "0.25": 0.6107784421301155,
+    "0.5": 0.6166733192204904,
+    "1": 0.6131906904046344,
+    "2": 0.6046215783607328
+   },
+   "dev_gain_vs_ordinary_pp": 4.369934126871399,
+   "best_positive_below_ordinary": false,
+   "partial_cells_excluded": [],
+   "sections": [
+    "41",
+    "42"
+   ],
+   "frozen_file": "dqwen_beta_lock.json",
+   "frozen_sha256": "710baaf0280edb4b95e0ac7027895422aed9447d823b439536af7d9d91a6ffde"
+  },
+  "nemotron_ar": {
+   "beta": 1,
+   "n_cells": 16,
+   "cells": [
+    "list_easy_fam:M=2",
+    "list_easy_fam:M=4",
+    "list_easy_fam:M=8",
+    "list_easy_fam:M=16",
+    "movie_dir_fam:M=2",
+    "movie_dir_fam:M=4",
+    "movie_dir_fam:M=8",
+    "movie_dir_fam:M=16",
+    "salt_rep_fam:M=2",
+    "salt_rep_fam:M=4",
+    "salt_rep_fam:M=8",
+    "salt_rep_fam:M=16",
+    "sst2_fam:M=2",
+    "sst2_fam:M=4",
+    "sst2_fam:M=8",
+    "sst2_fam:M=16"
+   ],
+   "dev_mean_by_beta": {
+    "0": 0.4993184407552083,
+    "0.025": 0.5103539599957335,
+    "0.05": 0.5198398556717001,
+    "0.125": 0.5417738444316869,
+    "0.25": 0.5646007354313507,
+    "0.5": 0.5842046290629297,
+    "1": 0.5898145248880262,
+    "2": 0.583770183262736
+   },
+   "dev_gain_vs_ordinary_pp": 9.04960841328179,
+   "best_positive_below_ordinary": false,
+   "partial_cells_excluded": [],
+   "sections": [
+    "41"
+   ],
+   "frozen_file": "nemotron_causal_beta_lock.json",
+   "frozen_sha256": "8b72b1a2800d1bdbeccb3088f9772bf3c434bc7bb3a68b1899d3e052cd04bfcb"
+  },
+  "nemotron_pt": {
+   "beta": 1,
+   "n_cells": 16,
+   "cells": [
+    "list_easy_fam:J=1",
+    "list_easy_fam:J=2",
+    "list_easy_fam:J=4",
+    "list_easy_fam:J=8",
+    "movie_dir_fam:J=1",
+    "movie_dir_fam:J=2",
+    "movie_dir_fam:J=4",
+    "movie_dir_fam:J=8",
+    "salt_rep_fam:J=1",
+    "salt_rep_fam:J=2",
+    "salt_rep_fam:J=4",
+    "salt_rep_fam:J=8",
+    "sst2_fam:J=1",
+    "sst2_fam:J=2",
+    "sst2_fam:J=4",
+    "sst2_fam:J=8"
+   ],
+   "dev_mean_by_beta": {
+    "0": 0.4203838166736421,
+    "0.025": 0.4298157580798167,
+    "0.05": 0.43792022977890294,
+    "0.125": 0.4553167765096594,
+    "0.25": 0.4693899101055435,
+    "0.5": 0.4772642690612486,
+    "1": 0.48018578291677816,
+    "2": 0.47885219324103334
+   },
+   "dev_gain_vs_ordinary_pp": 5.980196624313605,
+   "best_positive_below_ordinary": false,
+   "partial_cells_excluded": [],
+   "sections": [
+    "42"
+   ],
+   "frozen_file": "nemotron_pt_beta_lock.json",
+   "frozen_sha256": "8c080c83b52eab447bdd52923835b0450c91e8b8a885f7a31af431a62d066ee9"
+  },
+  "qwen": {
+   "beta": 1,
+   "n_cells": 16,
+   "cells": [
+    "list_easy_fam:M=2",
+    "list_easy_fam:M=4",
+    "list_easy_fam:M=8",
+    "list_easy_fam:M=16",
+    "movie_dir_fam:M=2",
+    "movie_dir_fam:M=4",
+    "movie_dir_fam:M=8",
+    "movie_dir_fam:M=16",
+    "salt_rep_fam:M=2",
+    "salt_rep_fam:M=4",
+    "salt_rep_fam:M=8",
+    "salt_rep_fam:M=16",
+    "sst2_fam:M=2",
+    "sst2_fam:M=4",
+    "sst2_fam:M=8",
+    "sst2_fam:M=16"
+   ],
+   "dev_mean_by_beta": {
+    "0": 0.5899818057105655,
+    "0.025": 0.5941014938787197,
+    "0.05": 0.5979211143496143,
+    "0.125": 0.6071292448197483,
+    "0.25": 0.616804997013485,
+    "0.5": 0.6244882266069904,
+    "1": 0.6275792967562577,
+    "2": 0.6257899686813891
+   },
+   "dev_gain_vs_ordinary_pp": 3.759749104569221,
+   "best_positive_below_ordinary": false,
+   "partial_cells_excluded": [],
+   "sections": [
+    "41"
+   ],
+   "frozen_file": "qwen3_beta_lock.json",
+   "frozen_sha256": "9023c6aab714157d8f9c8cb3167178a9797f9f02a4353b8480aff678a2ec7f3c"
+  }
+ }
+}
