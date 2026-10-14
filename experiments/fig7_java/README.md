@@ -112,7 +112,7 @@ draws the learned lengths from the stored predictions instead of running head C.
 (model, revision, regime, K, chunk, head; not the cells selected); an interrupted run resumes after the episodes with
 that hash and, before loading the model, refuses a file holding records of another configuration or the frozen pools
 (exit status 2, naming the file). `<out>/manifest_<hash>.json` holds the configuration, the pool's hash, every seed
-and the library and GPU versions.
+and the library and GPU versions. A failed family is counted and the run exits non-zero.
 
 ## Runtime
 

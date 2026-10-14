@@ -220,3 +220,38 @@ def test_run_refuses_a_pool_of_another_protocol(root, tmp_path):
     assert str(pool) in result.stderr
     assert "loaded in" not in result.stdout
     assert sorted(path.name for path in pool.parent.iterdir()) == [pool.name]
+
+
+def test_run_counts_a_failed_family_and_exits_non_zero(root, tmp_path, monkeypatch, capsys):
+    """A family that raises is reported and counted, the others are written, and the run ends with RUN_FAILED and exit
+    status 1 (no model: load and run_canvas are replaced); the next run writes only the failed family."""
+    run = load_run(root)
+    monkeypatch.setattr(run, "load", lambda name, device: SimpleNamespace(model_id="GSAI-ML/LLaDA-1.5", revision="rev"))
+    monkeypatch.setattr(run.torch.cuda, "is_available", lambda: False)
+    monkeypatch.setattr(run.torch.cuda, "empty_cache", lambda: None)
+    body = {"n_tokens": 1, "oracle_L": 1, "n_unique": 1, "seconds_gen": 0.0, "seconds_score": 0.0, "checks": None,
+            "gold_ell1": 0.0, "gold_ell0": 0.0}
+
+    def flaky(adapter, family, *arguments, **options):
+        if family["episode_id"] == "list_easy_fam:report:001":
+            raise RuntimeError("injected failure")
+        return body
+
+    monkeypatch.setattr(run, "run_canvas", flaky)
+    argv = ["run.py", "--model", "llada", "--M", "4", "--J", "2", "--K", "4", "--families", "3", "--out", str(tmp_path)]
+    monkeypatch.setattr(sys, "argv", [*argv, "--device", "cpu"])
+    with pytest.raises(SystemExit) as exit:
+        run.main()
+    stdout = capsys.readouterr().out
+    assert exit.value.code == 1
+    assert "FAILED list_easy_fam:report:001 M=4 J=2" in stdout
+    assert "RUN_FAILED llada" in stdout and "failed families: 1" in stdout
+    assert "RUN_DONE" not in stdout
+    pool = tmp_path / "llada" / "list_easy_fam_M4_J2.jsonl"
+    assert [record["episode_id"] for record in read_jsonl(pool)] == ["list_easy_fam:report:000", "list_easy_fam:report:002"]
+
+    monkeypatch.setattr(run, "run_canvas", lambda adapter, family, *arguments, **options: body)
+    run.main()
+    stdout = capsys.readouterr().out
+    assert "CELL_DONE llada M=4 J=2 new=1" in stdout
+    assert "RUN_DONE llada" in stdout
