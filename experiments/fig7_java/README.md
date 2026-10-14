@@ -107,7 +107,9 @@ GPU (LLaDA-1.5, about 16 GiB):
     make rerun-fig7        # oracle regime, first 8 episodes, then analyze.py with the paper's verdicts and --compare
 
 `--families N` keeps the first N episodes (anchors). `--head-probs artifacts/java/length/s5hc_C_s5final_G4.npz`
-draws the learned lengths from the stored predictions instead of running head C. Records are appended to
+draws the learned lengths from the stored predictions instead of running head C. The two learned runs hash different
+checkpoint identities, the stored predictions' `ckpt_sha` (the original checkpoint's SHA-256) against the published
+file's SHA-256 (ARTIFACTS.md), so each refuses the other's pool: give them separate `--out` directories. Records are appended to
 `<out>/pools_<regime>.jsonl` (or `pools_zero_demo.jsonl`) as episodes finish. Each carries its pool's `config_hash`
 (model, revision, regime, K, chunk, head; not the cells selected); an interrupted run resumes after the episodes with
 that hash and, before loading the model, refuses a file holding records of another configuration or the frozen pools
