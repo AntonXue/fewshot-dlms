@@ -14,8 +14,9 @@ candidate infills from LLaDA-1.5. The script prints
     CUDA_VISIBLE_DEVICES=0 python examples/walkthrough.py          # samples and scores the pool on one GPU (minutes)
     CUDA_VISIBLE_DEVICES=0 python examples/walkthrough.py --save-fixture data/fixtures/walkthrough.jsonl
 
---cached reads data/fixtures/walkthrough.jsonl, the pool that the live command wrote, and prints the same
-table. The live run is Figure 5's own sampling and scoring (experiments/fig5_multi_target/run.py::run_canvas)
+--cached reads data/fixtures/walkthrough.jsonl (--fixture names another stored pool), the pool that the live
+command wrote, and prints the same table; a live run prints the table first, then --save-fixture writes the
+record. The live run is Figure 5's own sampling and scoring (experiments/fig5_multi_target/run.py::run_canvas)
 for one family and one cell, so its record is a Figure 5 pool record.
 
 "Ordinary" is what scoring.family_metrics calls beta = 0: the K candidates are draws from P1 and carry equal
@@ -79,6 +80,25 @@ def canvas_text(adapter, canvas):
     return "".join(pieces)
 
 
+def device_name(device):
+    """The provenance name of the device the model is loaded on: the GPU's name for a CUDA device (its own index, not
+    the current device's), else the device type ("cpu")."""
+    import torch
+
+    device = torch.device(device)
+    if device.type == "cuda":
+        return torch.cuda.get_device_name(device)
+    return device.type
+
+
+def pool_protocol_hash(run, adapter):
+    """The protocol_hash of the walkthrough's pool: Figure 5's hash of the cell (M, J) at K candidates
+    (run.pool_config), as experiments/fig5_multi_target/run.py writes it. `adapter` needs only name, model_id and
+    revision."""
+    settings = SimpleNamespace(bank=BANK, M=[M], J=[J], K=K, chunk=run.CHUNK)
+    return run.protocol_hash(run.pool_config(run.config_of(settings, adapter), M, J))
+
+
 def live_record(device):
     """Sample and score the pool on a GPU, with the calls of Figure 5, and return it as one record."""
     import torch
@@ -96,8 +116,6 @@ def live_record(device):
     for key in ("p1_prompt_text", "p0_prompt_text"):  # the audit's prompt texts; canvas_text shows the canvas
         body["checks"].pop(key)
     canvas = build_canvas(adapter, family, M, J, body["oracle_L"])
-    settings = SimpleNamespace(bank=BANK, M=[M], J=[J], K=K, chunk=run.CHUNK)
-    config = run.config_of(settings, adapter)
     return {
         "episode_id": family["episode_id"],
         "source": run.TASK,
@@ -110,7 +128,7 @@ def live_record(device):
         "J": J,
         "K": K,
         "beta_convention": "zero_is_ordinary",
-        "protocol_hash": run.protocol_hash(config),
+        "protocol_hash": pool_protocol_hash(run, adapter),
         "gold": [target["output"] for target in family["targets"][:J]],
         "target_inputs": [target["input"] for target in family["targets"][:J]],
         "grader": family["grader"],
@@ -120,7 +138,7 @@ def live_record(device):
             "model_id": adapter.model_id,
             "revision": adapter.revision,
             "seed": body["seed"],
-            "gpu": torch.cuda.get_device_name(),
+            "gpu": device_name(device),
             "torch": torch.__version__,
             "transformers": transformers.__version__,
             "date": datetime.date.today().isoformat(),
@@ -202,6 +220,8 @@ def print_report(record):
         verdict = " ".join(f"T{j + 1} {'correct' if correct[k, j] else 'wrong'}" for j in range(record["J"]))
         print(f"   {label}: candidate {k}, {answers_of(record, k)}   ({verdict}; "
               f"all targets {'correct' if joint[k] else 'wrong'})")
+    print("   (Identical picks are expected: both draws use the same u and often land on the same candidate; the "
+          "expected accuracies below carry the comparison.)")
     print()
     print("   Expected accuracy of the pool under each weighting (what the paper averages over families):")
     print(f"   {'':<10} {'A_all':>7} {'A_avg':>7} {'ESS':>6}")
@@ -217,24 +237,34 @@ def read_pool(path):
         return json.loads(handle.readline())
 
 
+def save_fixture(path, record):
+    """Write the pool record as the one line of a walkthrough file."""
+    Path(path).write_text(json.dumps(record) + "\n", encoding="utf-8")
+    print(f"wrote {path}", file=sys.stderr)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--cached", action="store_true", help="print the stored pool; no GPU, no torch")
-    parser.add_argument("--fixture", default=str(FIXTURE), help="the stored pool that --cached reads")
+    fixture_help = f"--cached: the stored pool to read (default {FIXTURE.relative_to(ROOT)})"
+    parser.add_argument("--fixture", default=None, help=fixture_help)
     parser.add_argument("--save-fixture", default=None, help="live run: also write the pool record to this file")
     parser.add_argument("--device", default="cuda", help="live run: torch device (choose the GPU with CUDA_VISIBLE_DEVICES)")
     args = parser.parse_args()
     if args.cached and args.save_fixture:
         parser.error("--save-fixture needs a live run, not --cached")
+    if args.fixture and not args.cached:
+        parser.error("--fixture names the stored pool that --cached reads; a live run samples its own")
+    if args.save_fixture and not Path(args.save_fixture).parent.is_dir():
+        parser.error(f"--save-fixture: the directory {Path(args.save_fixture).parent} does not exist")
 
     if args.cached:
-        record = read_pool(args.fixture)
-    else:
-        record = live_record(args.device)
-        if args.save_fixture:
-            Path(args.save_fixture).write_text(json.dumps(record) + "\n", encoding="utf-8")
-            print(f"wrote {args.save_fixture}", file=sys.stderr)
+        print_report(read_pool(args.fixture or FIXTURE))
+        return
+    record = live_record(args.device)
     print_report(record)
+    if args.save_fixture:
+        save_fixture(args.save_fixture, record)
 
 
 if __name__ == "__main__":
