@@ -31,7 +31,7 @@ Implemented in `src/fewshot_dlms/scoring.py`: `example_reward`, `pool_weights(el
 
 **2. One canvas, many targets.** Demonstrations and J masked targets are interleaved in one sequence and
 all targets are filled in one pass, in a fixed reveal order. Sampling and the two log-likelihoods
-(P1 with `E` visible, P0 with `E` masked) are in `src/fewshot_dlms/adapters/base.py` (*coming*); the
+(P1 with `E` visible, P0 with `E` masked; Lemma 3.1) are in `src/fewshot_dlms/adapters/base.py`; the
 canvas itself, with its target sites and `E`, is `src/fewshot_dlms/canvas.py`.
 
 **3. Target lengths.** A masked target needs a token count. Using the length of the reference answer is
