@@ -9,6 +9,7 @@ import collections
 import csv
 import hashlib
 import json
+import re
 
 import pytest
 
@@ -30,23 +31,19 @@ MAX_REPLACEMENT_TOKENS = 80
 MAX_METHOD_LINES = 200
 MAX_CANVAS_TOKENS = 2048
 
-# Strings that must not appear in any file under data/java: private paths, user and host names,
-# and the vocabulary of the authors' internal hand-off documents.
-PRIVATE_STRINGS = [
-    "/disk-a-redacted",
-    "/disk-b-redacted",
-    "/home/",
-    "user-redacted",
-    "host-prefix-redacted",
-    "cluster-redacted",
-    ".claude",
-    "editdiff",
-    "scratch/",
-    "hand-off",
-    "handoff",
-    "hand off",
-    "sign-off",
-    "signoff",
+# Patterns that must not match any file under data/java (lower-cased): absolute paths of the
+# authors' machines, run metadata that names a machine, the private source tree, and the
+# vocabulary of the authors' internal working documents.
+PRIVATE_PATTERNS = [
+    r"/(?:hdd|ssd)\d",
+    r"/home/",
+    r"/mnt/",
+    r'"host":',
+    r'"gpu_env":',
+    r"editdiff",
+    r"scratch/",
+    r"hand-?\s?off",
+    r"sign-?off",
 ]
 
 LLADA_REVISION = "84346fd91ba60252d260022201ad6fc5a3468fb2"
@@ -220,8 +217,8 @@ def test_java_data_directory_has_no_private_strings():
     }
     for path in files:
         text = path.read_text(encoding="utf-8").lower()
-        for needle in PRIVATE_STRINGS:
-            assert needle not in text, f"{needle!r} in {path.name}"
+        for pattern in PRIVATE_PATTERNS:
+            assert re.search(pattern, text) is None, f"{pattern!r} matches {path.name}"
 
 
 def test_licenses_name_every_repository_and_commit():

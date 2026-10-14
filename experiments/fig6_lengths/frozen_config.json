@@ -1,0 +1,454 @@
+{
+ "public_copy": "The authors' freeze record of the Section 4.3 length heads (selection/FROZEN_CONFIG.json of their length project, sha256 ec7b4ebd950a4a3dc0af8f8b898fe9d204b2818f40371ce7929cde453622597d), with machine paths removed: the project root is dropped, paths inside the project are relative to it (runs/<run>/final.pt = artifacts/heads/<backbone>.pt here), and final_sweeps/ is the run of the Section 4.1/4.2 oracle pools (artifacts/pools/fig6/<model>/list_easy_fam_M4_J<J>_oracle.jsonl here). Nothing else is changed.",
+ "frozen_at_utc": "2026-10-07 11:56:13",
+ "note": "Freeze protocol (two stages, decided before any report-bank prompt was rendered): stage 1 freezes everything — architecture, L_max 256, data sources and splits, mixture 70/30, 100k prompts (1,563 x 64), optimizer and learning rates, 24,576-token LLaDA microbatches, final-checkpoint rule, tokenizer revisions, batching, sampling, seeds — plus the LLaDA and Nemotron checkpoints (both development-checked). dQwen's training run had already started with the identical frozen config; its checkpoint hash is appended by `lpx_freeze.py --complete` only after the run ends and only if `runs/<run>/config.json` is byte-identical (SHA-256 recorded here). No report-bank result of any backbone can change any frozen item; a failed dQwen development check would be reported, not fixed.\nReport K: K = 64 / J proposals per family (J = 1, 2, 4, 8 -> K = 64, 32, 16, 8), i.e. 64 sampled targets per family in every cell; a compute-driven deviation from K = 64 at every J (per-candidate canvases rarely share a length, so J = 8 at K = 64 would cost ~8 GPU-hours per backbone on the shared GPUs). The oracle condition is the Section-4.2 K = 64 pool of the same families (bit-identical reproduction verified for LLaDA and Nemotron; dQwen drift caveat in DQWEN_PORT.md, plus a same-session dQwen delta-0 rerun at J = 1, 2).\nGeneration-path code (dr_worker.py, mm_common.py, mm_adapters.py, lpx_model.py, lpx_alloc.py, lpx_train.py) is frozen at the hashes below; analysis / plotting scripts may receive documented fixes afterwards.",
+ "backbones": {
+  "llada": {
+   "dr_worker_model": "llada",
+   "run": "fin_llada_m70_100k",
+   "checkpoint": "runs/fin_llada_m70_100k/final.pt",
+   "checkpoint_sha256": "0de13a8ac6b881493e368d281531326b84fe7f5d2c50b1dccba6491dd1dec1d8",
+   "config": {
+    "gpu": 0,
+    "backbone": "llada",
+    "name": "fin_llada_m70_100k",
+    "mix": "fsp:0.7,edit:0.3",
+    "prompts": 100000,
+    "lmax": 256,
+    "seed": 0,
+    "lr_block": 3e-05,
+    "lr_head": 0.0003,
+    "wd": 0.01,
+    "ppu": 64,
+    "tokens_per_micro": 24576,
+    "warmup_frac": 0.05,
+    "eval_every": 500,
+    "code_dev_max": 1500,
+    "max_updates": 0,
+    "eval_only": "",
+    "mix_normalised": {
+     "fsp": 0.7,
+     "edit": 0.3
+    },
+    "updates": 1563,
+    "updates_per_source": {
+     "fsp": 1094,
+     "edit": 469
+    },
+    "train_prompts_available": {
+     "fsp": 100000,
+     "edit": 22083
+    },
+    "dropped_gt_lmax_or_ctx": {
+     "fsp": 0,
+     "edit": 45
+    },
+    "warmup": 78,
+    "architecture": "frozen llada -> trainable copy of the last decoder layer + final norm -> categorical head over 1..256",
+    "loss": "prompt-level: mean over prompts of the per-prompt mean site NLL",
+    "trainable_params": 219164928
+   },
+   "train_data_sha256": {
+    "fsp": "48fd0effeeb5f38969ba7f8b578366d58deb63d509400d74c64597ab5243300a",
+    "edit": "75e072fba997fd4711a44c1f9a0dc0d1f5af85e0d505cc03256ea30126279972"
+   },
+   "dev_metrics_at_freeze": {
+    "list_dev": {
+     "sites": 315,
+     "out_of_support": 0.0,
+     "P0": 0.37316547285468366,
+     "P1": 0.4253459563384922,
+     "P2": 0.5007173556253747,
+     "nll_site": 2.044804542195578,
+     "eae": 3.0041070096091653,
+     "mode_exact": 0.4253968253968254,
+     "ece_mode": 0.2123389151834306,
+     "nll_prompt": 2.1707994313166568,
+     "J1": {
+      "P0": 0.3600303880295888,
+      "P1": 0.44563888969038584,
+      "P2": 0.5218146028251502,
+      "eae": 3.2077241991620786,
+      "mode_exact": 0.42857142857142855
+     },
+     "J2": {
+      "P0": 0.3788321727995589,
+      "P1": 0.412551209308612,
+      "P2": 0.5160685233895419,
+      "eae": 2.910093206875603,
+      "mode_exact": 0.47619047619047616
+     },
+     "J4": {
+      "P0": 0.3642373911400985,
+      "P1": 0.4056190783496244,
+      "P2": 0.4872542313574936,
+      "eae": 2.931770754447982,
+      "mode_exact": 0.39285714285714285
+     },
+     "J8": {
+      "P0": 0.3778547243288943,
+      "P1": 0.4358714654214094,
+      "P2": 0.5009739699183016,
+      "eae": 3.0383264391790337,
+      "mode_exact": 0.42857142857142855
+     }
+    },
+    "code_dev": {
+     "sites": 2626,
+     "out_of_support": 0.003808073115003808,
+     "P0": 0.09927698650809787,
+     "P1": 0.27522311771566665,
+     "P2": 0.41327124090642825,
+     "nll_site": 3.216522372167798,
+     "eae": 10.163109748361125,
+     "mode_exact": 0.12718964204112718,
+     "ece_mode": 0.09228519829428455,
+     "nll_prompt": 3.2754710106640426
+    }
+   },
+   "listbench_dev_sha256": "519fdd80dd052f86b25dbe92c24f0ba65331dcd3d5ef7c359c0d4852922f3171",
+   "status": "frozen"
+  },
+  "nemotron": {
+   "dr_worker_model": "nemotron_pt",
+   "run": "fin_nemotron_m70_100k",
+   "checkpoint": "runs/fin_nemotron_m70_100k/final.pt",
+   "checkpoint_sha256": "df46105dab89104d0d1ccdb34795343a69fadda5528d610fd725bf414fb62e62",
+   "config": {
+    "gpu": 2,
+    "backbone": "nemotron",
+    "name": "fin_nemotron_m70_100k",
+    "mix": "fsp:0.7,edit:0.3",
+    "prompts": 100000,
+    "lmax": 256,
+    "seed": 0,
+    "lr_block": 3e-05,
+    "lr_head": 0.0003,
+    "wd": 0.01,
+    "ppu": 64,
+    "tokens_per_micro": 24576,
+    "warmup_frac": 0.05,
+    "eval_every": 500,
+    "code_dev_max": 1500,
+    "max_updates": 0,
+    "eval_only": "",
+    "mix_normalised": {
+     "fsp": 0.7,
+     "edit": 0.3
+    },
+    "updates": 1563,
+    "updates_per_source": {
+     "fsp": 1094,
+     "edit": 469
+    },
+    "train_prompts_available": {
+     "fsp": 100000,
+     "edit": 22088
+    },
+    "dropped_gt_lmax_or_ctx": {
+     "fsp": 0,
+     "edit": 40
+    },
+    "warmup": 78,
+    "architecture": "frozen nemotron -> trainable copy of the last decoder layer + final norm -> categorical head over 1..256",
+    "loss": "prompt-level: mean over prompts of the per-prompt mean site NLL",
+    "trainable_params": 219164928
+   },
+   "train_data_sha256": {
+    "fsp": "693ea6d555247455880bef43fa3f07165be0a2601d7d4331eabaccecaaaf7bcc",
+    "edit": "9b9bf4f52eaf89a6817292f389d3fccb91fa531f5e385537d3ff680c67440f38"
+   },
+   "dev_metrics_at_freeze": {
+    "list_dev": {
+     "sites": 315,
+     "out_of_support": 0.0,
+     "P0": 0.4256697233671156,
+     "P1": 0.4710582470587237,
+     "P2": 0.528739649240711,
+     "nll_site": 2.272905391878231,
+     "eae": 3.03361034572412,
+     "mode_exact": 0.4888888888888889,
+     "ece_mode": 0.15754256962783753,
+     "nll_prompt": 2.2754047252844134,
+     "J1": {
+      "P0": 0.38897988124509064,
+      "P1": 0.4464895562634757,
+      "P2": 0.5192514597831497,
+      "eae": 4.135027537373984,
+      "mode_exact": 0.42857142857142855
+     },
+     "J2": {
+      "P0": 0.3912695571480829,
+      "P1": 0.4538292085372041,
+      "P2": 0.5273644342401314,
+      "eae": 3.2699933369533496,
+      "mode_exact": 0.42857142857142855
+     },
+     "J4": {
+      "P0": 0.4148648349018438,
+      "P1": 0.4596372682802334,
+      "P2": 0.5224782842690542,
+      "eae": 2.8727113522346412,
+      "mode_exact": 0.4642857142857143
+     },
+     "J8": {
+      "P0": 0.44425843941976284,
+      "P1": 0.4841470824277548,
+      "P2": 0.5334001591588796,
+      "eae": 2.9172869457053183,
+      "mode_exact": 0.5238095238095238
+     }
+    },
+    "code_dev": {
+     "sites": 2626,
+     "out_of_support": 0.003427265803503427,
+     "P0": 0.08230340795689355,
+     "P1": 0.23461278978178796,
+     "P2": 0.3627021368604119,
+     "nll_site": 3.387431924323776,
+     "eae": 11.099056084819896,
+     "mode_exact": 0.10814927646610815,
+     "ece_mode": 0.09767249539517212,
+     "nll_prompt": 3.4636401500182075
+    }
+   },
+   "listbench_dev_sha256": "2e82a383b0d7f9174594c7b21f627c93e1fd5a04087650788a8a2efad1ca9854",
+   "status": "frozen"
+  },
+  "dqwen": {
+   "status": "frozen",
+   "dr_worker_model": "dqwen",
+   "run": "fin_dqwen_m70_100k_g2",
+   "config": {
+    "gpu": 2,
+    "backbone": "dqwen",
+    "name": "fin_dqwen_m70_100k_g2",
+    "mix": "fsp:0.7,edit:0.3",
+    "prompts": 100000,
+    "lmax": 256,
+    "seed": 0,
+    "lr_block": 3e-05,
+    "lr_head": 0.0003,
+    "wd": 0.01,
+    "ppu": 64,
+    "tokens_per_micro": 24576,
+    "warmup_frac": 0.05,
+    "eval_every": 500,
+    "code_dev_max": 1500,
+    "max_updates": 0,
+    "eval_only": "",
+    "mix_normalised": {
+     "fsp": 0.7,
+     "edit": 0.3
+    },
+    "updates": 1563,
+    "updates_per_source": {
+     "fsp": 1094,
+     "edit": 469
+    },
+    "train_prompts_available": {
+     "fsp": 100000,
+     "edit": 22088
+    },
+    "dropped_gt_lmax_or_ctx": {
+     "fsp": 0,
+     "edit": 40
+    },
+    "warmup": 78,
+    "architecture": "frozen dqwen -> trainable copy of the last decoder layer + final norm -> categorical head over 1..256",
+    "loss": "prompt-level: mean over prompts of the per-prompt mean site NLL",
+    "trainable_params": 210776832
+   },
+   "config_sha256": "78545288b460724cf496929d53e76b7711eb95911de526746b3e1985e785fb91",
+   "train_data_sha256": {
+    "fsp": "c451bfc4b942288cb79106ebae594c62caf309ee9f645be9bd224a2b6b7d4423",
+    "edit": "815df9e9a22751fe48e8306ae83fe733e32ddeb118435e6cd6cee1c601170bf0"
+   },
+   "listbench_dev_sha256": "57c2590e23d88b9b37f09c5db1db8049a935a3791e62c6f64042152979216d90",
+   "rule": "checkpoint = final.pt of this run, appended with --complete; any config change voids the freeze",
+   "checkpoint": "runs/fin_dqwen_m70_100k_g2/final.pt",
+   "checkpoint_sha256": "83126cce639d3aa28cee0ef13cc526cd63684b8c94c6ff51ddad511ba206232f",
+   "dev_metrics_at_freeze": {
+    "list_dev": {
+     "sites": 315,
+     "out_of_support": 0.0,
+     "P0": 0.33597277809311643,
+     "P1": 0.39375682991500677,
+     "P2": 0.4453903953181185,
+     "nll_site": 2.174276123639142,
+     "eae": 3.4456282542197867,
+     "mode_exact": 0.3333333333333333,
+     "ece_mode": 0.2896540257665846,
+     "nll_prompt": 2.1537083285988694,
+     "J1": {
+      "P0": 0.2782020371939455,
+      "P1": 0.35312406347893666,
+      "P2": 0.4155128767285879,
+      "eae": 3.891965243197202,
+      "mode_exact": 0.2857142857142857
+     },
+     "J2": {
+      "P0": 0.3300881498331104,
+      "P1": 0.39687848959930505,
+      "P2": 0.4655789025656452,
+      "eae": 3.292402958418659,
+      "mode_exact": 0.35714285714285715
+     },
+     "J4": {
+      "P0": 0.3260193738758625,
+      "P1": 0.38821033948634004,
+      "P2": 0.4540887402722954,
+      "eae": 3.379476065737078,
+      "mode_exact": 0.2857142857142857
+     },
+     "J8": {
+      "P0": 0.3496419798791413,
+      "P1": 0.40082875601277435,
+      "P2": 0.43972878585283987,
+      "eae": 3.4612185487892466,
+      "mode_exact": 0.35714285714285715
+     }
+    },
+    "code_dev": {
+     "sites": 2626,
+     "out_of_support": 0.003808073115003808,
+     "P0": 0.09654612101052135,
+     "P1": 0.27169942885769865,
+     "P2": 0.41497799526138096,
+     "nll_site": 3.2940367255077714,
+     "eae": 9.85400749786785,
+     "mode_exact": 0.12414318354912414,
+     "ece_mode": 0.10456258207999358,
+     "nll_prompt": 3.308289317757179
+    }
+   },
+   "completed_at_utc": "2026-10-07 15:11:03"
+  }
+ },
+ "code": {
+  "git_head": "117013087287a246ed981f9d534163ca5c48fbd2",
+  "sha256": {
+   "experiments/length_project/lpx_alloc.py": "af893ac3a858f6589ffc396ac0fcb6ad6228d5246bc37c4c33ac95225d531dd3",
+   "experiments/length_project/lpx_bench.py": "73c361d73c24073ee9c13f54bd8bff24ccbf01d20b99d069546079fe510086f9",
+   "experiments/length_project/lpx_codegen.py": "6c9e2e615bc9bb1b08d3e44ad67255440a78ec6af15ed3d56053df8871eb227f",
+   "experiments/length_project/lpx_codetab.py": "5fe3631d77fd8076d6ed32bf441d37289a348e940013a4a0b3b639211336547a",
+   "experiments/length_project/lpx_common.py": "0b9ae0a13ae4c0391b603ecaaede91c2342fcc8b99b62fbf6fbb4def2fc1134e",
+   "experiments/length_project/lpx_coverage.py": "640447265cf92c012707cba228654a2a953aa70c963306eec566b0b56ee84144",
+   "experiments/length_project/lpx_detcheck.py": "c9913ec1607c345a9d25a72b709dcf51fa4d46dbc3d8b1641b65f37d085adb64",
+   "experiments/length_project/lpx_docs.py": "d84f7255a3c4063f38cb6cd3f7ef6e2c539ff3e3a239c35d41e63813ab387dba",
+   "experiments/length_project/lpx_ds.py": "abd31f4e91231c820ebd779ce0299c8c4488a9dc56aa9bbef24465666367904d",
+   "experiments/length_project/lpx_edit.py": "62b9e09b17ff4cfb771cbaa2d0adeb24db0e42e67b26b51ba40e6ab264b65537",
+   "experiments/length_project/lpx_figs.py": "be855f7d12189ea68c7b6afef0cfaed7a38c53ba0a868ca1e998d1fe2bebe4b3",
+   "experiments/length_project/lpx_freeze.py": "db415ac01dfe0b50a27e3f6b575aaffc90d6bca0dda7bc4c8bf6587b23a9bb3f",
+   "experiments/length_project/lpx_fsp.py": "2b3e5fbec9032544f9db2dc5268e0dc4826c24ee8d8d97653a9b2624b0d7e43f",
+   "experiments/length_project/lpx_invariance.py": "ffcb56ee32677079a8213d39c8be6377d8b9d163b8057106cb2c90f3b11bb49c",
+   "experiments/length_project/lpx_manifest.py": "2717410f5bcd215676aaff4563ec9d26b060597d73632c0ec28ebc1da7d5822e",
+   "experiments/length_project/lpx_mine.py": "88db776164814fb2520407851584c16a3a2046d811f2a62c5b4061e5f9afaeeb",
+   "experiments/length_project/lpx_model.py": "8c127b06a56e3bd2a90ba60cdd4441510aeeaa471641c95ca0347e9c560c52b7",
+   "experiments/length_project/lpx_nat.py": "5d49c7bf87a557b4720089cd0d8ec391a4df76db996efb822b72396ba1605991",
+   "experiments/length_project/lpx_overlap.py": "bcd203d9df1ce104ca13791d74529a9eacec7063f2fcf74e3e5d021187ce70d4",
+   "experiments/length_project/lpx_pccheck.py": "115b50475ae8f6644f7f2bc56258e2507c786a019a2a51f1b81ccdf2901d3080",
+   "experiments/length_project/lpx_results_tables.py": "d5131b34519b007335172dc49386f03ccaf3d9de56c5611c0197174de0df3705",
+   "experiments/length_project/lpx_screen.py": "eb0ee0cb11f7f9c62cb97999242c6d08157e0a97395e43c6c995c57866135f7b",
+   "experiments/length_project/lpx_shortcut.py": "c05b3d7bcfd4c3dddbc8facc10b419906d72f31d65d9618e2613113ff1c5b3d8",
+   "experiments/length_project/lpx_smoke.py": "cbbc57931d6ac6d051fcab07e1a3802e63c846b5633a166b8dbf174bee5b257c",
+   "experiments/length_project/lpx_tables.py": "c516589327d65dc5abbc2cfd720f802b496c3461fcd07dcaa3fdc39f177086f1",
+   "experiments/length_project/lpx_train.py": "09e7943fbacbeb2faf25731f475d0da1e8a186a1f0113e7d830f8730b3509d52",
+   "experiments/algo_investigation/dr_worker.py": "184e45db376cbd96f2b54c05ef52f8a86374830cf6f17b6efe2c6ef2cff1ec53",
+   "experiments/algo_investigation/fs_analyze_lib.py": "c6ad0e52fd896978c47a18fc7bfe6de2389f7532b0d6b44a1eb8f7ec92e02465",
+   "experiments/multimodel/mm_common.py": "aaff285c6a3b9a05e306b9eb53977e702bd2d03cf4690e8d36d7475135e61152",
+   "experiments/multimodel/mm_adapters.py": "b1b9aa7b6d2a64c1026078902ee105530c62d5ae04d5cdea4294452540fe02b7"
+  }
+ },
+ "protocol": {
+  "bank": "report",
+  "benchmark": "list_easy_fam (List Functions-Easy, 64 report families, frozen Section-4.2 manifests)",
+  "M": 4,
+  "J": [
+   1,
+   2,
+   4,
+   8
+  ],
+  "K_by_J": {
+   "1": 64,
+   "2": 32,
+   "4": 16,
+   "8": 8
+  },
+  "beta": 0,
+  "placement": "master",
+  "chunk": 32,
+  "p0_replay": false,
+  "predictor": "evaluated once per compact prompt (one placeholder per target); per-site distributions saved to eval/<run>_listbench_report.npz",
+  "allocation": "candidate k, site j: L = F_q^{-1}(u), u = SHA-256('lpx-alloc-v1', bank, backbone, family, J, k, j); 64 rows saved per family, the first K_by_J[J] used",
+  "oracle_condition": {
+   "llada": {
+    "1": "final_sweeps/pools/report/llada/list_easy_fam_M4_J1_il.jsonl",
+    "2": "final_sweeps/pools/report/llada/list_easy_fam_M4_J2_il.jsonl",
+    "4": "final_sweeps/pools/report/llada/list_easy_fam_M4_J4_il.jsonl",
+    "8": "final_sweeps/pools/report/llada/list_easy_fam_M4_J8_il.jsonl"
+   },
+   "nemotron": {
+    "1": "final_sweeps/pools/report/nemotron_pt/list_easy_fam_M4_J1_il.jsonl",
+    "2": "final_sweeps/pools/report/nemotron_pt/list_easy_fam_M4_J2_il.jsonl",
+    "4": "final_sweeps/pools/report/nemotron_pt/list_easy_fam_M4_J4_il.jsonl",
+    "8": "final_sweeps/pools/report/nemotron_pt/list_easy_fam_M4_J8_il.jsonl"
+   },
+   "dqwen": {
+    "1": "final_sweeps/pools/report/dqwen/list_easy_fam_M4_J1_il.jsonl",
+    "2": "final_sweeps/pools/report/dqwen/list_easy_fam_M4_J2_il.jsonl",
+    "4": "final_sweeps/pools/report/dqwen/list_easy_fam_M4_J4_il.jsonl",
+    "8": "final_sweeps/pools/report/dqwen/list_easy_fam_M4_J8_il.jsonl"
+   }
+  },
+  "oracle_pool_sha256": {
+   "llada": {
+    "1": "6805776b5a1fb8a7124a7e00168097f95fe499918c5ca0a3c47ed38d3be21d4c",
+    "2": "c2bc24a17ad1f4c08845772970601b73612da9007e7333b52be61e795dea7635",
+    "4": "9ebc7dadf600fc5810a7b81ad49f301f346fd79284f241ef9b8144db3fe3faef",
+    "8": "e6746617249b4fd64484d7f236633e4e87591eeaf03624464cb1c94454758742"
+   },
+   "nemotron": {
+    "1": "685ee9ebb6cd888c018481f2ce91fdb2a72f2f66689ef63a7fc072b7304635d9",
+    "2": "afae35a34410bea2ee20bd4c0a956e8d23a26cc235c6e31eb7dd657a75c1a95d",
+    "4": "9a922b3baa12e1b53c67d7ec728aa361701cb9d127028c51e8256e1197cfef4d",
+    "8": "f80620cb77d8b454c463e26c0b81018c6959ef3fffd9f34982b124a48ecf1546"
+   },
+   "dqwen": {
+    "1": "e3481cb93e1caf2ac41ec0f5a92e0aabffb411861ca597e5277423da7c570d23",
+    "2": "150f8a643bae24acd994e441f4260c14f124b6c8e47f0aaae10dd69021512144",
+    "4": "7d5f31091874dac05bacd63032aefa4cd94a470bda8a6ab1c074bd3ac65b90f7",
+    "8": "aa228bf82d7c380179011987b13ef7a8bc6e9e4fe5acd14a61c84b65af95b341"
+   }
+  },
+  "manifest": "final_sweeps/manifests/report/list_easy_fam.jsonl",
+  "manifest_sha256": "308de4d9a5aa58fd3443874d723e31e741b00dc147a6ea0b8e26c125c3665475",
+  "perturbation": {
+   "deltas": [
+    -2,
+    -1,
+    1,
+    2
+   ],
+   "J": [
+    1,
+    2
+   ],
+   "K": "64 / J",
+   "rule": "every candidate gets L*_j + delta; families with any L*_j + delta < 1 skipped and counted; delta 0 = the oracle pool"
+  }
+ },
+ "analysis": {
+  "length_metrics": "P_r = sum_{|l - L*| <= r} q(l), r = 0, 1, 2; NLL; expected absolute error; mode exact; ECE of the mode — per site, averaged within family, then over families",
+  "downstream": "A_target and A_all at beta = 0 (uniform weights over the K candidates); learned - oracle per family; paired family bootstrap, 10,000 resamples, seed SHA-256('lpx-bootstrap-v1')",
+  "secondary": "length-exact rate of realised allocations; Pr(L != L* | target correct); generated target tokens per family"
+ },
+ "history": [
+  {
+   "stage": "complete dqwen",
+   "at_utc": "2026-10-07 15:11:03",
+   "previous_sha256": "e0ecb5ac8336fd205771446496513cf43a00a07052dfee1dcd08ee3e49550c5d"
+  }
+ ]
+}

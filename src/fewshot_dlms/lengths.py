@@ -1,4 +1,4 @@
-# ported from editdiff/experiments/length_project/lpx_alloc.py, experiments/length_project/lpx_model.py::{StopForward, Trunk, Branch}, experiments/length_pilot/lp_model.py::{rot_half, block_forward, Packed, Trunk, Branch, load_branch, predict} and experiments/length_pilot/lp_common.py::{collapse_window, L_MAX} @ d276fa6
+# ported from editdiff/experiments/length_project/lpx_alloc.py, experiments/length_project/lpx_ds.py (length_mass), experiments/length_project/lpx_model.py::{StopForward, Trunk, Branch, site_metrics}, experiments/length_pilot/lp_model.py::{rot_half, block_forward, Packed, Trunk, Branch, load_branch, predict} and experiments/length_pilot/lp_common.py::{collapse_window, L_MAX} @ d276fa6
 """Target lengths (Section 3.3, Section 4.3, Appendix B.5): allocation modes and the learned length head.
 
 A masked target needs a token count before the model fills it: a canvas with L_j masks at target j can only
@@ -171,6 +171,68 @@ def section43_seed(bank, backbone, episode_id, J):
     episode_id the family (e.g. "list_easy_fam:report:000") and J its number of targets.
     """
     return (bank, backbone, episode_id, J)
+
+
+# ---------------------------------------------------------------------------------------------
+# How good a length distribution is (Section 4.3, Appendix B.5)
+# ---------------------------------------------------------------------------------------------
+
+
+def length_mass(probs, lengths, radius):
+    """P_r of every site: the probability mass a length distribution puts within `radius` tokens of the reference.
+
+    probs    array [S, lmax]: site s's probabilities over the lengths 1..lmax
+    lengths  array [S]: the reference length L* of each site
+    Returns [S]: sum of probs[s, l - 1] over |l - L*_s| <= radius (P_0 = the mass on the exact length). Sums are taken
+    over the slice of the support, in the order of the authors' analysis (lpx_ds.py), so they are bit-identical to it.
+    """
+    lmax = probs.shape[1]
+    return np.array([probs[s, max(0, lengths[s] - 1 - radius) : min(lmax, lengths[s] + radius)].sum() for s in range(len(lengths))])
+
+
+def site_metrics(probs, lengths, lmax=L_MAX):
+    """Summary of per-site length distributions against the reference lengths (lpx_model.site_metrics).
+
+    probs [S, lmax] probabilities over 1..lmax; lengths [S] reference lengths (may exceed lmax: out of support).
+    Returns the site means of P_0, P_1, P_2 (mass within 0, 1, 2 tokens), the NLL of the reference (in-support sites),
+    the expected absolute error E|L - L*|, how often the mode is exact, and the calibration error of the mode (ECE over
+    10 confidence bins). The trainer's development evaluation (experiments/fig6_lengths/train_head.py) reports these.
+    """
+    S = len(lengths)
+    support = np.arange(1, lmax + 1)
+    in_support = lengths <= lmax
+    clipped = np.clip(lengths, 1, lmax)
+
+    def within(radius):
+        values = []
+        for s in range(S):
+            if lengths[s] - radius <= lmax:
+                values.append(probs[s, max(0, lengths[s] - 1 - radius) : min(lmax, lengths[s] + radius)].sum())
+            else:
+                values.append(0.0)
+        return np.array(values)
+
+    p0 = np.where(in_support, probs[np.arange(S), clipped - 1], 0.0)
+    mode = probs.argmax(1) + 1
+    confidence = probs.max(1)
+    ece = 0.0
+    bins = np.minimum((confidence * 10).astype(int), 9)
+    for b in range(10):
+        in_bin = bins == b
+        if in_bin.any():
+            ece += in_bin.mean() * abs(confidence[in_bin].mean() - (mode[in_bin] == lengths[in_bin]).mean())
+    nll = -np.log(np.clip(p0, 1e-300, None))
+    return {
+        "sites": int(S),
+        "out_of_support": float((~in_support).mean()),
+        "P0": float(p0.mean()),
+        "P1": float(within(1).mean()),
+        "P2": float(within(2).mean()),
+        "nll_site": float(nll[in_support].mean()) if in_support.any() else float("nan"),
+        "eae": float((probs * np.abs(support[None, :] - lengths[:, None])).sum(1).mean()),
+        "mode_exact": float((mode == lengths).mean()),
+        "ece_mode": float(ece),
+    }
 
 
 # ---------------------------------------------------------------------------------------------
@@ -572,3 +634,23 @@ class LengthHead:
         seed = section43_seed("report", head.backbone, episode_id, J) they are the paper's Section 4.3 draws.
         """
         return sample_allocations(self.predict(canvas), K, seed)
+
+
+def fresh_head(adapter, lmax=L_MAX, seed=0):
+    """A LengthHead on a loaded adapter with an untrained branch: the training start of Appendix B.5.
+
+    The branch copies the adapter's last block and final norm and draws its head weights with standard deviation 1e-3
+    from a generator seeded by `seed` (Branch). The adapter's own weights are frozen here; experiments/fig6_lengths/train_head.py trains
+    the branch.
+    """
+    if adapter.name not in BACKBONE_OF_ADAPTER:
+        raise ValueError(f"no length head for adapter {adapter.name!r}; expected one of {sorted(BACKBONE_OF_ADAPTER)}")
+    backbone = BACKBONE_OF_ADAPTER[adapter.name]
+    for parameter in adapter.model.parameters():
+        parameter.requires_grad_(False)
+    if backbone == "llada":
+        trunk = _LLaDATrunk(adapter)
+    else:
+        trunk = _CaptureTrunk(adapter, backbone)
+    branch = Branch(trunk.last, trunk.norm, trunk.width, lmax=lmax, seed=seed).to(trunk.device)
+    return LengthHead(adapter, backbone, trunk, branch, {"backbone": backbone, "lmax": lmax})
