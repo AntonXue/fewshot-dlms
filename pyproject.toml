@@ -19,6 +19,9 @@ judge = ["anthropic>=0.40"]
 dev = ["pytest>=8"]
 # pyarrow 26 needs NumPy 2, but the core dependencies pin numpy==1.26.4.
 data = ["datasets>=3", "pyarrow<26"]
+# GPU runs: the Triton kernels dQwen3.5's linear-attention layers used in the paper's runs (with fla-core 0.5.1).
+# Do not install causal-conv1d: transformers would then switch dQwen to a different convolution kernel.
+gpu = ["flash-linear-attention==0.5.1"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

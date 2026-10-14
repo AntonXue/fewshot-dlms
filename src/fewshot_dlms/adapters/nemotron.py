@@ -18,7 +18,10 @@ head reads the hidden state at the masked position itself (no shift). The mask t
 The checkpoint is nvidia/Nemotron-Labs-Diffusion-8B at a pinned revision, loaded in bf16 with its own
 modelling code (trust_remote_code). The attention pattern above is passed to the model through a
 registered attention function (`padmask_sdpa`), the authors' shim; see `_register_mask_attention`.
+Several Nemotron instances can live in one process: each keeps its own mask.
 """
+import weakref
+
 import torch
 from transformers import AutoModel
 from transformers import AutoTokenizer
@@ -35,24 +38,36 @@ EOS_ID = 11  # <|im_end|>
 MODES = {"prefix_tail": "nemotron_pt"}
 
 
-def _register_mask_attention(explicit_mask):
-    """Register the attention function `padmask_sdpa`: SDPA with an explicit boolean mask when one is set.
+# Attention layer -> the explicit-mask holder of the Nemotron instance that owns the layer. The attention
+# function is registered once per process under one name, so it looks up the calling layer here: every
+# instance (the prefix/tail interface, and later the causal-suffix one) sees only its own mask.
+_MASK_HOLDERS = weakref.WeakKeyDictionary()
 
-    `explicit_mask["mask"]` is None or a boolean tensor [B, 1, T, T] (True = may attend). While it is set
-    and matches the key length, every attention layer uses it in place of the model's own mask, with
-    is_causal=False; otherwise the layer runs plain SDPA as the model asks. This is how the prefix/tail
-    mask (and the key-validity mask for right padding) reaches the model, which is called without an
-    attention mask.
+
+def padmask_sdpa(module, query, key, value, attention_mask, **kwargs):
+    """SDPA with the explicit boolean mask of the calling layer's instance, when one is set.
+
+    The holder's "mask" is None or a boolean tensor [B, 1, T, T] (True = may attend). While it is set and
+    matches the key length, the layer uses it in place of the model's own mask, with is_causal=False;
+    otherwise the layer runs plain SDPA as the model asks.
     """
+    holder = _MASK_HOLDERS.get(module)
+    mask = holder["mask"] if holder is not None else None
+    if mask is not None and mask.shape[-1] == key.shape[-2]:
+        kwargs["is_causal"] = False
+        return sdpa_attention_forward(module, query, key, value, mask, **kwargs)
+    return sdpa_attention_forward(module, query, key, value, attention_mask, **kwargs)
 
-    def padmask_sdpa(module, query, key, value, attention_mask, **kwargs):
-        mask = explicit_mask["mask"]
-        if mask is not None and mask.shape[-1] == key.shape[-2]:
-            kwargs["is_causal"] = False
-            return sdpa_attention_forward(module, query, key, value, mask, **kwargs)
-        return sdpa_attention_forward(module, query, key, value, attention_mask, **kwargs)
 
+def _register_mask_attention(attention_layers, explicit_mask):
+    """Route the attention of these layers through `padmask_sdpa`, reading the mask from `explicit_mask`.
+
+    This is how the prefix/tail mask (and the key-validity mask for right padding) reaches the model, which
+    is called without an attention mask. The caller also sets each layer's `_attn_implementation`.
+    """
     ALL_ATTENTION_FUNCTIONS["padmask_sdpa"] = padmask_sdpa
+    for layer in attention_layers:
+        _MASK_HOLDERS[layer] = explicit_mask
 
 
 class Nemotron(Adapter):
@@ -81,7 +96,7 @@ class Nemotron(Adapter):
         assert config.dlm_paradigm == "bidirectional" and config.mask_token_id == MASK_ID
         self.layers = self.model.encoder.layers
         self.explicit_mask = {"mask": None}
-        _register_mask_attention(self.explicit_mask)
+        _register_mask_attention([layer.self_attn for layer in self.layers], self.explicit_mask)
         config._attn_implementation = "padmask_sdpa"
         for layer in self.layers:
             layer.self_attn.config._attn_implementation = "padmask_sdpa"

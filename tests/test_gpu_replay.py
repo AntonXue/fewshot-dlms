@@ -7,9 +7,11 @@ ell0 = log P0 (demonstration outputs masked at E). The tests rebuild each canvas
 canvas.py and the model's tokenizer, check that it is the frozen prompt token for token, and score the
 stored tokens with the fixed-order loop of Lemma 3.1 (adapters/base.py):
 
-  - one candidate at a time with logprob_fixed_order, which agrees up to bf16 batch noise;
+  - one candidate at a time with logprob_fixed_order (the first N_CANDIDATES distinct candidates of each
+    record), which agrees up to bf16 batch noise;
   - with the frozen run's own batches, which on the authors' platform is exact for LLaDA-1.5 and
-    Nemotron (tests/gpu_util.py explains both tolerances).
+    Nemotron (tests/gpu_util.py explains both tolerances). For dQwen3.5 this test also checks that the
+    linear-attention kernels are those of the paper's runs (flash-linear-attention 0.5.1).
 
 GPU only (`make test-gpu`); needs the three pinned checkpoints (see README.md).
 """
@@ -24,10 +26,12 @@ from fewshot_dlms.adapters.base import context_ids
 from fewshot_dlms.adapters.base import logprob_fixed_order
 from fewshot_dlms.adapters.base import reveal
 from fewshot_dlms.adapters.base import reveal_order
+from fewshot_dlms.adapters.dqwen import PAPER_KERNELS
 from fewshot_dlms.canvas import build_canvas
 from fewshot_dlms.data import load_families
 from fewshot_dlms.data import read_jsonl
 from tests.gpu_util import batched_tolerance
+from tests.gpu_util import on_reference_platform
 from tests.gpu_util import release
 from tests.gpu_util import tolerance
 
@@ -39,7 +43,7 @@ POOL = {
     "dqwen": "fig5/dqwen_M4_J2.jsonl",
 }
 N_RECORDS = 2  # pool records (families) per model
-N_CANDIDATES = 4  # candidates scored one at a time per record
+N_CANDIDATES = 4  # distinct candidates scored one at a time per record (fewer if the record has fewer)
 
 
 @pytest.fixture(scope="module", params=list(POOL))
@@ -70,6 +74,18 @@ def sha256_of(ids):
     return hashlib.sha256(json.dumps(ids).encode()).hexdigest()
 
 
+def distinct_candidates(record, n):
+    """The first n candidates of a record with distinct token ids, in stored order."""
+    seen = set()
+    chosen = []
+    for candidate in record["candidates"]:
+        toks = tuple(candidate["toks"])
+        if toks not in seen and len(chosen) < n:
+            seen.add(toks)
+            chosen.append(candidate)
+    return chosen
+
+
 def assert_close(replayed, stored, limit, where):
     assert abs(replayed - stored) <= limit, (where, replayed, stored, limit)
 
@@ -87,7 +103,7 @@ def test_replay_reproduces_stored_loglik(adapter, families, root):
     limit = tolerance(adapter.name)
     for record in records_of(root, adapter.name):
         canvas = canvas_of(adapter, families, record)
-        for candidate in record["candidates"][:N_CANDIDATES]:
+        for candidate in distinct_candidates(record, N_CANDIDATES):
             ell1, _ = logprob_fixed_order(adapter, canvas, candidate["toks"], hide_E=False)
             ell0, _ = logprob_fixed_order(adapter, canvas, candidate["toks"], hide_E=True)
             where = (adapter.name, record["episode_id"], "one at a time")
@@ -97,7 +113,7 @@ def test_replay_reproduces_stored_loglik(adapter, families, root):
             assert adapter.block_start == record["block_start"]
 
 
-def test_replay_with_the_frozen_batches(adapter, families, root):
+def test_replay_with_the_frozen_batches(adapter, families, root, record_property):
     """Score in the batches of the frozen run: exact on the authors' platform for LLaDA and Nemotron.
 
     The frozen run sampled P1 with all K draws in one reveal, so each forward pass held the distinct
@@ -106,6 +122,10 @@ def test_replay_with_the_frozen_batches(adapter, families, root):
     """
     name = adapter.name
     limit = batched_tolerance(name)
+    if name == "dqwen":
+        record_property("dqwen_kernels", adapter.kernels)
+        if on_reference_platform():
+            assert adapter.kernels == PAPER_KERNELS
     allowed = adapter.support("ordinary")
     for record in records_of(root, name):
         canvas = canvas_of(adapter, families, record)

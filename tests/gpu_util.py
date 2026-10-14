@@ -9,8 +9,9 @@ stored values only up to this batch noise.
 
 Scoring with the frozen run's batches removes it. On the authors' platform (REFERENCE_GPU, REFERENCE_TORCH)
 LLaDA-1.5 and Nemotron then reproduce every stored log-likelihood bit for bit. dQwen3.5 does not: its
-Gated-DeltaNet layers run Triton kernels (flash-linear-attention) whose configuration is autotuned
-afresh in every process, so its logits vary from process to process even with identical batches.
+Gated-DeltaNet layers run Triton kernels (flash-linear-attention 0.5.1, as in the paper's runs) whose
+configuration is autotuned afresh in every process, so its logits vary from process to process even with
+identical batches.
 """
 import gc
 
@@ -30,7 +31,16 @@ TOLERANCES = {
 
 REFERENCE_GPU = "NVIDIA H100 NVL"  # the GPU of the authors' runs
 REFERENCE_TORCH = "2.7.1+cu128"  # the torch build of the authors' runs
-BIT_EXACT = ("llada", "nemotron_pt")  # models whose replay with the frozen run's batches is exact there
+
+# Tolerance on the reference platform when scoring with the frozen run's batches. LLaDA-1.5 and Nemotron are
+# bit-exact there. dQwen3.5 depends on the process: in 10 separate processes (two H100 NVLs) replaying the
+# two fixture records (every candidate's ell1 and ell0, the reference answer's ell0), 7 reproduced
+# every value exactly and 3 differed by at most 0.372; the tolerance leaves a margin of about a third.
+BATCHED_TOLERANCES = {
+    "llada": 0.0,
+    "nemotron_pt": 0.0,
+    "dqwen": 0.5,
+}
 
 
 def tolerance(name):
@@ -44,9 +54,12 @@ def on_reference_platform():
 
 
 def batched_tolerance(name):
-    """Tolerance when scoring with the frozen run's batches: 0 where replay is bit-exact, else `tolerance`."""
-    if name in BIT_EXACT and on_reference_platform():
-        return 0.0
+    """Tolerance when scoring with the frozen run's batches: BATCHED_TOLERANCES on the reference platform.
+
+    Elsewhere the GPU's own kernels differ from the authors', so the one-at-a-time `tolerance` applies.
+    """
+    if on_reference_platform():
+        return BATCHED_TOLERANCES[name]
     return tolerance(name)
 
 

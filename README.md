@@ -66,6 +66,12 @@ They are downloaded into the Hugging Face cache (`$HF_HOME`) on first use. Witho
 them beforehand and set `HF_HUB_OFFLINE=1`. All three run their own modelling code (`trust_remote_code`).
 The paper's runs used one H100 (96 GB) per model; scoring one candidate at a time peaks at 15–17 GiB.
 
+For GPU runs install `pip install -e .[gpu]`. dQwen3.5's linear-attention layers get their kernels from
+whatever is installed: the paper's dQwen pools were computed with the Triton kernels of
+flash-linear-attention 0.5.1 and *without* causal-conv1d. Without fla, or with causal-conv1d installed,
+transformers silently switches to other kernels and dQwen's numbers drift from the frozen pools; the
+dQwen adapter warns when this happens.
+
 ## Reproduce in three commands
 
     pip install -e .
