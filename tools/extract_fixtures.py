@@ -22,12 +22,45 @@ Usage:
     python tools/extract_fixtures.py --src <run directory of the Section 4.2 grid>
 
 The run directory holds pools/<model>/list_easy_fam_M4_J2.jsonl and analysis/families.csv.
+
+Figure 6 (target lengths, Section 4.3) writes
+
+  fig6/head_predictions_llada.json   for the first ten report families of List Functions-Easy at M = 4
+                                     demonstrations and J = 2 targets: the frozen LLaDA-1.5 length head's
+                                     distribution over the lengths 1..256 at both sites, the SHA-256 of the
+                                     compact prompt it read, and the first 64 learned allocations the authors
+                                     drew from it
+
+The distributions are the authors' own predictions, copied from the frozen evaluation of the Section 4.3
+run (float32 values, written in their shortest round-trip form). That evaluation is the output of the
+private length-project code (lpx_model.Branch on the lp_model packed LLaDA forward pass), run once after
+the configuration freeze with
+
+    python experiments/length_project/lpx_alloc.py <length project> predict --gpu 0 --backbone llada \
+        --run fin_llada_m70_100k --data listbench_report
+
+and the allocations were drawn from them with
+
+    python experiments/length_project/lpx_alloc.py <length project> alloc --backbone llada \
+        --run fin_llada_m70_100k --bank report --K 64 --conds learned --Js 1,2,4,8
+
+tests/test_lengths.py redraws the allocations with lengths.sample_allocations; tests/test_gpu_head.py runs
+the ported head (lengths.LengthHead) on the same canvases and compares the distributions.
+
+Usage:
+    python tools/extract_fixtures.py --fixture fig6_head --src <run directory of the Section 4.3 length project>
+
+The run directory holds data/listbench_report_llada.jsonl (the compact prompts), eval/<run>_listbench_report.npz
+(the predictions) and downstream/report/llada/alloc_learned_<run>_list_easy_fam_J<J>.json (the allocations).
 """
 
 import argparse
 import csv
+import hashlib
 import json
 from pathlib import Path
+
+import numpy as np
 
 DEFAULT_DEST = Path(__file__).resolve().parents[1] / "data" / "fixtures"
 
@@ -107,12 +140,103 @@ def extract_fig5(src: Path, dest: Path) -> None:
         print(f"fig5/{fixture['stem']}: {len(records)} families {episode_ids}")
 
 
+# The Figure 6 head fixture: the frozen LLaDA-1.5 head of Section 4.3 on the first report families.
+FIG6_HEAD = {
+    "stem": "head_predictions_llada",
+    "run": "fin_llada_m70_100k",
+    "backbone": "llada",
+    "task": "list_easy_fam",
+    "bank": "report",
+    "M": 4,
+    "J": 2,
+    "n_families": 10,
+    "K": 64,  # allocations stored per family (the run drew 64 per family and used the first 64 / J = 32)
+}
+
+
+def shortest_float32(value) -> float:
+    """A float32 value as the shortest decimal that reads back as the same float32."""
+    return float(str(np.float32(value)))
+
+
+def extract_fig6_head(src: Path, dest: Path) -> None:
+    """Write fig6/head_predictions_llada.json from the frozen Section 4.3 evaluation (see the module docstring)."""
+    spec = FIG6_HEAD
+    run = spec["run"]
+    J = spec["J"]
+    rows = [json.loads(line) for line in (src / "data" / f"listbench_{spec['bank']}_{spec['backbone']}.jsonl").open()]
+    rows = [row for row in rows if row["J"] == J]
+    episode_ids = sorted(row["episode_id"] for row in rows)[: spec["n_families"]]
+    row_of = {row["episode_id"]: row for row in rows}
+
+    predictions = np.load(src / "eval" / f"{run}_listbench_{spec['bank']}.npz")
+    probs_of = dict(zip(predictions["ids"].tolist(), predictions["P"]))
+    lmax = int(predictions["lmax"])
+
+    allocation_file = f"alloc_learned_{run}_{spec['task']}_J{J}.json"
+    allocations = json.loads((src / "downstream" / spec["bank"] / spec["backbone"] / allocation_file).read_text())
+
+    canvases = []
+    for episode_id in episode_ids:
+        row = row_of[episode_id]
+        if row["labels"] != row["oracle"] or len(row["mask_positions"]) != J:
+            raise ValueError(f"unexpected compact prompt for {episode_id}")
+        probs = [[shortest_float32(p) for p in probs_of[f"{episode_id}|{J}|{j}"]] for j in range(J)]
+        canvases.append(
+            {
+                "episode_id": episode_id,
+                "oracle_L": row["oracle"],
+                "compact_sha256": hashlib.sha256(json.dumps(row["input_ids"]).encode()).hexdigest(),
+                "compact_tokens": len(row["input_ids"]),
+                "mask_positions": row["mask_positions"],
+                "probs": probs,
+                "allocations": allocations[episode_id][: spec["K"]],
+            }
+        )
+
+    fixture = {
+        "description": (
+            "Frozen Section 4.3 length head (LLaDA-1.5) on the first report families of List Functions-Easy, "
+            "M = 4, J = 2: per-site probabilities over the lengths 1..lmax (probs[j][c] is length c + 1), the "
+            "SHA-256 of the compact prompt (JSON list of token ids), and the authors' first K learned allocations, "
+            "drawn with seed (bank, backbone, family, J)"
+        ),
+        "source": "the authors' frozen Section 4.3 evaluation (lpx_alloc.py predict / alloc); see tools/extract_fixtures.py",
+        "head": {
+            "run": run,
+            "backbone": spec["backbone"],
+            "lmax": lmax,
+            "checkpoint_sha256": str(predictions["ckpt_sha"]),
+        },
+        "task": spec["task"],
+        "bank": spec["bank"],
+        "M": spec["M"],
+        "J": J,
+        "canvases": canvases,
+    }
+    out_dir = dest / "fig6"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with (out_dir / f"{spec['stem']}.json").open("w", encoding="utf-8") as handle:
+        json.dump(fixture, handle)
+        handle.write("\n")
+    print(f"fig6/{spec['stem']}: {len(canvases)} families {episode_ids[0]} .. {episode_ids[-1]}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--src", type=Path, required=True, help="run directory of the Section 4.2 grid")
+    parser.add_argument(
+        "--src",
+        type=Path,
+        required=True,
+        help="run directory of the Section 4.2 grid (fig5) or of the Section 4.3 length project (fig6_head)",
+    )
     parser.add_argument("--dest", type=Path, default=DEFAULT_DEST, help="default: data/fixtures of this repository")
+    parser.add_argument("--fixture", choices=["fig5", "fig6_head"], default="fig5", help="which fixture to write (default: fig5)")
     args = parser.parse_args()
-    extract_fig5(args.src, args.dest)
+    if args.fixture == "fig6_head":
+        extract_fig6_head(args.src, args.dest)
+    else:
+        extract_fig5(args.src, args.dest)
 
 
 if __name__ == "__main__":
