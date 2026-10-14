@@ -1,6 +1,7 @@
 """Frozen benchmark families: the loader, the checksums, and the SST-2 / MIT Movie rebuild."""
 
 import json
+import os
 
 import pytest
 
@@ -30,7 +31,28 @@ FAMILY_KEYS = {
 }
 
 
-def test_four_tasks_64_families():
+@pytest.fixture(scope="module")
+def rebuilt_text():
+    """Need the rebuilt SST-2 / MIT Movie text: skip locally, fail under CI when it is missing."""
+    try:
+        for task in TEXT_FREE_BENCHMARKS:
+            for bank in BANKS:
+                load_families(task, bank)
+    except FileNotFoundError:
+        pass
+    else:
+        return
+
+    message = (
+        "SST-2 / MIT Movie text not built: "
+        'run `pip install -e ".[data]"` and `python data/benchmarks/build.py`'
+    )
+    if os.environ.get("CI", "").lower() not in ("", "0", "false"):
+        pytest.fail(message, pytrace=False)
+    pytest.skip(message)
+
+
+def test_four_tasks_64_families(rebuilt_text):
     for task in BENCHMARKS:
         families = load_families(task, "report")
         assert len(families) == 64, task
@@ -39,7 +61,7 @@ def test_four_tasks_64_families():
         assert load_families(task) == families, task
 
 
-def test_sha_file_covers_every_family():
+def test_sha_file_covers_every_family(rebuilt_text):
     shas = json.loads((BENCHMARK_DIR / "sha256.json").read_text(encoding="utf-8"))
     recorded = {
         f"{bank}/{task}/{family['episode_id']}"
