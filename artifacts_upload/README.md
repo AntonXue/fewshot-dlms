@@ -1,6 +1,7 @@
 ---
 license: other
 license_name: fewshot-dlms-per-group
+license_link: https://huggingface.co/datasets/UT-IFML/fewshot-dlms/blob/main/README.md#licenses
 pretty_name: "Multi-Target Few-Shot Prompting with Diffusion Language Models: frozen artifacts"
 size_categories:
 - 100K<n<1M
@@ -23,8 +24,8 @@ against `SHA256SUMS`:
     python -m fewshot_dlms.fetch pools java        # what the analyses need (about 0.4 GB)
     python -m fewshot_dlms.fetch heads head_training
 
-The files land under `artifacts/` with the layout below. To check a download by hand, run `sha256sum -c SHA256SUMS`
-in that directory. This card lists what each group holds, where it came from, how it was changed on the way here,
+The files land under `artifacts/` with the layout below. To check a download by hand, run
+`sha256sum -c --ignore-missing SHA256SUMS` in that directory (`--ignore-missing` skips the groups not fetched). This card lists what each group holds, where it came from, how it was changed on the way here,
 and its license.
 
 ## Layout
@@ -116,21 +117,22 @@ models at the revisions below. Section numbers refer to the paper.
   key12(`c2a07e4a701f0a41`, `demo_ablation`, anchor, target sites, M) mod 2^31, where key12 is the first 12 hex digits
   of SHA-256 of the parts joined by `|` (`experiments/fig7_java/run.py`). The 8 pool files are the run's worker files as written; 23
   units appear in two of them with identical bytes. The verdicts were produced by Claude Sonnet 5.5 running as Claude
-  Code sub-agents with rubric r1 (`experiments/fig7_java/rubric_r1.md`, SHA-256 `7a893ac4a9d60950…`): 2,089 report
+  Code sub-agents with rubric r1 (`experiments/fig7_java/rubric_r1.md`, SHA-256 `7a893ac4a9d60950a050c16d16b3fa21e5af15c7982efeb9a87ec3f91e59f327`): 2,089 report
   packets, 46 calibration controls (`calibration/controls.jsonl`, the judge's verdicts on them in `calibration.csv`) and
   698 ablation packets. The packet texts are not shipped; `judge.py` rebuilds them byte for byte. The three `npz` files
   hold the predicted length distributions (float32, `P [214, 256]`) of head C and of two comparator heads at the 214
   target sites; the comparator heads themselves are not shipped.
-- **`heads`**. The checkpoints used for the paper's pools, re-saved without the run directory that was pickled in
-  their training configuration (see the changes below): the tensors are identical to the authors' files, byte for
-  byte. The stored pools and predictions keep recording the original files' SHA-256 (`head_ckpt_sha` in the Java pools,
-  `ckpt_sha` in the `npz` files, the freeze record); the table below maps them to the published files. Each is a
-  trainable fp32 copy of the
-  backbone's last transformer block and final norm plus a categorical head over the lengths 1..256; the backbone stays
+- **`heads`**. The checkpoints used for the paper's pools, re-saved with one entry removed from the training
+  configuration pickled in them: `root`, the authors' run directory (no other key changed). Every tensor was checked
+  to be identical to the authors' file (`torch.equal` and the raw bytes). The stored pools and predictions keep
+  recording the original files' SHA-256 (`head_ckpt_sha` in the Java pools, `ckpt_sha` in the `npz` files,
+  `checkpoint_sha256` in the freeze record); the table below maps them to the published files. Each head is a
+  trainable fp32 copy of the backbone's last transformer block and final norm plus a categorical head over the lengths 1..256; the backbone stays
   frozen. `lengths.LengthHead.load` of the code repository loads them. The benchmark heads were trained on 100,000
   prompts (70 % structured few-shot / 30 % code edits, 1,563 updates, seed 0); head C on 20,000 draws of its Java
-  corpus (50 % s5g / 50 % s5h, 313 updates, seed 0). This group has four files: the spec's "five heads" counted head C's
-  comparator, whose predictions ship as `java/length/s5g_B_s5final_G4.npz` instead of a checkpoint.
+  corpus (50 % s5g / 50 % s5h, 313 updates, seed 0). Head C's two comparator heads ship as predictions only
+  (`java/length/s5g_B_s5final_G4.npz`, `java/length/fin_llada_m70_100k_s5final_G4.npz`; the second is the LLaDA-1.5
+  benchmark head above), not as further checkpoints.
 
   | file | SHA-256 of the authors' file (recorded in pools and predictions) | SHA-256 of the published file |
   |---|---|---|
@@ -149,7 +151,7 @@ models at the revisions below. Section numbers refer to the paper.
     the repositories listed under Licenses, split by repository with seed `mtfsp-20261007-lengthproject-edit-v1`; each
     row names its repository, commit and file.
   - `listbench_dev_<backbone>.jsonl`: the List Functions–Easy development bank, M = 4, J ∈ {1, 2, 4, 8}.
-  - `configs/<head>.json`: each head's training configuration.
+  - `configs/<head>.json`: each head's training configuration, without the run directory and the GPU index.
   - `java_head_C/`: head C's training corpora as manifests (every field of a row except the token ids: repository,
     commit, file, unit, cell, labels, lengths) and the corpus audit. The rendered prompts of head C are not shipped.
 
@@ -164,7 +166,8 @@ Everything is copied byte for byte except:
   `target_inputs` and the decoded prompts `checks.p1_prompt_text` / `checks.p0_prompt_text` are replaced by their
   SHA-256 digests under the same key + `_sha256`. The reference answers and the sampled candidates stay. The code
   repository rebuilds the text from the original sources (`data/benchmarks/build.py`).
-- The training configurations lose the run directory (`root`); head C's corpora are reduced to manifests (above).
+- The training configurations lose the run directory (`root`) and the GPU index (`gpu`); head C's corpora are
+  reduced to manifests (above).
 - The four head checkpoints are loaded and saved again (`torch.save`, loadable with `weights_only=True`) with the same
   `root` entry removed from the training configuration pickled in them; nothing else in the configuration changes,
   and every tensor is identical to the original, byte for byte. Their SHA-256 therefore differ from the ones the

@@ -25,14 +25,16 @@ What changes on the way; everything else is copied byte for byte:
     (extract_fixtures.without_benchmark_text). The reference answers and the sampled candidates stay.
   - The training configs of the heads lose CONFIG_DROPPED; head C's training corpus ships as manifests, every field
     of a row except MANIFEST_DROPPED (the token ids).
-  - The head checkpoints are re-saved (torch.save) with CONFIG_DROPPED removed from the training config pickled in
-    them; their tensors are checked to be identical, byte for byte, to the authors' final.pt. The re-saved files have
+  - The head checkpoints are re-saved (torch.save) with HEAD_CONFIG_DROPPED removed from the training config pickled
+    in them; their tensors are checked to be identical, byte for byte, to the authors' final.pt. The re-saved files have
     new SHA-256s; the stored pools and predictions keep recording the original ones.
 Then it hashes the tree into SHA256SUMS (also written to the repository root, where fetch.py verifies downloads
 against it) and checks it: no record keeps a key of RUN_METADATA, no SST-2 or MIT Movie record keeps prompt text,
-and no file matches PRIVATE_PATTERN (in JSONL files, sampled candidate texts excepted). It exits with status 1 if a check fails or a source is missing.
+and no file, text or binary, matches PRIVATE_PATTERN (in JSONL files, sampled candidate texts excepted). With --check
+it also requires the tree to match the repository's SHA256SUMS and writes nothing. It exits with status 1 if a check fails or a source is missing.
 
-Re-running is safe: unchanged outputs are not rewritten and files that are no longer planned are removed. The
+Re-running is safe: unchanged outputs are not rewritten; files that are no longer planned and leftover temporary
+files (*.tmp) are removed, and any other file outside the plan stops the run. The
 upload directory is outside the repository (large files); artifacts_upload/ in the repository holds the data card,
 which is tracked, and git-ignored links to the upload directory's top-level entries.
 
@@ -91,7 +93,8 @@ HEAD_C_CORPUS = ("s5g", "s5h")
 # Keys of a record that describe the machine, the moment or the private paths of a run, not its result.
 RUN_METADATA = ("host", "hostname", "gpu_env", "gpu", "device", "pid", "cwd", "root", "wall_time", "pool_file",
                 "lengths_file")
-CONFIG_DROPPED = ("root",)  # a head's training config: the run directory
+CONFIG_DROPPED = ("root", "gpu")  # a head's training config (JSON): the run directory and the GPU index
+HEAD_CONFIG_DROPPED = ("root",)  # the config pickled in a head checkpoint: the run directory only (R33)
 MANIFEST_DROPPED = ("input_ids", "mask_positions")  # head C's corpus rows: the tokenised code
 # Text that must not reach the tree: machine paths and internal working notes (generic, no names).
 PRIVATE_PATTERN = re.compile(rb"/(?:hdd|ssd)\d|/home/|/mnt/|hand-off|\.claude")
@@ -105,7 +108,7 @@ def plan():
 
     kind is "copy" (bytes), "jsonl" (records without RUN_METADATA and benchmark text), "config" (JSON without
     CONFIG_DROPPED), "manifest" (JSONL rows without MANIFEST_DROPPED) or "head" (a checkpoint re-saved without
-    CONFIG_DROPPED in its training config).
+    HEAD_CONFIG_DROPPED in its training config).
     """
     files = []
     for bank in ("report", "dev"):
@@ -251,15 +254,15 @@ def same_tensors(original, resaved):
 
 
 def resaved_head(source, dest):
-    """Write the head checkpoint `source` to `dest` without CONFIG_DROPPED in its training config.
+    """Write the head checkpoint `source` to `dest` without HEAD_CONFIG_DROPPED in its training config.
 
     The checkpoint is {"branch": state dict, "config": training config} (lengths.LengthHead.load). It is saved under
     its final file name, which torch.save writes into the archive, so the bytes depend only on the content. The new
     file must load with weights_only=True, hold the same tensors byte for byte and the same config minus
-    CONFIG_DROPPED, and no string of the config may match PRIVATE_PATTERN. Returns True if `dest` was written.
+    HEAD_CONFIG_DROPPED, and no string of the config may match PRIVATE_PATTERN. Returns True if `dest` was written.
     """
     original = torch.load(source, map_location="cpu", weights_only=True)
-    config = {key: value for key, value in original["config"].items() if key not in CONFIG_DROPPED}
+    config = {key: value for key, value in original["config"].items() if key not in HEAD_CONFIG_DROPPED}
     if PRIVATE_PATTERN.search(json.dumps(config).encode("utf-8")):
         raise ValueError(f"{source}: the training config still holds a private path")
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -303,7 +306,19 @@ def copy_file(source, dest):
 
 
 def assemble(dest, files):
-    """Write every planned file into `dest`, copy the data card, and remove files that are no longer planned."""
+    """Write every planned file into `dest`, copy the data card, and remove files that are no longer planned.
+
+    Leftover temporary files (*.tmp, and staging directories of an interrupted head re-save) are removed first.
+    """
+    for path in sorted(dest.rglob("*"), reverse=True) if dest.is_dir() else []:
+        relative = path.relative_to(dest).as_posix()
+        if relative.startswith(".cache/") or relative == ".cache":
+            continue
+        if path.is_file() and path.name.endswith(".tmp"):
+            print(f"removed (temporary file): {relative}")
+            path.unlink()
+        elif path.is_dir() and path.parent.name == "heads" and path.name.startswith("tmp"):
+            shutil.rmtree(path)
     written = 0
     for path, source, kind in files:
         target = dest / path
@@ -333,11 +348,11 @@ def assemble(dest, files):
 
 
 def tree_files(dest):
-    """Every file of the tree that SHA256SUMS lists: all but SHA256SUMS itself, temporary files and .cache/."""
+    """Every file of the tree but SHA256SUMS itself and .cache/ (upload_large_folder's state, never uploaded)."""
     paths = []
     for path in dest.rglob("*"):
         relative = path.relative_to(dest).as_posix()
-        if relative.startswith(".cache/") or relative == "SHA256SUMS" or relative.endswith(".tmp"):
+        if relative.startswith(".cache/") or relative == "SHA256SUMS":
             continue
         if path.is_file():
             paths.append(relative)
@@ -352,12 +367,15 @@ def sha256_file(path):
     return digest.hexdigest()
 
 
-def write_sums(dest, paths):
-    """SHA256SUMS in the tree and at the repository root, in the format of sha256sum: '<hex>  <path>'."""
-    text = "".join(f"{sha256_file(dest / path)}  {path}\n" for path in paths)
+def sums_text(dest, paths):
+    """SHA256SUMS of the tree, in the format of sha256sum: '<hex>  <path>' per file, sorted by path."""
+    return "".join(f"{sha256_file(dest / path)}  {path}\n" for path in paths)
+
+
+def write_sums(dest, text):
+    """SHA256SUMS in the tree and at the repository root."""
     write_bytes(dest / "SHA256SUMS", text.encode("utf-8"))
     write_bytes(ROOT / "SHA256SUMS", text.encode("utf-8"))
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def sampled_matches(data):
@@ -381,7 +399,7 @@ def sampled_matches(data):
 
 
 def check(dest, paths):
-    """The checks of the module doc; returns the list of failures."""
+    """The checks of the module doc, on text and binary files alike; returns the list of failures."""
     failures = []
     for path in paths:
         data = (dest / path).read_bytes()
@@ -448,8 +466,9 @@ def main():
     print("warning: tools/assemble_artifacts.py reads the authors' private run directories (SOURCES block)", file=sys.stderr)
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--dest", type=Path, default=UPLOAD_DIR, help="the upload directory")
-    parser.add_argument("--check", action="store_true", help="only hash and check the existing tree")
+    parser.add_argument("--check", action="store_true", help="only hash and check the existing tree; writes nothing")
     args = parser.parse_args()
+    args.dest = args.dest.resolve()
     files = plan()
     if not args.check:
         missing = [str(source) for _, source, _ in files if not source.is_file()]
@@ -462,9 +481,17 @@ def main():
     if paths != expected:
         print(f"tree differs from the plan: extra {sorted(set(paths) - set(expected))}, missing {sorted(set(expected) - set(paths))}", file=sys.stderr)
         sys.exit(1)
-    sums_sha = write_sums(args.dest, paths)
-    link_top_level(args.dest)
-    failures = check(args.dest, paths)
+    text = sums_text(args.dest, paths)
+    failures = []
+    if args.check:
+        for manifest in (ROOT / "SHA256SUMS", args.dest / "SHA256SUMS"):
+            if not manifest.is_file() or manifest.read_text(encoding="utf-8") != text:
+                failures.append(f"{manifest} does not match the tree (run without --check to rewrite it)")
+    else:
+        write_sums(args.dest, text)
+        link_top_level(args.dest)
+    sums_sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    failures += check(args.dest, paths)
     total = summary(args.dest, paths, sums_sha)
     if total > MAX_BYTES:
         failures.append(f"tree is {total / 1e9:.1f} GB, more than {MAX_BYTES / 1e9:.0f} GB")
