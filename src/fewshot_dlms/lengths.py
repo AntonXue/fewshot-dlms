@@ -633,10 +633,13 @@ class LengthHead:
     def sample(self, canvas, K, seed):
         """K independent learned allocations for a canvas: K lists of J lengths in 1..lmax.
 
-        The head is evaluated once; the draws are sample_allocations(predict(canvas), K, seed). With
+        The head is evaluated once; its probabilities are rounded to float32 and back to float64, the precision in
+        which the paper's runs stored them before drawing (as experiments/fig6_lengths/run.py and
+        experiments/fig7_java/run.py do), and the draws are sample_allocations(those probabilities, K, seed). With
         seed = section43_seed("report", head.backbone, episode_id, J) they are the paper's Section 4.3 draws.
         """
-        return sample_allocations(self.predict(canvas), K, seed)
+        probs = self.predict(canvas).astype(np.float32).astype(np.float64)
+        return sample_allocations(probs, K, seed)
 
 
 def fresh_head(adapter, lmax=L_MAX, seed=0):
