@@ -1,4 +1,4 @@
-# ported from editdiff/experiments/multimodel/mm_common.py, experiments/sec42_mj/mj_worker.py, experiments/sec42_mj/mj_build.py::extend and experiments/example_tilting/et_common.py @ d276fa6
+# ported from editdiff/experiments/multimodel/mm_common.py, experiments/sec42_mj/mj_worker.py, experiments/sec42_mj/mj_build.py::extend, experiments/example_tilting/et_common.py and, for build_java_canvas, experiments/swe_explore/sx_common.py::{site_parts,render} with the Section 5 package's scratch/fr_lib.py @ d276fa6
 """From a frozen family to the canvas a diffusion language model fills in.
 
 A family (see data.py) holds an instruction, 16 ordered demonstrations D1..D16 and 8 ordered targets
@@ -26,6 +26,10 @@ Where the records sit: `master_layout`. This module builds the Figure 5 canvas (
 authors' code, one chat turn, J >= 1 targets) for tasks whose outputs are text: List Functions-Easy
 (checked against the authors' run), SALT and MIT Movie. The classification canvas of SST-2 (opaque
 output codes) and the one-target canvas of Figure 4 are added with their figures.
+
+`build_java_canvas` builds the canvas of Section 5 (Appendix C) from a Java episode of data/java: the
+helper the developer introduced, then the demonstrations (accepted before/after edits of other sites that
+call the helper), then the target sites with a mask span in place of the new code.
 """
 from dataclasses import dataclass
 import hashlib
@@ -231,5 +235,127 @@ def build_canvas(adapter, family, M, J, lengths, placement="interleaved"):
         "placement": placement,
         "model": getattr(adapter, "name", None),
         "slots": [entry["slot"] for entry in episode["entries"]],
+    }
+    return Canvas(ids=ids, sites=sites, E=E, gold=gold, meta=meta)
+
+
+# ---------------------------------------------------------------------------------------------
+# Java helper propagation (Section 5)
+# ---------------------------------------------------------------------------------------------
+
+# The instruction of every canvas of the main run, and the neutral instruction of the zero-demonstration
+# ablation (Appendix C), which is the same for M = 0, 1 and 2 so that the arms differ only in their demonstrations.
+JAVA_INSTRUCTION = (
+    "Apply the refactoring demonstrated in the example to every target site. "
+    "Each target's <new> block must be completed with the transformed code."
+)
+JAVA_ZERO_DEMO_INSTRUCTION = (
+    "Complete each target <new> span by applying the intended refactoring using the helper shown in the "
+    "source context; use any accepted before/after edits if provided."
+)
+
+# A site shows the lines of its enclosing method around the changed span: at most 20 before it and 12 after
+# it. Longer context is cut at the far end and marked with a "// ..." line.
+JAVA_CONTEXT_BEFORE = 20
+JAVA_CONTEXT_AFTER = 12
+JAVA_CUT_MARKER = "    // ..."
+
+
+def _java_context(site):
+    """The method lines before and after the changed span of a site, as text that surrounds the span.
+
+    Returns (head, tail). `head` is the lines before the span, each followed by a newline, and `tail` is the
+    lines after it, each preceded by a newline; either is "" when there is no such line. The lines are the
+    same before and after the commit (data/java records `method_before` only; tools/export_java.py checks it).
+    """
+    lines = site["method_before"].split("\n")
+    head_lines = lines[: site["i1"]]
+    tail_lines = lines[site["i2"] :]
+    if len(head_lines) > JAVA_CONTEXT_BEFORE:
+        head_lines = [JAVA_CUT_MARKER] + head_lines[-JAVA_CONTEXT_BEFORE:]
+    if len(tail_lines) > JAVA_CONTEXT_AFTER:
+        tail_lines = tail_lines[:JAVA_CONTEXT_AFTER] + [JAVA_CUT_MARKER]
+    head = "\n".join(head_lines)
+    tail = "\n".join(tail_lines)
+    return (head + "\n" if head else ""), ("\n" + tail if tail else "")
+
+
+def build_java_canvas(adapter, episode, M, J, lengths, instruction=JAVA_INSTRUCTION):
+    """Compile a Java helper-propagation episode into a Canvas with `lengths[j]` mask tokens at target j.
+
+    `episode` is a record of `data.load_java_episodes()`. The first `M` of its demonstrations and the first
+    `J` of its targets are used (M = 0 gives the canvas of the zero-demonstration ablation). `adapter`
+    supplies `encode`, `mask_id`, `chat_header(instruction)` and `chat_end()`. Every piece of text is
+    tokenized on its own and the token lists are concatenated, so positions are exact by construction:
+
+      chat header + instruction
+      "// <repository> <commit[:10]> <file>\n// helper, already present in the file:\n<helper>\n\n"
+      for each demonstration:
+          "// --- <File.java> : <method> ---\n<old>\n" + context + old span + context + "\n</old>\n<new>\n"
+          context + new span (their positions are collected in E) + context + "\n</new>\n\n"
+      for each target:
+          the same block with `lengths[j]` mask tokens in place of the new span (the positions of sites[j])
+      chat end
+
+    The demonstrations are the accepted before/after edits of the paper, so E marks the accepted edits
+    that P0 hides. The reference answers (`episode["reference"]`) are returned in `gold` and never enter
+    `ids`. `lengths` is the number of answer tokens given to each target: the paper's oracle setting passes
+    `episode["oracle_lengths"]`, the learned setting passes the lengths drawn from the length head.
+    Raises ValueError unless 0 <= M <= len(demos), 1 <= J <= len(targets) and there is one positive length
+    per target.
+    """
+    demos = episode["demos"]
+    targets = episode["targets_visible"]
+    if not 0 <= M <= len(demos):
+        raise ValueError(f"M must be between 0 and {len(demos)}, got {M}")
+    if not 1 <= J <= len(targets):
+        raise ValueError(f"J must be between 1 and {len(targets)}, got {J}")
+    if len(lengths) != J:
+        raise ValueError(f"expected {J} target lengths (one per target), got {len(lengths)}")
+    if any(length < 1 for length in lengths):
+        raise ValueError(f"every target needs at least one mask token, got lengths {list(lengths)}")
+
+    file_name = episode["file"].split("/")[-1]
+    header = f"{episode['repository']} {episode['commit'][:10]} {episode['file']}"
+
+    ids = list(adapter.encode(adapter.chat_header(instruction)))
+    helper_block = f"// {header}\n// helper, already present in the file:\n{episode['helper_text'].rstrip()}\n\n"
+    ids.extend(adapter.encode(helper_block))
+
+    E = []
+    for demo in demos[:M]:
+        head, tail = _java_context(demo)
+        ids.extend(adapter.encode(f"// --- {file_name} : {demo['method']} ---\n<old>\n" + head))
+        ids.extend(adapter.encode(demo["span_old"]))
+        ids.extend(adapter.encode(tail + "\n</old>\n<new>\n"))
+        ids.extend(adapter.encode(head))
+        output_ids = adapter.encode(demo["span_new"])
+        E.extend(range(len(ids), len(ids) + len(output_ids)))
+        ids.extend(output_ids)
+        ids.extend(adapter.encode(tail + "\n</new>\n\n"))
+
+    sites = []
+    for j, target in enumerate(targets[:J]):
+        head, tail = _java_context(target)
+        ids.extend(adapter.encode(f"// --- {file_name} : {target['method']} ---\n<old>\n" + head))
+        ids.extend(adapter.encode(target["span_old"]))
+        ids.extend(adapter.encode(tail + "\n</old>\n<new>\n"))
+        ids.extend(adapter.encode(head))
+        length = int(lengths[j])
+        sites.append(list(range(len(ids), len(ids) + length)))
+        ids.extend([adapter.mask_id] * length)
+        ids.extend(adapter.encode(tail + "\n</new>\n\n"))
+    ids.extend(adapter.encode(adapter.chat_end()))
+
+    gold = [reference["span_new"] for reference in episode["reference"]["targets"][:J]]
+    meta = {
+        "task": "java_helper",
+        "episode_id": episode["episode_id"],
+        "M": M,
+        "J": J,
+        "lengths": [int(length) for length in lengths],
+        "placement": "demos_first",
+        "model": getattr(adapter, "name", None),
+        "slots": [f"D{i}" for i in range(1, M + 1)] + [f"T{j}" for j in range(1, J + 1)],
     }
     return Canvas(ids=ids, sites=sites, E=E, gold=gold, meta=meta)

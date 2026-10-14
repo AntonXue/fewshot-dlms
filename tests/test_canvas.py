@@ -7,8 +7,11 @@ data/benchmarks/; the small hand-made family below is there to make the expected
 import pytest
 
 from fewshot_dlms.canvas import BASE_DEMOS
+from fewshot_dlms.canvas import JAVA_INSTRUCTION
+from fewshot_dlms.canvas import JAVA_ZERO_DEMO_INSTRUCTION
 from fewshot_dlms.canvas import active_episode
 from fewshot_dlms.canvas import build_canvas
+from fewshot_dlms.canvas import build_java_canvas
 from fewshot_dlms.canvas import extend_layout
 from fewshot_dlms.canvas import master_layout
 from fewshot_dlms.data import load_families
@@ -250,3 +253,146 @@ def test_every_frozen_layout_starts_with_a_demonstration():
 def test_more_than_four_demonstrations_need_the_list_functions_extension():
     with pytest.raises(ValueError):
         active_episode(SALT_REPORT[0], 8, 2)
+
+
+# ---------------------------------------------------------------------------------------------
+# build_java_canvas (Section 5: helper propagation)
+# ---------------------------------------------------------------------------------------------
+
+
+def java_site(name, old, new, n_head=1, n_tail=2):
+    """A site whose enclosing method has `n_head` lines before the changed line and `n_tail` after it."""
+    head = [f"    // head {i}" for i in range(n_head)]
+    tail = [f"    // tail {i}" for i in range(n_tail)]
+    return {
+        "site_id": f"{name}@1",
+        "method": name,
+        "span_old": old,
+        "span_new": new,
+        "method_before": "\n".join(head + [old] + tail),
+        "i1": n_head,
+        "i2": n_head + 1,
+    }
+
+
+def tiny_java_episode():
+    """One helper, two demonstrations and two targets, with one-line spans and short contexts."""
+    return {
+        "episode_id": "tiny_java",
+        "repository": "toy",
+        "commit": "0123456789abcdef0123456789abcdef01234567",
+        "file": "src/main/java/Util.java",
+        "helper": "twice",
+        "helper_text": "    static int twice(int x) {\n        return 2 * x;\n    }\n",
+        "demos": [
+            java_site("a", "        y = x + x;", "        y = twice(x);"),
+            java_site("b", "        z = w + w;", "        z = twice(w);"),
+        ],
+        "targets_visible": [
+            java_site("c", "        u = v + v;", None),
+            java_site("d", "        p = q + q;", None),
+        ],
+        "reference": {
+            "targets": [
+                {"site_id": "c@1", "span_new": "        u = twice(v);"},
+                {"site_id": "d@1", "span_new": "        p = twice(q);"},
+            ]
+        },
+        "M": 2,
+        "J": 2,
+    }
+
+
+def test_java_canvas_spells_the_prompt():
+    adapter = FakeAdapter()
+    canvas = build_java_canvas(adapter, tiny_java_episode(), 2, 2, [3, 2])
+    expected = (
+        "<h>" + JAVA_INSTRUCTION
+        + "// toy 0123456789 src/main/java/Util.java\n"
+        + "// helper, already present in the file:\n"
+        + "    static int twice(int x) {\n        return 2 * x;\n    }\n\n"
+        + "// --- Util.java : a ---\n<old>\n    // head 0\n        y = x + x;\n    // tail 0\n    // tail 1\n</old>\n"
+        + "<new>\n    // head 0\n        y = twice(x);\n    // tail 0\n    // tail 1\n</new>\n\n"
+        + "// --- Util.java : b ---\n<old>\n    // head 0\n        z = w + w;\n    // tail 0\n    // tail 1\n</old>\n"
+        + "<new>\n    // head 0\n        z = twice(w);\n    // tail 0\n    // tail 1\n</new>\n\n"
+        + "// --- Util.java : c ---\n<old>\n    // head 0\n        u = v + v;\n    // tail 0\n    // tail 1\n</old>\n"
+        + "<new>\n    // head 0\n___\n    // tail 0\n    // tail 1\n</new>\n\n"
+        + "// --- Util.java : d ---\n<old>\n    // head 0\n        p = q + q;\n    // tail 0\n    // tail 1\n</old>\n"
+        + "<new>\n    // head 0\n__\n    // tail 0\n    // tail 1\n</new>\n\n"
+        + "<e>"
+    )
+    assert adapter.decode(canvas.ids) == expected
+
+
+def test_java_canvas_E_is_the_accepted_edits_and_gold_the_references():
+    adapter = FakeAdapter()
+    canvas = build_java_canvas(adapter, tiny_java_episode(), 2, 2, [3, 2])
+    assert canvas.E == sorted(canvas.E)
+    assert adapter.decode([canvas.ids[position] for position in canvas.E]) == "        y = twice(x);        z = twice(w);"
+    assert canvas.gold == ["        u = twice(v);", "        p = twice(q);"]
+    assert [len(site) for site in canvas.sites] == [3, 2]
+    assert canvas.sites[1][0] > canvas.sites[0][-1]
+    assert canvas.meta["task"] == "java_helper"
+    assert canvas.meta["episode_id"] == "tiny_java"
+    assert (canvas.meta["M"], canvas.meta["J"]) == (2, 2)
+    assert canvas.meta["lengths"] == [3, 2]
+    assert canvas.meta["slots"] == ["D1", "D2", "T1", "T2"]
+    assert canvas.meta["model"] == "fake"
+
+
+def test_java_canvas_uses_the_first_M_demonstrations_and_first_J_targets():
+    adapter = FakeAdapter()
+    canvas = build_java_canvas(adapter, tiny_java_episode(), 1, 1, [4])
+    text = adapter.decode(canvas.ids)
+    assert "Util.java : a ---" in text
+    assert "Util.java : b ---" not in text
+    assert "Util.java : c ---" in text
+    assert "Util.java : d ---" not in text
+    assert canvas.gold == ["        u = twice(v);"]
+    assert len(canvas.sites) == 1
+
+
+def test_java_canvas_without_demonstrations_has_empty_E():
+    adapter = FakeAdapter()
+    canvas = build_java_canvas(adapter, tiny_java_episode(), 0, 2, [3, 2], instruction=JAVA_ZERO_DEMO_INSTRUCTION)
+    text = adapter.decode(canvas.ids)
+    assert canvas.E == []
+    assert text.startswith("<h>" + JAVA_ZERO_DEMO_INSTRUCTION + "// toy")
+    assert text.count("\n<old>\n") == 2
+    assert text.count("</old>\n<new>\n") == 2
+    assert canvas.meta["slots"] == ["T1", "T2"]
+
+
+def test_java_canvas_trims_long_contexts_like_the_authors_renderer():
+    adapter = FakeAdapter()
+    episode = tiny_java_episode()
+    episode["demos"] = []
+    episode["targets_visible"] = [java_site("c", "        u = v + v;", None, n_head=25, n_tail=15)]
+    episode["reference"]["targets"] = episode["reference"]["targets"][:1]
+    canvas = build_java_canvas(adapter, episode, 0, 1, [1])
+    text = adapter.decode(canvas.ids)
+    # 20 lines before the changed span (behind a "// ..." marker), 12 after (before one); the old and
+    # the new block of the target each show them.
+    assert text.count("    // head") == 2 * 20
+    assert "    // head 4\n" not in text
+    assert "    // head 5\n" in text
+    assert "    // tail 11\n    // ...\n" in text
+    assert "    // tail 12" not in text
+    assert "<old>\n    // ...\n    // head 5" in text
+
+
+def test_java_canvas_rejects_bad_arguments():
+    adapter = FakeAdapter()
+    episode = tiny_java_episode()
+    with pytest.raises(ValueError):
+        build_java_canvas(adapter, episode, 2, 2, [3])
+    with pytest.raises(ValueError):
+        build_java_canvas(adapter, episode, 2, 2, [3, 0])
+    with pytest.raises(ValueError):
+        build_java_canvas(adapter, episode, 3, 2, [3, 2])
+    with pytest.raises(ValueError):
+        build_java_canvas(adapter, episode, -1, 2, [3, 2])
+    with pytest.raises(ValueError):
+        build_java_canvas(adapter, episode, 2, 3, [3, 2, 1])
+    with pytest.raises(ValueError):
+        build_java_canvas(adapter, episode, 2, 0, [])
