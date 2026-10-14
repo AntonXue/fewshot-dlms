@@ -7,7 +7,8 @@ reproduce data/tables/fig5/ to 1e-9 in every numeric column (and exactly in ever
   cells.csv        Figure 5 and Section 4.2: A_all, A_target and the paired gains per (model, M, J, beta)
   gold.csv         gold-answer support per (model, M, J)
   diagnostics.csv  pool coverage, reward spread, ESS per (model, M, J)
-  sharpening.csv   M x J sharpening figure (Fig. 10 ACL / Fig. 11 arXiv): sharpening control vs example guidance per (model, M, J)
+  sharpening.csv   M x J sharpening figure (Fig. 10 ACL / Fig. 11 arXiv): sharpening control vs example guidance
+                   per (model, M, J)
   mechanism.csv    mechanism figure (Fig. 8, both builds): gold NLL by reveal position, cross-benchmark study, J = 8
 
 The parity tests need the fetched pools (`python -m fewshot_dlms.fetch pools java`). The other tests run

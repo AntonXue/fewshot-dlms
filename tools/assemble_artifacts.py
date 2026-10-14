@@ -33,7 +33,8 @@ Then it hashes the tree into SHA256SUMS (also written to the repository root, wh
 against it) and checks it: no record keeps a key of RUN_METADATA, no SST-2 or MIT Movie record keeps prompt text,
 and no file, text or binary, matches PRIVATE_PATTERN (in JSONL files, sampled candidate texts excepted). With --check
 it also requires the tree to match the repository's SHA256SUMS and writes nothing. It exits with status 1 if a check
-fails or a source is missing, and with status 2 if tools/sources.local.json is missing or incomplete.
+fails or a source is missing, and with status 2 if tools/sources.local.json is missing or incomplete (with --check
+it needs only upload_dir).
 
 Re-running is safe: unchanged outputs are not rewritten; files that are no longer planned and leftover temporary
 files (*.tmp) are removed, and any other file outside the plan stops the run. The
@@ -99,7 +100,7 @@ HEAD_C_CORPUS = ("s5g", "s5h")
 RUN_METADATA = ("host", "hostname", "gpu_env", "gpu", "device", "pid", "cwd", "root", "wall_time", "pool_file",
                 "lengths_file")
 CONFIG_DROPPED = ("root", "gpu")  # a head's training config (JSON): the run directory and the GPU index
-HEAD_CONFIG_DROPPED = ("root",)  # the config pickled in a head checkpoint: the run directory only (R33)
+HEAD_CONFIG_DROPPED = ("root",)  # the config pickled in a head checkpoint: the run directory only; weights unchanged
 MANIFEST_DROPPED = ("input_ids", "mask_positions")  # head C's corpus rows: the tokenised code
 # Text that must not reach the tree: machine paths and internal working notes (generic, no names).
 PRIVATE_PATTERN = re.compile(rb"/(?:hdd|ssd)\d|/home/|/mnt/|hand-off|\.claude")
@@ -108,18 +109,19 @@ TOP_LEVEL = ("pools", "java", "heads", "head_training", "SHA256SUMS")
 MAX_BYTES = 12 * 10 ** 9
 
 
-def load_sources(path=SOURCES_FILE):
-    """The source directories of SOURCE_KEYS from `path` (JSON: key -> directory); exits with status 2 without it."""
+def load_sources(path=SOURCES_FILE, required=SOURCE_KEYS):
+    """The directories of `path` (JSON: key -> directory) for the keys of SOURCE_KEYS it holds; exits with status 2
+    without the file or without a key of `required`."""
     if not path.is_file():
         print(f"no {path.name}: copy tools/sources.example.json to {path} and set the authors' run directories",
               file=sys.stderr)
         sys.exit(2)
     sources = json.loads(path.read_text(encoding="utf-8"))
-    missing = [key for key in SOURCE_KEYS if key not in sources]
+    missing = [key for key in required if key not in sources]
     if missing:
         print(f"{path.name} lacks the keys {', '.join(missing)} (see tools/sources.example.json)", file=sys.stderr)
         sys.exit(2)
-    return {key: Path(sources[key]) for key in SOURCE_KEYS}
+    return {key: Path(sources[key]) for key in SOURCE_KEYS if key in sources}
 
 
 def plan(sources):
@@ -495,10 +497,10 @@ def main():
     parser.add_argument("--dest", type=Path, default=None, help="the upload directory (default: upload_dir of the sources)")
     parser.add_argument("--check", action="store_true", help="only hash and check the existing tree; writes nothing")
     args = parser.parse_args()
-    sources = load_sources()
+    sources = load_sources(required=("upload_dir",) if args.check else SOURCE_KEYS)  # --check reads only the tree
     print(f"warning: tools/assemble_artifacts.py reads the authors' private run directories ({SOURCES_FILE.name})", file=sys.stderr)
     args.dest = (args.dest or sources["upload_dir"]).resolve()
-    files = plan(sources)
+    files = plan({key: sources.get(key, Path()) for key in SOURCE_KEYS})  # --check only needs the planned names
     if not args.check:
         missing = [str(source) for _, source, _ in files if not source.is_file()]
         if missing or not CARD.is_file():

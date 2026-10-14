@@ -1,5 +1,6 @@
 # ported from editdiff/experiments/length_project/lpx_alloc.py, experiments/length_project/lpx_ds.py (length_mass), experiments/length_project/lpx_model.py::{StopForward, Trunk, Branch, site_metrics}, experiments/length_pilot/lp_model.py::{rot_half, block_forward, Packed, Trunk, Branch, load_branch, predict} and experiments/length_pilot/lp_common.py::{collapse_window, L_MAX} @ d276fa6
-"""Target lengths (Section 3.3, Section 4.3, Appendix B, Length Allocation): allocation modes and the learned length head.
+"""Target lengths (Section 3.3, Section 4.3, Appendix B, Length Allocation): allocation modes and the learned
+length head.
 
 A masked target needs a token count before the model fills it: a canvas with L_j masks at target j can only
 hold an answer of exactly L_j tokens. `allocate` gives the J target lengths of one candidate in one of three
@@ -10,7 +11,7 @@ modes:
     learned  L_j drawn from the length head below (Section 4.3; the Java head C of Section 5)
 
 The length head (Appendix B, Length Allocation)
-------------------------------
+-----------------------------------------------
 A frozen DLM reads a compact prompt z~ that holds one placeholder per target site. The hidden state that
 enters the backbone's last transformer block feeds a trainable copy of that block and of the final
 normalisation (LLaDA-1.5: block 31 of 32 and ln_f; Nemotron: layer 33 of 34 and encoder.norm; dQwen3.5:
@@ -503,7 +504,8 @@ class Branch(torch.nn.Module):
             parameter.requires_grad_(True)
 
     def param_groups(self, lr_block, lr_head, weight_decay):
-        """AdamW groups of Appendix B, Length Allocation: block and norm at lr_block, head at lr_head; no decay on vectors."""
+        """AdamW groups of Appendix B, Length Allocation: block and norm at lr_block, head at lr_head; no decay on
+        vectors."""
         block_parameters = list(self.block.parameters()) + list(self.norm.parameters())
         return [
             {"params": [p for p in block_parameters if p.ndim >= 2], "lr": lr_block, "weight_decay": weight_decay},
@@ -514,7 +516,8 @@ class Branch(torch.nn.Module):
 
 
 class LengthHead:
-    """A frozen DLM with a trained length branch: per-site length distributions for a canvas (Appendix B, Length Allocation)."""
+    """A frozen DLM with a trained length branch: per-site length distributions for a canvas (Appendix B, Length
+    Allocation)."""
 
     def __init__(self, adapter, backbone, trunk, branch, config):
         self.adapter = adapter

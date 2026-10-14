@@ -84,7 +84,8 @@ M_GRID = [1, 2, 4, 8, 16]
 J_GRID = [1, 2, 4, 8]
 CROSSBENCH_M = 4
 BETAS = [0, 0.025, 0.05, 0.125, 0.25, 0.5, 1, 2]  # beta = 0 is ordinary sampling (the paper's beta grid, as frozen)
-TAUS = [1, 0.85, 0.7, 0.5, 0.35, 0.25, 0.1]  # Appendix B, Likelihood Sharpening: temperatures of power sampling, P1^(1/tau)
+# Appendix B, Likelihood Sharpening: temperatures of power sampling, P1^(1/tau)
+TAUS = [1, 0.85, 0.7, 0.5, 0.35, 0.25, 0.1]
 FIGURE_BETA = 0.5  # the common guidance strength of Figure 4
 NBOOT = 10000
 BOOTSTRAP_SEED = "mtfsp-20261003-bootstrap-v1"  # cell key f"{model}|{task}"
@@ -122,7 +123,8 @@ FROZEN_LOCK_CELLS = {
 }
 
 # Appendix B, Likelihood Sharpening: the sharpening residuals use LLaDA-1.5's report pools at M = 4: J = 1 is the
-# Section 4.1 pool, J = 4 and J = 8 the cross-benchmark pools. Their own family resamples: cell key f"llada|{task}|44|J{J}".
+# Section 4.1 pool, J = 4 and J = 8 the cross-benchmark pools. Their own family resamples: cell key
+# f"llada|{task}|44|J{J}".
 POWER_MODEL = "llada"
 POWER_J = [1, 4, 8]
 
@@ -921,8 +923,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--pools", required=True, help="directory with <bank>/<model>/<task>_M{M}_J{J}[_il].jsonl and gold/")
     parser.add_argument("--out", default=str(HERE / "out"))
-    parser.add_argument("--crossbench", action="store_true", help="also the cross-benchmark report cells (the cross-benchmark figure)")
-    parser.add_argument("--beta-sweep", action="store_true", help="also the guidance-strength sweep figure (arXiv version only)")
+    parser.add_argument("--crossbench", action="store_true",
+                        help="also the cross-benchmark report cells (the cross-benchmark figure)")
+    parser.add_argument("--beta-sweep", action="store_true",
+                        help="also the guidance-strength sweep figure (arXiv version only)")
     parser.add_argument("--nboot", type=int, default=NBOOT)
     parser.add_argument("--compare", nargs="+", default=None, help="directories of reference tables, e.g. data/tables/fig4")
     args = parser.parse_args()

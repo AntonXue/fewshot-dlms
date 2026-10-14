@@ -89,6 +89,6 @@ def test_no_fixture_holds_private_strings(root):
     names = {path.relative_to(root / "data" / "fixtures").as_posix() for path in paths}
     assert {"walkthrough.jsonl", "fig6/head_predictions_llada.json"} <= names
     for path in paths:
-        text = path.read_text(encoding="utf-8").lower()
+        text = path.read_bytes().decode("utf-8", errors="replace").lower()
         for pattern in PRIVATE_PATTERNS:
             assert re.search(pattern, text) is None, f"{pattern!r} matches {path.name}"

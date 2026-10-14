@@ -69,9 +69,9 @@ BETA = 0.5  # the paper's common guidance strength
 NBOOT = 10000
 BOOTSTRAP_SEED = "mtfsp-20261011-mj-bootstrap-v1"  # cell key f"{model}|{M}|{J}"
 
-# Appendix B, Likelihood Sharpening: the sharpening control has the same total exponent 3/2 on P1 as Q_0.5 ∝ P1^{3/2} P0^{-1/2},
-# but no P0: target P1^{3/2}, i.e. temperature 2/3, pool weights ∝ P1^{1/2}. Its intervals use their own
-# family resamples, seeded from SHARPENING_SEED (see sharpening_indices).
+# Appendix B, Likelihood Sharpening: the sharpening control has the same total exponent 3/2 on P1 as
+# Q_0.5 ∝ P1^{3/2} P0^{-1/2}, but no P0: target P1^{3/2}, i.e. temperature 2/3, pool weights ∝ P1^{1/2}. Its
+# intervals use their own family resamples, seeded from SHARPENING_SEED (see sharpening_indices).
 SHARPENING_TAU = 2 / 3
 SHARPENING_SEED = "agentC-appA-20261011-mj-v1"
 

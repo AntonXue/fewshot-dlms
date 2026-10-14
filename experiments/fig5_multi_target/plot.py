@@ -202,7 +202,8 @@ FIG8_OFFSET = {"llada": -0.12, "nemotron_pt": -0.04, "dqwen": 0.04}
 
 
 def figure8(mechanism, path):
-    """The mechanism figure (Fig. 8, both builds) from mechanism.csv: P0 (dashed, hollow) and P1 (solid) gold NLL per token."""
+    """The mechanism figure (Fig. 8, both builds) from mechanism.csv: P0 (dashed, hollow) and P1 (solid) gold NLL per
+    token."""
     rows = mechanism[mechanism.J == 8]
     fig, axes = F.grid(1, len(TASKS), height=1.05 + 1.25)
     top = float(np.ceil(rows.gold_nll0_per_token.max()))
@@ -236,7 +237,8 @@ FIG9_OFFSET = {"llada": -0.08, "nemotron_pt": 0.0, "dqwen": 0.08}
 
 
 def figure9(crossbench, path):
-    """The cross-benchmark figure (Fig. 9) from cells_crossbench.csv: ordinary A_all (beta = 0) and its gain at beta = 0.5."""
+    """The cross-benchmark figure (Fig. 9) from cells_crossbench.csv: ordinary A_all (beta = 0) and its gain at
+    beta = 0.5."""
     report = crossbench[crossbench.bank == "report"]
     ordinary = report[np.isclose(report.beta, 0.0)]
     guided = report[np.isclose(report.beta, 0.5)]
