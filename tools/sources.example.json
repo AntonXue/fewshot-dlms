@@ -1,0 +1,10 @@
+{
+  "final_sweeps": "/path/to/final_sweeps/pools",
+  "gold_probe": "/path/to/gold_reward/report",
+  "mj_grid": "/path/to/sec42_mj/pools",
+  "length_project": "/path/to/length_project",
+  "java_length": "/path/to/sec5_length",
+  "java_run": "/path/to/sec5_final_helper_run",
+  "java_zero_demo": "/path/to/sec5_zero_demo_ablation",
+  "upload_dir": "/path/to/fewshot_dlms_upload"
+}

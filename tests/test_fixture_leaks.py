@@ -1,11 +1,13 @@
-"""The fixtures do not redistribute the text of SST-2 or MIT Movie (data/benchmarks/README.md).
+"""The fixtures do not redistribute the text of SST-2 or MIT Movie (data/benchmarks/README.md), nor run metadata.
 
 Fixture records cut from SST-2 or MIT Movie pools keep a SHA-256 digest of every field that held benchmark text
 (tools/extract_fixtures.py); the tests that need the text rebuild it from the families that
-data/benchmarks/build.py writes locally, and compare digests.
+data/benchmarks/build.py writes locally, and compare digests. No fixture file, of any figure, may hold a machine
+path, a run-metadata key that names a machine, or the vocabulary of the authors' internal notes.
 """
 import json
 import os
+import re
 
 import pytest
 
@@ -14,6 +16,19 @@ from fewshot_dlms.data import TEXT_FREE_BENCHMARKS
 from fewshot_dlms.data import load_families
 
 FIXTURE_DIRS = ("fig4",)  # fixture directories cut from SST-2 / MIT Movie pools
+
+# Generic patterns (lower-cased text): machine paths, run metadata that names a machine, internal-note vocabulary.
+PRIVATE_PATTERNS = [
+    r"/(?:hdd|ssd)\d",
+    r"/home/",
+    r"/mnt/",
+    r'"host":',
+    r'"hostname":',
+    r'"gpu_env":',
+    r'"cwd":',
+    r"hand-?\s?off",
+    r"\.claude",
+]
 
 
 def fixture_paths(root):
@@ -66,3 +81,14 @@ def test_fixtures_hold_no_benchmark_sentences(root):
             values.extend(string_values(json.loads(line)))
         leaked = sorted({sentence for sentence in sentences for value in values if sentence in value})
         assert not leaked, (path.name, leaked[:5])
+
+
+def test_no_fixture_holds_private_strings(root):
+    """Every file under data/fixtures (fig4, fig5, fig6, the walkthrough pool and any later fixture directory)."""
+    paths = sorted(path for path in (root / "data" / "fixtures").rglob("*") if path.is_file())
+    names = {path.relative_to(root / "data" / "fixtures").as_posix() for path in paths}
+    assert {"walkthrough.jsonl", "fig6/head_predictions_llada.json"} <= names
+    for path in paths:
+        text = path.read_text(encoding="utf-8").lower()
+        for pattern in PRIVATE_PATTERNS:
+            assert re.search(pattern, text) is None, f"{pattern!r} matches {path.name}"
