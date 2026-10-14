@@ -63,8 +63,8 @@ def fixture(root):
 
 
 @pytest.fixture(scope="module")
-def head_path(artifacts):
-    path = artifacts / HEAD
+def head_path(artifact_root):
+    path = artifact_root / HEAD
     if not path.exists():
         pytest.skip(f"no head checkpoint at artifacts/{HEAD}")
     return path
