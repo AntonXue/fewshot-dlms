@@ -31,7 +31,11 @@ where = ["src"]
 fewshot_dlms = ["fonts/*.otf", "fonts/*.txt"]
 
 [tool.pytest.ini_options]
-markers = ["gpu: needs a CUDA GPU and model weights", "parity: needs fetched artifacts"]
+markers = [
+  "gpu: needs a CUDA GPU and model weights",
+  "parity: needs fetched artifacts",
+  "api: calls the Anthropic API and spends credits (make test-api only)",
+]
 # Third-party warnings: sentencepiece (imported by the tokenizers) is a SWIG extension that warns on import
 # under Python 3.12; Nemotron's own configuration code calls a rope helper that transformers 5 deprecates.
 filterwarnings = [
