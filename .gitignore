@@ -4,3 +4,5 @@ __pycache__/
 .pytest_cache/
 experiments/*/out/**/*.pdf
 data/benchmarks/_built/
+artifacts_upload/*
+!artifacts_upload/README.md
