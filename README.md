@@ -61,6 +61,8 @@ the Hugging Face Hub at pinned revisions (`src/fewshot_dlms/adapters/`):
 | `llada` | `GSAI-ML/LLaDA-1.5` | `84346fd91ba60252d260022201ad6fc5a3468fb2` | 15 GB |
 | `nemotron_pt` | `nvidia/Nemotron-Labs-Diffusion-8B` (causal prefix, bidirectional tail) | `16c67f0560b912e93e0cabb6e0c4f5c3086d95fc` | 16 GB |
 | `dqwen` | `UT-IFML/dQwen3.5-9B-Base` | `f193fa20e341504f8d9e2b4b8342048c466e6590` | 17 GB |
+| `nemotron_ar` | `nvidia/Nemotron-Labs-Diffusion-8B` (causal suffix, Figure 4; same weights as `nemotron_pt`) | `16c67f0560b912e93e0cabb6e0c4f5c3086d95fc` | 16 GB |
+| `qwen` | `Qwen/Qwen3-8B` (free-length causal continuation, Figure 4) | `b968826d9c46dd6066d109eabc6255188de91218` | 16 GB |
 
 They are downloaded into the Hugging Face cache (`$HF_HOME`) on first use. Without network access, cache
 them beforehand and set `HF_HUB_OFFLINE=1`. All three run their own modelling code (`trust_remote_code`).
