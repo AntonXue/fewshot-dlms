@@ -33,8 +33,8 @@ Every record carries the protocol_hash of its cell (cell_config: model, revision
 function of that cell alone). A rerun with the same protocol skips the families already in the file, so an interrupted
 run resumes; a pool file that holds records of another protocol (another K, chunk, revision, ...) is refused with exit
 status 2, naming the file, before the model is loaded, so that analyze.py never reads two protocols as one pool.
-<out>/<bank>/<model>/manifest_<hash>.json lists every cell's configuration and hash, the seeds and the library
-versions. A family that fails is reported and counted; the run exits with status 1 if any did. analyze.py reads the
+<out>/<bank>/<model>/manifest_<hash>.json lists every cell's configuration and hash, the seeds and, per session (a
+resumed run appends its own), the library versions and the command. A family that fails is reported and counted; the run exits with status 1 if any did. analyze.py reads the
 pools.
 
     CUDA_VISIBLE_DEVICES=0 python experiments/fig4_single_target/run.py --model llada --tasks list_easy_fam --M 4 \\
@@ -440,16 +440,19 @@ def protocol_hash(config):
 
 
 def write_manifest(directory, cells, plan, model):
-    """The run's manifest: every cell's configuration, hash, families and seeds; library and GPU versions; the command."""
+    """The run's manifest: every cell's configuration, hash, families and seeds; per session, the library and GPU
+    versions and the command.
+
+    A resumed run (same cells, so the same file) keeps what the earlier sessions recorded: it adds its seeds and appends
+    its own entry to "sessions". The file is replaced atomically, so a killed run never leaves half a manifest.
+    """
     digest = hashlib.sha256(json.dumps(sorted(cell["protocol_hash"] for cell in cells.values())).encode()).hexdigest()[:16]
     seeds = {}
     for _, families, M, J, name in plan:
         config = cells[name]["config"]
         master = config["study"] == "crossbench"
         seeds[name] = {family["episode_id"]: proposal_seed(model, family["episode_id"], M, J, master) for family in families}
-    manifest = {
-        "cells": cells,
-        "seeds": seeds,
+    session = {
         "versions": {
             "python": platform.python_version(),
             "torch": torch.__version__,
@@ -461,7 +464,16 @@ def write_manifest(directory, cells, plan, model):
         "command": sys.argv,
     }
     path = directory / f"manifest_{digest}.json"
-    path.write_text(json.dumps(manifest, indent=1))
+    if path.exists():
+        manifest = json.loads(path.read_text())
+        for name, cell_seeds in seeds.items():
+            manifest["seeds"].setdefault(name, {}).update(cell_seeds)
+        manifest.setdefault("sessions", []).append(session)
+    else:
+        manifest = {"cells": cells, "seeds": seeds, "sessions": [session]}
+    partial = path.with_name(path.name + ".partial")
+    partial.write_text(json.dumps(manifest, indent=1))
+    os.replace(partial, path)
     return path
 
 
