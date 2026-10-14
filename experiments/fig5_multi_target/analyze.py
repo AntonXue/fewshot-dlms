@@ -23,9 +23,9 @@ Outputs in --out:
     gold.csv         per (model, M, J): the reference answers scored under P1 and P0 (gold reward per token)
     diagnostics.csv  per (model, M, J): pool coverage, reward spread, ESS, prompt sizes
     candidates.csv.gz, coverage.json
-    sharpening.csv   Figure 10 (Appendix B.4): the sharpening control w = softmax(0.5 * ell1), i.e. the
+    sharpening.csv   Figure 10 (Appendix B, Likelihood Sharpening): the sharpening control w = softmax(0.5 * ell1), i.e. the
                      target P1^{3/2} (temperature 2/3), against example guidance at beta = 0.5
-    mechanism.csv    Figure 8 (Appendix B.3): gold NLL per token by reveal position under P1 and P0 in the
+    mechanism.csv    Figure 8 (Appendix B, Multi-Target Prompting): gold NLL per token by reveal position under P1 and P0 in the
                      cross-benchmark study (M = 4, J = 8); read from --gold-pools when present
 
 --compare DIR prints, for every table also in DIR, the largest |difference| per numeric column, and for
@@ -67,13 +67,13 @@ BETA = 0.5  # the paper's common guidance strength
 NBOOT = 10000
 BOOTSTRAP_SEED = "mtfsp-20261011-mj-bootstrap-v1"  # cell key f"{model}|{M}|{J}"
 
-# Appendix B.4: the sharpening control has the same total exponent 3/2 on P1 as Q_0.5 ∝ P1^{3/2} P0^{-1/2},
+# Appendix B, Likelihood Sharpening: the sharpening control has the same total exponent 3/2 on P1 as Q_0.5 ∝ P1^{3/2} P0^{-1/2},
 # but no P0: target P1^{3/2}, i.e. temperature 2/3, pool weights ∝ P1^{1/2}. Its intervals use their own
 # family resamples, seeded from SHARPENING_SEED (see sharpening_indices).
 SHARPENING_TAU = 2 / 3
 SHARPENING_SEED = "agentC-appA-20261011-mj-v1"
 
-# Appendix B.3, Figure 8: the cross-benchmark study (M = 4, J = 8, K = 64) with its reference answers scored
+# Appendix B, Multi-Target Prompting, Figure 8: the cross-benchmark study (M = 4, J = 8, K = 64) with its reference answers scored
 # under P1 and P0, one record per family in <gold-pools>/<model>/<task>_M4_J8_il.jsonl.
 MECHANISM_MODELS = ["llada", "nemotron_pt", "dqwen"]
 MECHANISM_TASKS = [
@@ -386,7 +386,7 @@ def diagnostics_row(model, M, J, K, F, ordinary_A_all):
 
 
 def sharpening_indices(model, M, J, n, nboot):
-    """Family resamples of the sharpening table (Appendix B.4).
+    """Family resamples of the sharpening table (Appendix B, Likelihood Sharpening).
 
     Seed = the first 16 hex digits of SHA-256(f"{SHARPENING_SEED}|{model}|{M}|{J}"), mod 2**32, for
     numpy's default_rng; one rng.integers(0, n, size=(nboot, n)) draw, as in bootstrap.cell_indices.

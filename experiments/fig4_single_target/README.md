@@ -1,16 +1,16 @@
 # Figure 4: one target, example guidance (Section 4.1)
 
-The single-target study of Section 4.1, the development-bank choice of β (Appendix B.2), and the studies that reuse
-its pools:
+The single-target study of Section 4.1, the development-bank choice of β (Appendix B, Single-Target Prompting), and
+the studies that reuse its pools:
 
 | Paper | Content | Output of `plot.py` | Table in `data/tables/` |
 |---|---|---|---|
 | Figure 4 (Section 4.1) | ordinary accuracy and its paired gain at β = 0.5 against M, four benchmarks, four model interfaces | `fig4.pdf` | `fig4/sec41_accuracy.csv` |
 | Appendix (gold row) | gold example reward per target token, (log P1 − log P0) / T of the reference answer | `gold_reward_row.pdf` | `fig4/gold_reward_cells.csv` |
-| Figure 11 (Appendix B.6) | guidance-strength sweep: A_all gain and effective support exp(H)/K against β | `fig11_beta_sweep.pdf` | `fig4/beta_sweep.csv` |
-| Figure 9 (Appendix B.3) | cross-benchmark study, M = 4, J ∈ {1, 2, 4, 8}: drawn by `experiments/fig5_multi_target/plot.py` | — | `fig5/cells_crossbench.csv` |
-| Appendix B.2 | the development-only β of every model | — | `fig4/beta_locks.json`, `fig4/dev_sec41.csv`, `fig4/dev_sec42.csv` |
-| Section 4.4 | sharpening residuals: guidance against power sampling at the matched exponent (LLaDA-1.5) | — | `fig4/sec44_power.csv` |
+| Figure 11 (Appendix B, Guidance-Strength Sensitivity) | guidance-strength sweep: A_all gain and effective support exp(H)/K against β | `fig11_beta_sweep.pdf` | `fig4/beta_sweep.csv` |
+| Figure 9 (Appendix B, Multi-Target Prompting) | cross-benchmark study, M = 4, J ∈ {1, 2, 4, 8}: drawn by `experiments/fig5_multi_target/plot.py` | — | `fig5/cells_crossbench.csv` |
+| Appendix B, Single-Target Prompting | the development-only β of every model | — | `fig4/beta_locks.json`, `fig4/dev_sec41.csv`, `fig4/dev_sec42.csv` |
+| Appendix B, Likelihood Sharpening | sharpening residuals: guidance against power sampling at the matched exponent (LLaDA-1.5) | — | `fig4/sec44_power.csv` |
 
 `analyze.py --crossbench` writes `cells_crossbench.csv` (the paper's `sec42_all.csv`), which Figure 9 reads from
 `data/tables/fig5/`.
@@ -22,9 +22,9 @@ its pools:
 - **Episodes.** Section 4.1: the first M ∈ {1, 2, 4, 8, 16} demonstrations, then the target T1 (J = 1, target last).
   Cross-benchmark study: M = 4 and the first J ∈ {1, 2, 4, 8} targets, placed in each family's frozen 12-slot master
   layout (`canvas.master_layout`; J = 1 keeps T1 at its master position).
-- **Model interfaces** (Appendix B.1). `llada` and `dqwen`: one canvas, the target masked with its oracle length (the token
-  count of `" " + answer`). `nemotron_ar`: Nemotron's causal suffix, exactly the oracle length, left to right. `qwen`:
-  Qwen3-8B, free length, stopping at the first token that holds a newline or at `<|im_end|>` (200-token budget; graded on
+- **Model interfaces** (Appendix B, Experimental Setup). `llada` and `dqwen`: one canvas, the target masked with its
+  oracle length (the token count of `" " + answer`). `nemotron_ar`: Nemotron's causal suffix, exactly the oracle
+  length, left to right. `qwen`: Qwen3-8B, free length, stopping at the first token that holds a newline or at `<|im_end|>` (200-token budget; graded on
   its first line). The cross-benchmark study runs the three canvas models `llada`, `nemotron_pt` (causal prefix,
   bidirectional tail) and `dqwen`.
 - **Sampling.** K = 64 answers per family from P1 at temperature 1, all in one call: fixed-order decoding (Lemma 3.1,
@@ -52,11 +52,11 @@ its pools:
     matrix per model and task, shared by every β, M and J (gains are paired);
   - `sec44_power.csv`: the same seed string, cell key `llada|<task>|44|J<J>`;
   - gold rows: `bootstrap.boot_sd` with seed string `4.1|<model>|<task>|<M>|rpt`.
-- **Section 4.4.** LLaDA-1.5, M = 4, J ∈ {1, 4, 8} (J = 1: the Section 4.1 pool; J = 4, 8: cross-benchmark pools).
-  Guidance at (β, τ) has total exponent 1/τ + β on P1; `gain_vs_matched_power` compares it with ordinary power sampling
+- **Appendix B, Likelihood Sharpening** (sharpening residuals). LLaDA-1.5, M = 4, J ∈ {1, 4, 8} (J = 1: the Section
+  4.1 pool; J = 4, 8: cross-benchmark pools). Guidance at (β, τ) has total exponent 1/τ + β on P1; `gain_vs_matched_power` compares it with ordinary power sampling
   at τ_eff = 1 / (1/τ + β).
-- **Appendix B.6.** List Functions–Easy cross-benchmark pools (M = 4, K = 64), J ∈ {1, 4}, three DLMs, β ∈ {0, .25, .5,
-  1, 2}. Per family w = softmax(β R), A_all = Σ w·all_correct, H = −Σ w log w, D_eff = exp(H)/K; cell means, gains over
+- **Appendix B, Guidance-Strength Sensitivity.** List Functions–Easy cross-benchmark pools (M = 4, K = 64), J ∈ {1, 4},
+  three DLMs, β ∈ {0, .25, .5, 1, 2}. Per family w = softmax(β R), A_all = Σ w·all_correct, H = −Σ w log w, D_eff = exp(H)/K; cell means, gains over
   β = 0 paired with the cell's index matrix (`<model>|list_easy_fam`).
 
 ## Commands
@@ -136,4 +136,7 @@ GPU sampling is statistical in general, so a rerun is judged by whether the froz
 
 - **Note.** On this platform the rerun reproduced the frozen pool bit for bit (tokens, ell1, ell0 of all 64 × 64
   answers), so `--compare` reports a largest difference of 0 in `sec41_accuracy.csv` and `sec44_power.csv` and the
-  rerun's mean equals the frozen one. On another GPU the draws differ and the verdict is the check.
+  rerun's mean equals the frozen one. On another GPU the draws differ and the verdict is the check. On this stack
+  the "inside" verdicts therefore hold trivially; `tests/test_resampling_compare.py` checks that `--compare` also
+  reports "outside" when a rerun's mean is far from the frozen one (on Figure 5's `analyze.py`, which prints the
+  same verdict rule).

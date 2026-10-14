@@ -1,5 +1,5 @@
 # ported from editdiff/experiments/length_project/lpx_alloc.py, experiments/length_project/lpx_ds.py (length_mass), experiments/length_project/lpx_model.py::{StopForward, Trunk, Branch, site_metrics}, experiments/length_pilot/lp_model.py::{rot_half, block_forward, Packed, Trunk, Branch, load_branch, predict} and experiments/length_pilot/lp_common.py::{collapse_window, L_MAX} @ d276fa6
-"""Target lengths (Section 3.3, Section 4.3, Appendix B.5): allocation modes and the learned length head.
+"""Target lengths (Section 3.3, Section 4.3, Appendix B, Length Allocation): allocation modes and the learned length head.
 
 A masked target needs a token count before the model fills it: a canvas with L_j masks at target j can only
 hold an answer of exactly L_j tokens. `allocate` gives the J target lengths of one candidate in one of three
@@ -9,7 +9,7 @@ modes:
     offset   L_j = L*_j + delta, clipped to 1..lmax (the controlled offsets of Section 4.3)
     learned  L_j drawn from the length head below (Section 4.3; the Java head C of Section 5)
 
-The length head (Appendix B.5)
+The length head (Appendix B, Length Allocation)
 ------------------------------
 A frozen DLM reads a compact prompt z~ that holds one placeholder per target site. The hidden state that
 enters the backbone's last transformer block feeds a trainable copy of that block and of the final
@@ -68,7 +68,7 @@ import hashlib
 import numpy as np
 import torch
 
-L_MAX = 256  # lengths are 1..L_MAX: the head's categorical support (Appendix B.5)
+L_MAX = 256  # lengths are 1..L_MAX: the head's categorical support (Appendix B, Length Allocation)
 
 MODES = ("oracle", "offset", "learned")
 
@@ -174,7 +174,7 @@ def section43_seed(bank, backbone, episode_id, J):
 
 
 # ---------------------------------------------------------------------------------------------
-# How good a length distribution is (Section 4.3, Appendix B.5)
+# How good a length distribution is (Section 4.3, Appendix B, Length Allocation)
 # ---------------------------------------------------------------------------------------------
 
 
@@ -483,7 +483,7 @@ class Branch(torch.nn.Module):
 
     The copies are fp32 and separate from the frozen backbone. The head is Linear(d, lmax) over the lengths
     1..lmax, initialised from N(0, head_std^2) with a generator seeded by `seed` and a zero bias (the training
-    start of Appendix B.5; a loaded checkpoint overwrites every weight).
+    start of Appendix B, Length Allocation; a loaded checkpoint overwrites every weight).
     """
 
     def __init__(self, last_block, final_norm, width, lmax=L_MAX, seed=0, head_std=1e-3):
@@ -503,7 +503,7 @@ class Branch(torch.nn.Module):
             parameter.requires_grad_(True)
 
     def param_groups(self, lr_block, lr_head, weight_decay):
-        """AdamW groups of Appendix B.5: block and norm at lr_block, head at lr_head; no decay on vectors."""
+        """AdamW groups of Appendix B, Length Allocation: block and norm at lr_block, head at lr_head; no decay on vectors."""
         block_parameters = list(self.block.parameters()) + list(self.norm.parameters())
         return [
             {"params": [p for p in block_parameters if p.ndim >= 2], "lr": lr_block, "weight_decay": weight_decay},
@@ -514,7 +514,7 @@ class Branch(torch.nn.Module):
 
 
 class LengthHead:
-    """A frozen DLM with a trained length branch: per-site length distributions for a canvas (Appendix B.5)."""
+    """A frozen DLM with a trained length branch: per-site length distributions for a canvas (Appendix B, Length Allocation)."""
 
     def __init__(self, adapter, backbone, trunk, branch, config):
         self.adapter = adapter
@@ -637,7 +637,7 @@ class LengthHead:
 
 
 def fresh_head(adapter, lmax=L_MAX, seed=0):
-    """A LengthHead on a loaded adapter with an untrained branch: the training start of Appendix B.5.
+    """A LengthHead on a loaded adapter with an untrained branch: the training start of Appendix B, Length Allocation.
 
     The branch copies the adapter's last block and final norm and draws its head weights with standard deviation 1e-3
     from a generator seeded by `seed` (Branch). The adapter's own weights are frozen here; experiments/fig6_lengths/train_head.py trains

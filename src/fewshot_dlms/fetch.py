@@ -142,7 +142,7 @@ def group_table():
     for group, (size, readers) in GROUPS.items():
         lines.append(f"{group:<14} {size:>8}  {readers}")
     lines.append("")
-    lines.append("make test-parity and make figures need: python -m fewshot_dlms.fetch pools java")
+    lines.append("make test-parity, make reproduce and every analyze.py need: python -m fewshot_dlms.fetch pools java")
     return "\n".join(lines)
 
 

@@ -65,7 +65,7 @@ from fewshot_dlms.canvas import build_canvas
 from fewshot_dlms.data import BENCHMARKS
 from fewshot_dlms.data import load_families
 
-# How each model is run (Appendix B.1), and which adapter it loads.
+# How each model is run (Appendix B, Experimental Setup), and which adapter it loads.
 INTERFACE = {
     "llada": "canvas",
     "dqwen": "canvas",

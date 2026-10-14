@@ -9,7 +9,7 @@ pinned revision into `artifacts/` and checks every file against `SHA256SUMS`.
 
 Run from the repository root:
 
-    python -m fewshot_dlms.fetch pools java       # make test-parity, make figures, every analyze.py (386 MB)
+    python -m fewshot_dlms.fetch pools java       # make test-parity, make reproduce, every analyze.py (386 MB)
     python -m fewshot_dlms.fetch heads            # the length heads for the GPU runs (3.47 GB)
     python -m fewshot_dlms.fetch head_training    # the heads' training data (1.28 GB)
     python -m fewshot_dlms.fetch --check          # re-check what is under artifacts/, no download
@@ -36,7 +36,7 @@ The dataset holds `SHA256SUMS` too; the copy here is the one the fetcher trusts.
 
 | group | files | bytes | what reads it |
 |---|---|---|---|
-| `pools/fig4` | 336 | 260,397,761 | `experiments/fig4_single_target/analyze.py` (also Figure 9 and Appendix B.6) |
+| `pools/fig4` | 336 | 260,397,761 | `experiments/fig4_single_target/analyze.py` (also Figure 9 and Appendix B, Guidance-Strength Sensitivity) |
 | `pools/fig5` | 60 | 41,915,679 | `experiments/fig5_multi_target/analyze.py` (Figures 5, 8, 10) |
 | `pools/fig6` | 56 | 73,747,644 | `experiments/fig6_lengths/analyze.py` |
 | `java` | 21 | 10,060,127 | `experiments/fig7_java/analyze.py`, `judge.py` |

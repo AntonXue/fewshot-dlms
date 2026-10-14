@@ -4,11 +4,11 @@
     fig5.pdf              Figure 5. List Functions-Easy, columns J in {1, 2, 4, 8}, x = M in {2, 4, 8, 16}, three
                           diffusion models: ordinary A_all, ordinary A_avg (= A_target) and the paired gain in
                           A_all from example guidance at beta = 0.5 (cells.csv). Means only, as in the paper.
-    fig8_mechanism.pdf    Figure 8 (Appendix B.3). Gold NLL per target token under P1 (solid) and P0 (dashed) by
+    fig8_mechanism.pdf    Figure 8 (Appendix B, Multi-Target Prompting). Gold NLL per target token under P1 (solid) and P0 (dashed) by
                           position in the reveal order; cross-benchmark study, M = 4, J = 8 (mechanism.csv).
-    fig9_crossbench.pdf   Figure 9 (Appendix B.3). Cross-benchmark study, M = 4, K = 64: ordinary A_all and its
+    fig9_crossbench.pdf   Figure 9 (Appendix B, Multi-Target Prompting). Cross-benchmark study, M = 4, K = 64: ordinary A_all and its
                           paired gain at beta = 0.5 against J, with 95 % family-bootstrap bands (cells_crossbench.csv).
-    fig10_sharpening.pdf  Figure 10 (Appendix B.4). The M x J grid: gain in A_all of the sharpening control
+    fig10_sharpening.pdf  Figure 10 (Appendix B, Likelihood Sharpening). The M x J grid: gain in A_all of the sharpening control
                           (target P1^{3/2}) and guidance (beta = 0.5) minus sharpening, with bands (sharpening.csv).
 
 Rendered at 150 dpi, each PDF is pixel-identical to the paper's figure when TeX Gyre Pagella is used.
@@ -197,7 +197,7 @@ FIG8_OFFSET = {"llada": -0.12, "nemotron_pt": -0.04, "dqwen": 0.04}
 
 
 def figure8(mechanism, path):
-    """Figure 8 of Appendix B.3 from mechanism.csv: P0 (dashed, hollow) and P1 (solid) gold NLL per token."""
+    """Figure 8 of Appendix B, Multi-Target Prompting from mechanism.csv: P0 (dashed, hollow) and P1 (solid) gold NLL per token."""
     rows = mechanism[mechanism.J == 8]
     fig, axes = F.grid(1, len(TASKS), height=1.05 + 1.25)
     top = float(np.ceil(rows.gold_nll0_per_token.max()))
@@ -231,7 +231,7 @@ FIG9_OFFSET = {"llada": -0.08, "nemotron_pt": 0.0, "dqwen": 0.08}
 
 
 def figure9(crossbench, path):
-    """Figure 9 of Appendix B.3 from cells_crossbench.csv: ordinary A_all (beta = 0) and its paired gain at beta = 0.5."""
+    """Figure 9 of Appendix B, Multi-Target Prompting from cells_crossbench.csv: ordinary A_all (beta = 0) and its paired gain at beta = 0.5."""
     report = crossbench[crossbench.bank == "report"]
     ordinary = report[np.isclose(report.beta, 0.0)]
     guided = report[np.isclose(report.beta, 0.5)]
@@ -280,7 +280,7 @@ FIG10_OFFSET = {"llada": -0.12, "nemotron_pt": -0.04, "dqwen": 0.04}
 
 
 def figure10(sharpening, path):
-    """Figure 10 of Appendix B.4 from sharpening.csv (64 families per cell, K = 16, bands = 95 % family bootstrap)."""
+    """Figure 10 of Appendix B, Likelihood Sharpening from sharpening.csv (64 families per cell, K = 16, bands = 95 % family bootstrap)."""
     fig, axes = F.grid(len(FIG10_ROWS), len(J_GRID), height=len(FIG10_ROWS) * 1.0 + 1.35)
     for row, (column, ylabel, ylim, yticks) in enumerate(FIG10_ROWS):
         for j, J in enumerate(J_GRID):

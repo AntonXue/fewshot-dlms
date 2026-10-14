@@ -28,7 +28,7 @@ support, by default `adapter.support("ordinary")` (every real token except the m
 and chat markers). The model files (llada.py, nemotron.py, dqwen.py) load a pinned checkpoint and
 supply `Adapter.logits` and the chat framing; the loop itself is model-independent.
 
-Causal models (Figure 4 only; Appendix B.1): Nemotron's causal suffix and Qwen3-8B continue a prompt
+Causal models (Figure 4 only; Appendix B, Experimental Setup): Nemotron's causal suffix and Qwen3-8B continue a prompt
 (canvas.ar_prompt_ids) left to right, one token per step, with the same fp32 log-softmax over a support
 (`decode_ar`, `sample_ar`, `logprob_ar`). The suffix has the fixed oracle length; Qwen3's free-length
 continuation stops at its first stop token. Their P0 prompt deletes the demonstration outputs rather than

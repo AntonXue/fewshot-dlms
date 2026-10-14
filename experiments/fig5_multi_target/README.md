@@ -5,9 +5,9 @@ The M × J grid of Section 4.2 and three appendix figures that use the same mach
 | Paper | Content | Output of `plot.py` | Table in `data/tables/fig5/` |
 |---|---|---|---|
 | Figure 5 (Section 4.2) | ordinary A_all, ordinary A_avg, guidance gain in A_all at β = 0.5 | `fig5.pdf` | `cells.csv` |
-| Figure 8 (Appendix B.3) | gold NLL per token by reveal position, P1 vs P0 (cross-benchmark study, J = 8) | `fig8_mechanism.pdf` | `mechanism.csv` |
-| Figure 9 (Appendix B.3) | cross-benchmark study: ordinary A_all and its gain at β = 0.5 against J | `fig9_crossbench.pdf` | `cells_crossbench.csv` |
-| Figure 10 (Appendix B.4) | sharpening control (target P1^{3/2}) vs example guidance | `fig10_sharpening.pdf` | `sharpening.csv` |
+| Figure 8 (Appendix B, Multi-Target Prompting) | gold NLL per token by reveal position, P1 vs P0 (cross-benchmark study, J = 8) | `fig8_mechanism.pdf` | `mechanism.csv` |
+| Figure 9 (Appendix B, Multi-Target Prompting) | cross-benchmark study: ordinary A_all and its gain at β = 0.5 against J | `fig9_crossbench.pdf` | `cells_crossbench.csv` |
+| Figure 10 (Appendix B, Likelihood Sharpening) | sharpening control (target P1^{3/2}) vs example guidance | `fig10_sharpening.pdf` | `sharpening.csv` |
 
 `gold.csv` and `diagnostics.csv` hold the gold-answer support and the pool diagnostics of every cell
 (coverage, reward spread, effective sample size).
@@ -115,4 +115,6 @@ GPU sampling is statistical in general, so a rerun is judged by whether the froz
 - **Note.** On this platform the rerun reproduced the frozen pool bit for bit (tokens, ell1, ell0 of all 64 × 16
   candidates), so `--compare` reports a largest difference of 0 in `cells.csv`, `gold.csv` and `sharpening.csv`
   (only the timing column of `diagnostics.csv` differs) and the rerun's mean equals the frozen one. On another GPU
-  the draws differ and the verdict is the check.
+  the draws differ and the verdict is the check. On this stack the "inside" verdicts therefore hold trivially;
+  `tests/test_resampling_compare.py` checks that `--compare` also reports "outside" when a rerun's mean is far from
+  the frozen one.

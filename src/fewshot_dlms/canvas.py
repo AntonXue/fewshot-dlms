@@ -28,9 +28,9 @@ authors' code, one chat turn, J >= 1 targets) for tasks whose outputs are text: 
 output codes) and the one-target canvas of Figure 4 are added with their figures.
 
 `build_ar_prompt` and `ar_prompt_ids` build the prompt of the two causal interfaces of Figure 4 (Appendix
-B.1): Nemotron's fixed-length causal suffix and Qwen3-8B's free-length continuation. The same records as
-the canvas, demonstrations first, end at the target's "Output:"; the model continues from there. P0
-deletes the demonstration outputs from the prompt instead of masking them.
+B, Experimental Setup): Nemotron's fixed-length causal suffix and Qwen3-8B's free-length continuation. The
+same records as the canvas, demonstrations first, end at the target's "Output:"; the model continues from
+there. P0 deletes the demonstration outputs from the prompt instead of masking them.
 
 `build_java_canvas` builds the canvas of Section 5 (Appendix C) from a Java episode of data/java: the
 helper the developer introduced, then the demonstrations (accepted before/after edits of other sites that
@@ -319,7 +319,7 @@ def ar_prompt_ids(adapter, family, M, j, placeholder_note=False, hide_E=False):
 
     Every piece of text is tokenized on its own and the token lists are concatenated, as for the canvas.
     hide_E=True deletes each demonstration's " <output>" tokens and keeps everything else, the "Output:"
-    labels and the blank lines included: P0 of a causal model (Appendix B.1).
+    labels and the blank lines included: P0 of a causal model (Appendix B, Experimental Setup).
     """
     ids = []
     for piece, is_demonstration_output in _ar_pieces(adapter, family, M, j, placeholder_note):

@@ -54,7 +54,7 @@ J_GRID = [1, 2, 4, 8]
 K = 16
 CHUNK = 16  # most canvases per forward pass, as in the authors' run
 
-# How each model attends over the canvas (the `attention` field of the authors' records; Appendix B.1).
+# How each model attends over the canvas (the `attention` field of the authors' records; Appendix B, Experimental Setup).
 ATTENTION = {
     "llada": "full bidirectional (LLaDA architecture; no attention mask)",
     "nemotron_pt": (

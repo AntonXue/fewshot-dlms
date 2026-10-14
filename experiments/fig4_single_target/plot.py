@@ -1,5 +1,5 @@
 # ported from editdiff/experiments/paper_integration/figure_redesign/fig_finalize.py::{fig4, fig4_gold_row} @ 51db142 and experiments/beta_sweep/bs_figure.py @ 1aeba87
-"""Figure 4 (Section 4.1), its gold-reward row and Figure 11 (Appendix B.6) from the tables in data/tables/fig4 (CPU only).
+"""Figure 4 (Section 4.1), its gold-reward row and Figure 11 (Appendix B, Guidance-Strength Sensitivity) from the tables in data/tables/fig4 (CPU only).
 
     fig4.pdf              Figure 4. Columns: SST-2, List Functions-Easy, SALT, Movie Director; x = M in {1, 2, 4, 8, 16}
                           demonstrations, one target, K = 64; four model interfaces. Top row: ordinary accuracy (beta = 0);
@@ -7,7 +7,7 @@
                           Means only, as in the paper.
     gold_reward_row.pdf   The gold example reward per target token, (log P1 - log P0) / T of the reference answer, per cell
                           with 95 % family-bootstrap bands (gold_reward_cells.csv); a row of the appendix.
-    fig11_beta_sweep.pdf  Figure 11 (Appendix B.6). List Functions-Easy, M = 4, K = 64: the paired gain in A_all over beta = 0
+    fig11_beta_sweep.pdf  Figure 11 (Appendix B, Guidance-Strength Sensitivity). List Functions-Easy, M = 4, K = 64: the paired gain in A_all over beta = 0
                           at J = 1 and J = 4, and the effective support exp(H) / K of the weights, against beta in
                           {0, .25, .5, 1, 2} on categorical spacing, three diffusion models, 95 % bands (beta_sweep.csv).
 
@@ -226,7 +226,7 @@ def gold_reward_row(gold, path):
 
 
 # ---------------------------------------------------------------------------------------------
-# Figure 11: guidance-strength sweep (Appendix B.6)
+# Figure 11: guidance-strength sweep (Appendix B, Guidance-Strength Sensitivity)
 # ---------------------------------------------------------------------------------------------
 
 SWEEP_BETAS = [0.0, 0.25, 0.5, 1.0, 2.0]
@@ -259,7 +259,7 @@ def sweep_curve(ax, model, ys, lo, hi):
 
 
 def figure11(sweep, path):
-    """Figure 11 of Appendix B.6 from beta_sweep.csv: gain in A_all over beta = 0 (pp) at J = 1 and J = 4, then the effective
+    """Figure 11 of Appendix B, Guidance-Strength Sensitivity from beta_sweep.csv: gain in A_all over beta = 0 (pp) at J = 1 and J = 4, then the effective
     support exp(H) / K at J = 1 and J = 4. beta on categorical spacing (0, .25 and .5 would collide on a linear axis)."""
     gain_lo = sweep.gain_lo_pp.min()
     gain_hi = sweep.gain_hi_pp.max()

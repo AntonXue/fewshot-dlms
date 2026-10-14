@@ -6,7 +6,7 @@ published 12-slot layout. Each of the K candidates gets its own target lengths L
 *allocation*, from one of three modes (lengths.allocate):
 
     oracle   L_j = L*_j, the token count of " <answer>" under the model's tokenizer
-    learned  L^(k) drawn from the frozen length head (Appendix B.5): the head reads the compact prompt once
+    learned  L^(k) drawn from the frozen length head (Appendix B, Length Allocation): the head reads the compact prompt once
              (lengths.compact_prompt) and candidate k, target j draws L = F_j^{-1}(u_kj) with the hashed uniform
              u_kj of lengths.sample_allocations under the seed (bank, backbone, family, J) (lengths.section43_seed)
     offset   L_j = L*_j + delta at every target. A family with some L*_j + delta < 1 is skipped and counted, never

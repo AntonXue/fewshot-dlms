@@ -9,8 +9,8 @@ reproduce them to 1e-9 in every numeric column (and exactly in every other colum
   dev_sec41.csv          the same cells on the development bank (beta selection)
   dev_sec42.csv          the cross-benchmark cells on the development bank (beta selection)
   sec44_power.csv        sharpening residuals: guidance against the matched-exponent power control (LLaDA-1.5)
-  cells_crossbench.csv   Figure 9 (Appendix B.3), in data/tables/fig5/: the cross-benchmark study, M = 4, K = 64
-  beta_sweep.csv         Figure 11 (Appendix B.6): the guidance-strength sweep on List Functions-Easy
+  cells_crossbench.csv   Figure 9 (Appendix B, Multi-Target Prompting), in data/tables/fig5/: the cross-benchmark study, M = 4, K = 64
+  beta_sweep.csv         Figure 11 (Appendix B, Guidance-Strength Sensitivity): the guidance-strength sweep on List Functions-Easy
   beta_locks.json        the development-only beta of each model, recomputed from the development bank
 
 The parity tests need the fetched pools (`python -m fewshot_dlms.fetch pools java`). The other tests run on

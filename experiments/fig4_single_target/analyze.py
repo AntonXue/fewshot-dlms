@@ -1,6 +1,7 @@
-# ported from editdiff/experiments/algo_investigation/fs_analyze.py and fs_analyze_lib.py::{load, cell, weights, fam_metrics}, experiments/paper_integration/agent_a/fig5_compute.py (gold rows) and experiments/gold_reward/gr_analyze.py (gold reward per family) @ d276fa6; experiments/beta_sweep/bs_sweep.py (Appendix B.6) @ 1aeba87
-"""Figure 4 (Section 4.1), the development-bank choice of beta, the sharpening residuals of Section 4.4 and the two
-appendix studies that reuse these pools (Figure 9, Appendix B.3; Figure 11, Appendix B.6). CPU only, no model.
+# ported from editdiff/experiments/algo_investigation/fs_analyze.py and fs_analyze_lib.py::{load, cell, weights, fam_metrics}, experiments/paper_integration/agent_a/fig5_compute.py (gold rows) and experiments/gold_reward/gr_analyze.py (gold reward per family) @ d276fa6; experiments/beta_sweep/bs_sweep.py (Appendix B, Guidance-Strength Sensitivity) @ 1aeba87
+"""Figure 4 (Section 4.1), the development-bank choice of beta, the sharpening residuals (Appendix B, Likelihood
+Sharpening) and the two appendix studies that reuse these pools (Figure 9, Appendix B, Multi-Target Prompting;
+Figure 11, Appendix B, Guidance-Strength Sensitivity). CPU only, no model.
 
 The single-target study of Section 4.1: four benchmarks (SST-2 with opaque output codes, List Functions-Easy, SALT,
 Movie Director), four model interfaces (LLaDA-1.5 and dQwen3.5 canvases, Nemotron's causal suffix, Qwen3-8B free-length
@@ -28,7 +29,8 @@ Outputs in --out:
     gold_families.csv       the same per family (T counts Qwen3-8B's stop token)
     dev_sec41.csv           the Section 4.1 cells on the development bank (A_target, A_all and both gains)
     dev_sec42.csv           the cross-benchmark cells on the development bank
-    beta_locks.json         the development-only beta of each model (Appendix B.2), recomputed from the two tables above
+    beta_locks.json         the development-only beta of each model (Appendix B, Single-Target Prompting),
+                            recomputed from the two tables above
     sec44_power.csv         sharpening residuals (LLaDA-1.5): guidance at (beta, tau) against ordinary power sampling at
                             the matched exponent tau_eff = 1 / (1 / tau + beta), J in {1, 4, 8}
     diagnostics.csv         per cell: coverage, malformed rate, reward spread, prompt sizes, ESS at the locked beta
@@ -79,14 +81,14 @@ M_GRID = [1, 2, 4, 8, 16]
 J_GRID = [1, 2, 4, 8]
 CROSSBENCH_M = 4
 BETAS = [0, 0.025, 0.05, 0.125, 0.25, 0.5, 1, 2]  # beta = 0 is ordinary sampling (the paper's beta grid, as frozen)
-TAUS = [1, 0.85, 0.7, 0.5, 0.35, 0.25, 0.1]  # Section 4.4: temperatures of power sampling, P1^(1/tau)
+TAUS = [1, 0.85, 0.7, 0.5, 0.35, 0.25, 0.1]  # Appendix B, Likelihood Sharpening: temperatures of power sampling, P1^(1/tau)
 FIGURE_BETA = 0.5  # the common guidance strength of Figure 4
 NBOOT = 10000
 BOOTSTRAP_SEED = "mtfsp-20261003-bootstrap-v1"  # cell key f"{model}|{task}"
 
-# Appendix B.2: the development-only choice of beta. Per model, the mean A_target over its development cells (Section
-# 4.1: M in {2, 4, 8, 16}; cross-benchmark study: J in {1, 2, 4, 8}), equal cell weights; the best positive beta, ties
-# within 0.25 pp going to the smallest. A cell counts once at least MIN_DEV_FAMILIES of its families are complete.
+# Appendix B, Single-Target Prompting: the development-only choice of beta. Per model, the mean A_target over its
+# development cells (Section 4.1: M in {2, 4, 8, 16}; cross-benchmark study: J in {1, 2, 4, 8}), equal cell weights;
+# the best positive beta, ties within 0.25 pp going to the smallest. A cell counts once at least MIN_DEV_FAMILIES of its families are complete.
 LOCK_RULE = (
     "per model: mean A_target over cells (benchmark x grid point: 4.1 M in {2,4,8,16}; 4.2 J in {1,2,4,8}; Qwen3: 4.1 "
     "only), equal cell weights; best positive beta; ties within 0.25 pp -> smallest beta"
@@ -115,12 +117,13 @@ FROZEN_LOCK_CELLS = {
     },
 }
 
-# Section 4.4: the sharpening residuals use LLaDA-1.5's report pools at M = 4: J = 1 is the Section 4.1 pool, J = 4 and
-# J = 8 the cross-benchmark pools. Their own family resamples: cell key f"llada|{task}|44|J{J}".
+# Appendix B, Likelihood Sharpening: the sharpening residuals use LLaDA-1.5's report pools at M = 4: J = 1 is the
+# Section 4.1 pool, J = 4 and J = 8 the cross-benchmark pools. Their own family resamples: cell key f"llada|{task}|44|J{J}".
 POWER_MODEL = "llada"
 POWER_J = [1, 4, 8]
 
-# Appendix B.6, Figure 11: the guidance-strength sweep over the stored cross-benchmark pools of List Functions-Easy.
+# Appendix B, Guidance-Strength Sensitivity, Figure 11: the guidance-strength sweep over the stored cross-benchmark
+# pools of List Functions-Easy.
 SWEEP_TASK = "list_easy_fam"
 SWEEP_MODELS = [
     ("llada", "LLaDA-1.5"),
@@ -402,7 +405,7 @@ def crossbench_table(rows):
 
 
 # ---------------------------------------------------------------------------------------------
-# Development-only beta (Appendix B.2)
+# Development-only beta (Appendix B, Single-Target Prompting)
 # ---------------------------------------------------------------------------------------------
 
 
@@ -463,7 +466,7 @@ def frozen_cells(dev41, cells, frozen):
 
 
 def beta_locks(dev41, dev42):
-    """beta_locks.json: per model, the development-only beta and the statistic behind it (Appendix B.2)."""
+    """beta_locks.json: per model, the development-only beta and the statistic behind it (Appendix B, Single-Target Prompting)."""
     locks = {"rule": LOCK_RULE, "bank": "dev", "betas": BETAS, "models": {}}
     for model in LOCK_SECTIONS:
         cells, partial = dev_cells(dev41, dev42, model)
@@ -606,7 +609,7 @@ def gold_tables(pools, nboot):
 
 
 # ---------------------------------------------------------------------------------------------
-# Section 4.4: sharpening residuals
+# Appendix B, Likelihood Sharpening: sharpening residuals
 # ---------------------------------------------------------------------------------------------
 
 
@@ -662,7 +665,7 @@ def power_rows(pools, codes, lock_beta, nboot):
 
 
 # ---------------------------------------------------------------------------------------------
-# Appendix B.6: guidance-strength sweep
+# Appendix B, Guidance-Strength Sensitivity: guidance-strength sweep
 # ---------------------------------------------------------------------------------------------
 
 
@@ -681,7 +684,7 @@ def weights_and_entropy(ell1, ell0, beta):
 
 
 def sweep_rows(pools, nboot):
-    """beta_sweep.csv: the guidance-strength sweep of Appendix B.6 (Figure 11).
+    """beta_sweep.csv: the guidance-strength sweep of Appendix B, Guidance-Strength Sensitivity (Figure 11).
 
     Cells: List Functions-Easy, cross-benchmark pools (M = 4, K = 64, oracle lengths), J in {1, 4}, three diffusion models.
     Per family and beta: w = softmax(beta R), A_all = sum_k w_k c_k (c_k = every target of draw k correct),
