@@ -208,6 +208,12 @@ def test_hide_E_prompt_must_delete_tokens_of_the_prompt():
         logprob_ar(Bigram(), PROMPT, [3], hide_E_prompt_ids=PROMPT + [1])
 
 
+def test_sampling_without_a_generator_is_refused():
+    # Every draw must come from a seeded generator, never from torch's global RNG.
+    with pytest.raises(ValueError, match="Generator"):
+        decode_ar(Bigram(), PROMPT, 2, SUPPORT, max_new=3, stop_ids={STOP})
+
+
 def test_scoring_the_distinct_draws_together_repeats_the_sampler_batches():
     # The frozen pools scored P0 (and replayed P1) with the distinct draws in first-occurrence order in one call;
     # the forward passes then hold the same sequences as during sampling, batch for batch.
