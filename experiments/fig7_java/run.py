@@ -457,9 +457,12 @@ def done_units(path, field, digest):
 
 
 def append_record(path, record):
-    """Append one JSON line in a single write, so that a killed run leaves complete lines only."""
-    fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
-    os.write(fd, (json.dumps(record) + "\n").encode())
+    """Append one JSON line in a single write, so that a killed run leaves complete lines only. If the file ends in a
+    cut-off line (no final newline), the write starts with a newline, so the record never joins that line."""
+    fd = os.open(path, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o644)
+    size = os.fstat(fd).st_size
+    lead = b"\n" if size and os.pread(fd, 1, size - 1) != b"\n" else b""
+    os.write(fd, lead + (json.dumps(record) + "\n").encode())
     os.close(fd)
 
 
