@@ -26,8 +26,7 @@ its pools:
   count of `" " + answer`). `nemotron_ar`: Nemotron's causal suffix, exactly the oracle length, left to right. `qwen`:
   Qwen3-8B, free length, stopping at the first token that holds a newline or at `<|im_end|>` (200-token budget; graded on
   its first line). The cross-benchmark study runs the three canvas models `llada`, `nemotron_pt` (causal prefix,
-  bidirectional tail) and `dqwen`. `qwen_perhole` (the per-hole prompt of the authors' preflight, J = 1) is runnable
-  but no figure uses it.
+  bidirectional tail) and `dqwen`.
 - **Sampling.** K = 64 answers per family from P1 at temperature 1, all in one call: fixed-order decoding (Lemma 3.1,
   ascending canvas position) for canvases, left-to-right decoding for the causal interfaces. Seed of a family: the first
   16 hex digits of SHA-256(`algo_investigation|proposal|<model>|<episode_id>|<M>|<J>`) mod 2^31; the cross-benchmark
@@ -45,7 +44,9 @@ its pools:
   cell weights; the best positive β, ties within 0.25 pp to the smallest. LLaDA-1.5 0.5, dQwen3.5 0.5, Nemotron causal 1,
   Nemotron prefix/tail 1, Qwen3-8B 1. LLaDA-1.5's lock was frozen first, from the 28 development cells complete at the
   time (no J = 8 cell; its J = 1 point was then the Section 4.1 M = 4 pool); `analyze.py` reproduces it from those
-  cells and also applies the rule to all 32 complete cells (`all_complete_cells` in `beta_locks.json`): same β.
+  cells and also applies the rule to all 32 complete cells (`all_complete_cells` in `beta_locks.json`): same β. Each
+  lock in `beta_locks.json` names its `cell_set`; LLaDA-1.5's `partial_cells_excluded` is historical (what its lock
+  file recorded), and `partial_cells_excluded_derived` is the same field from today's complete pools (empty).
 - **Intervals.** Family bootstrap, 10,000 resamples, percentile 95 %, families in pool-file order:
   - cells: seed string `mtfsp-20261003-bootstrap-v1`, cell key `<model>|<task>` (`bootstrap.cell_indices`), one index
     matrix per model and task, shared by every β, M and J (gains are paired);

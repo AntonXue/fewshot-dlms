@@ -99,11 +99,19 @@ MIN_DEV_FAMILIES = 16
 # the J = 1 point of the cross-benchmark study was then the Section 4.1 M = 4 pool (target last), before that point was
 # moved to the master layout. analyze.py reproduces the lock from these cells and also applies the rule to every
 # complete development cell (all_complete_cells in beta_locks.json), which selects the same beta.
+# Its partial_cells_excluded is historical: what the lock file recorded when it was written. Every development cell of
+# the frozen pools is complete, so the same field derived today is empty (partial_cells_excluded_derived).
+ALL_COMPLETE_CELL_SET = "all complete development cells of the frozen pools (at least 16 families each)"
 FROZEN_LOCK_CELLS = {
     "llada": {
         "without_J": 8,
         "J1_from_section41_M4": True,
-        "partial_cells_excluded": ["list_easy_fam:8:13fam"],
+        "cell_set": (
+            "frozen 3 Oct development set (lock written 09:56 UTC): the 28 cells complete at that time; J = 8 excluded"
+            " (List Functions-Easy J = 8 had 13 of 21 families, the other benchmarks none); the J = 1 point read from"
+            " the Section 4.1 M = 4 pool (before the J = 1 master-layout correction)"
+        ),
+        "historical_partial_cells_excluded": ["list_easy_fam:8:13fam"],
     },
 }
 
@@ -190,7 +198,7 @@ def output_codes(bank):
 
 
 def grading_name(model):
-    """The model name `grading.answer` gets: every Qwen interface ("qwen", "qwen_perhole") is graded as "qwen"."""
+    """The model name `grading.answer` gets: as in the paper's analysis, every name starting with "qwen" is graded as "qwen"."""
     return "qwen" if model.startswith("qwen") else model
 
 
@@ -465,9 +473,13 @@ def beta_locks(dev41, dev42):
         if model in FROZEN_LOCK_CELLS:
             frozen = FROZEN_LOCK_CELLS[model]
             lock = lock_from_cells(frozen_cells(dev41, cells, frozen))
-            lock["partial_cells_excluded"] = frozen["partial_cells_excluded"]
+            lock["cell_set"] = frozen["cell_set"]
+            lock["partial_cells_excluded"] = frozen["historical_partial_cells_excluded"]
+            lock["partial_cells_excluded_note"] = "historical: as recorded in the frozen lock file when it was written"
+            lock["partial_cells_excluded_derived"] = partial
         else:
             lock = dict(everything)
+            lock["cell_set"] = ALL_COMPLETE_CELL_SET
             lock["partial_cells_excluded"] = partial
         lock["sections"] = LOCK_SECTIONS[model]
         lock["all_complete_cells"] = {key: everything[key] for key in ("beta", "n_cells", "dev_mean_by_beta")}
@@ -877,6 +889,26 @@ def has_pools(pools):
     return False
 
 
+def missing_inputs(pools, crossbench, beta_sweep):
+    """For each requested optional table whose pools are all absent, a line naming the files it needs."""
+    missing = []
+    if crossbench:
+        paths = [pool_path(pools, "report", model, task, CROSSBENCH_M, J, True) for model in MODELS42 for task, _ in TASKS for J in J_GRID]
+        if not any(path.exists() for path in paths):
+            missing.append(
+                f"--crossbench: no cross-benchmark pools {pools}/report/<model>/<task>_M{CROSSBENCH_M}_J<J>_il.jsonl"
+                f" (models {', '.join(MODELS42)}; J in {J_GRID})"
+            )
+    if beta_sweep:
+        paths = [pool_path(pools, "report", model, SWEEP_TASK, CROSSBENCH_M, J, True) for model, _ in SWEEP_MODELS for J in SWEEP_J]
+        if not any(path.exists() for path in paths):
+            missing.append(
+                f"--beta-sweep: no List Functions-Easy cross-benchmark pools {pools}/report/<model>/{SWEEP_TASK}_M{CROSSBENCH_M}_J<J>_il.jsonl"
+                f" (models {', '.join(model for model, _ in SWEEP_MODELS)}; J in {SWEEP_J})"
+            )
+    return missing
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--pools", required=True, help="directory with <bank>/<model>/<task>_M{M}_J{J}[_il].jsonl and gold/")
@@ -890,6 +922,12 @@ def main():
     pools = Path(args.pools)
     if not pools.is_dir() or not has_pools(pools):
         print(f"no Figure 4 pools in {pools}; {FETCH_HINT}", file=sys.stderr)
+        sys.exit(2)
+
+    missing = missing_inputs(pools, args.crossbench, args.beta_sweep)
+    if missing:
+        for line in missing:
+            print(f"{line}; {FETCH_HINT}", file=sys.stderr)
         sys.exit(2)
 
     frames = analyse(pools, args.crossbench, args.beta_sweep, args.nboot)

@@ -42,7 +42,7 @@ TABLES = {
     "beta_sweep": ("fig4/beta_sweep.csv", ["model", "J", "beta"]),
 }
 # The fields of a frozen lock file that the development bank determines.
-LOCK_FIELDS = ["beta", "n_cells", "cells", "best_positive_below_ordinary", "partial_cells_excluded", "sections"]
+LOCK_FIELDS = ["beta", "n_cells", "cells", "cell_set", "best_positive_below_ordinary", "partial_cells_excluded", "sections"]
 COMPARE_LINE = re.compile(
     r"^(\S+) (\S+) M=(\d+): frozen accuracy ([0-9.]+), rerun CI \[([0-9.]+), ([0-9.]+)\] -> frozen mean (inside|outside)"
 )
@@ -126,6 +126,7 @@ def test_beta_locks_match_frozen(root, analysis):
         mine = ours["models"][model]
         for field in LOCK_FIELDS:
             assert mine[field] == lock[field], (model, field)
+        assert mine.get("partial_cells_excluded_note") == lock.get("partial_cells_excluded_note"), model
         assert sorted(mine["dev_mean_by_beta"]) == sorted(lock["dev_mean_by_beta"])
         for beta, value in lock["dev_mean_by_beta"].items():
             assert abs(mine["dev_mean_by_beta"][beta] - value) < TOLERANCE, (model, beta)
@@ -175,6 +176,20 @@ def test_missing_pools_name_the_fetch_command(root, tmp_path):
     result = run_analyze(root, tmp_path / "no_pools", tmp_path / "out")
     assert result.returncode == 2
     assert "run: python -m fewshot_dlms.fetch pools java" in result.stderr + result.stdout
+
+
+@pytest.mark.parametrize("option", ["--crossbench", "--beta-sweep"])
+def test_missing_optional_pools_name_the_input_and_the_fetch_command(root, tmp_path, option):
+    """--crossbench and --beta-sweep need the cross-benchmark pools; without them analyze.py says which and exits 2."""
+    pools = tmp_path / "pools" / "report" / "qwen"
+    pools.mkdir(parents=True)
+    shutil.copy(root / "data" / "fixtures" / "fig4" / "qwen_sst2_M4.jsonl", pools / "sst2_fam_M4_J1.jsonl")
+    result = run_analyze(root, tmp_path / "pools", tmp_path / "out", option)
+    assert result.returncode == 2
+    assert option in result.stderr
+    assert "_il.jsonl" in result.stderr
+    assert "run: python -m fewshot_dlms.fetch pools java" in result.stderr
+    assert not (tmp_path / "out").exists()
 
 
 def test_plot_writes_the_figures(root, tmp_path):
@@ -278,32 +293,135 @@ class ToyText:
 
 
 def test_run_writes_complete_records_on_toy_models(root):
-    """run.py's four run functions on a byte-level toy: K answers, P0 scores for each, the reference scored, the seed."""
+    """run.py's run functions on a byte-level toy: K answers, P0 scores for each, the reference scored, the seed."""
     run = load_module(root, "experiments/fig4_single_target/run.py", "fig4_run")
     from fewshot_dlms.data import load_families
 
     family = load_families("list_easy_fam", "report")[0]
     gold_text = " " + family["targets"][0]["output"]
     for master, J in ((False, 1), (True, 2)):
-        body = run.run_canvas(ToyText("dlm"), family, 2, J, master, 4, 32, True, True)
+        body = run.run_canvas(ToyText("dlm"), "llada", family, 2, J, master, 4, 32, True, True)
         assert len(body["candidates"]) == 4
         assert all(len(c["texts"]) == J and np.isfinite(c["ell0"]) for c in body["candidates"])
         assert body["oracle_L"][0] == len(gold_text.encode())
         assert body["gold_T"] == sum(body["oracle_L"])
         assert body["checks"]["replay_P1_max_abs_seq"] < 1e-9
-        assert body["seed"] == run.proposal_seed("toy", family["episode_id"], 2, J, master)
-    for model in ("nemotron_ar", "qwen", "qwen_perhole"):
+        assert body["seed"] == run.proposal_seed("llada", family["episode_id"], 2, J, master)
+    for model in ("nemotron_ar", "qwen"):
         toy = ToyText("ar")
-        body = run.run_causal(toy, model, family, 2, 4, 32, True, model != "qwen_perhole")
+        body = run.run_causal(toy, model, family, 2, 4, True, True)
         assert len(body["candidates"]) == 4
         assert body["checks"]["replay_P1_max_abs_seq"] < 1e-9
+        assert body["seed"] == run.proposal_seed(model, family["episode_id"], 2, 1, False)
         if model == "qwen":
             assert all(c["toks"][-1] in toy.stop_ids() or len(c["toks"]) == run.FREE_MAX_NEW for c in body["candidates"])
             assert body["gold_T"] == len(gold_text.encode()) + 1
         else:
             assert all(len(c["toks"]) == len(gold_text.encode()) for c in body["candidates"])
-        if model == "qwen_perhole":
-            assert "[[1]]" in body["checks"]["p1_prompt_text"]
-            assert body["seed"] == run.proposal_seed(model, family["episode_id"], 2, 1, False, (("hole", 0),))
-            with pytest.raises(ValueError):
-                run.run_causal(toy, model, family, 2, 4, 32, True, True)
+            assert body["gold_T"] == len(gold_text.encode())
+
+
+# ---------------------------------------------------------------------------------------------
+# run.py main(): resume, refusal, failures, manifest (toy model in place of the checkpoint)
+# ---------------------------------------------------------------------------------------------
+
+
+@pytest.fixture
+def toy_run(root, monkeypatch, capsys):
+    """run.py with the toy canvas model in place of a checkpoint and no GPU; returns (module, call) where
+    call(out, *arguments) runs main() for LLaDA-1.5's List Functions-Easy cells and returns (exit code, stdout)."""
+    run = load_module(root, "experiments/fig4_single_target/run.py", "fig4_run_main")
+    monkeypatch.setattr(run, "load", lambda name, device: ToyText("dlm"))
+    monkeypatch.setattr(run.torch.cuda, "is_available", lambda: False)
+
+    def call(out, *arguments):
+        argv = ["run.py", "--model", "llada", "--tasks", "list_easy_fam", "--device", "cpu", "--out", str(out), *arguments]
+        monkeypatch.setattr(sys, "argv", argv)
+        code = 0
+        try:
+            run.main()
+        except SystemExit as exit:
+            code = exit.code
+        return code, capsys.readouterr().out
+
+    return run, call
+
+
+def pool_lines(out, name):
+    return (out / "report" / "llada" / f"{name}.jsonl").read_text().splitlines()
+
+
+def test_run_resumes_and_keeps_each_cells_hash(toy_run, tmp_path):
+    """A second run into the same --out writes nothing; a wider run (more M, more families) resumes the M = 2 cell where
+    it stopped, because a cell's protocol hash does not depend on the other cells requested."""
+    run, call = toy_run
+    out = tmp_path / "pools"
+    code, stdout = call(out, "--M", "2", "--K", "4", "--families", "2")
+    assert code == 0
+    assert "CELL_DONE llada list_easy_fam_M2_J1 new=2" in stdout
+    first = pool_lines(out, "list_easy_fam_M2_J1")
+    assert len(first) == 2
+
+    code, stdout = call(out, "--M", "2", "--K", "4", "--families", "2")
+    assert code == 0
+    assert "CELL_DONE llada list_easy_fam_M2_J1 new=0" in stdout
+    assert pool_lines(out, "list_easy_fam_M2_J1") == first
+
+    code, stdout = call(out, "--M", "2,4", "--K", "4", "--families", "5")
+    assert code == 0
+    assert "REFUSED" not in stdout
+    assert "CELL_DONE llada list_easy_fam_M2_J1 new=3" in stdout
+    assert "CELL_DONE llada list_easy_fam_M4_J1 new=5" in stdout
+    lines = pool_lines(out, "list_easy_fam_M2_J1")
+    assert lines[:2] == first
+    records = [json.loads(line) for line in lines]
+    assert len({record["protocol_hash"] for record in records}) == 1
+    assert [record["episode_id"] for record in records] == [f"list_easy_fam:report:{i:03d}" for i in range(5)]
+
+    manifests = [json.loads(path.read_text()) for path in (out / "report" / "llada").glob("manifest_*.json")]
+    assert len(manifests) == 2  # one per distinct set of requested cells
+    manifest = next(m for m in manifests if "list_easy_fam_M4_J1" in m["cells"])
+    assert set(manifest) == {"cells", "seeds", "versions", "command"}
+    assert set(manifest["cells"]) == {"list_easy_fam_M2_J1", "list_easy_fam_M4_J1"}
+    assert manifest["cells"]["list_easy_fam_M2_J1"]["protocol_hash"] == records[0]["protocol_hash"]
+    assert manifest["seeds"]["list_easy_fam_M2_J1"]["list_easy_fam:report:000"] == records[0]["seed"]
+
+
+def test_run_refuses_a_pool_of_another_protocol(toy_run, tmp_path):
+    """Changing K changes the cell's protocol: the existing file is refused, nothing is appended, the exit code is 1."""
+    run, call = toy_run
+    out = tmp_path / "pools"
+    assert call(out, "--M", "2", "--K", "4", "--families", "2")[0] == 0
+    before = pool_lines(out, "list_easy_fam_M2_J1")
+    code, stdout = call(out, "--M", "2", "--K", "3", "--families", "2")
+    assert code == 1
+    assert "REFUSED" in stdout
+    assert "RUN_FAILED" in stdout
+    assert pool_lines(out, "list_easy_fam_M2_J1") == before
+
+
+def test_run_counts_a_failed_family_and_retries_it(toy_run, tmp_path, monkeypatch):
+    """A family that raises is reported and counted, the others are written, the exit code is 1; the next run writes
+    only the failed family."""
+    run, call = toy_run
+    out = tmp_path / "pools"
+    real = run.run_canvas
+
+    def flaky(adapter, model, family, *arguments):
+        if family["episode_id"] == "list_easy_fam:report:001":
+            raise RuntimeError("injected failure")
+        return real(adapter, model, family, *arguments)
+
+    monkeypatch.setattr(run, "run_canvas", flaky)
+    code, stdout = call(out, "--M", "2", "--K", "4", "--families", "3")
+    assert code == 1
+    assert "FAILED list_easy_fam:report:001" in stdout
+    assert "RUN_FAILED llada: 1 families or cells failed" in stdout
+    assert len(pool_lines(out, "list_easy_fam_M2_J1")) == 2
+
+    monkeypatch.setattr(run, "run_canvas", real)
+    code, stdout = call(out, "--M", "2", "--K", "4", "--families", "3")
+    assert code == 0
+    assert "CELL_DONE llada list_easy_fam_M2_J1 new=1" in stdout
+    episodes = [json.loads(line)["episode_id"] for line in pool_lines(out, "list_easy_fam_M2_J1")]
+    assert sorted(episodes) == [f"list_easy_fam:report:{i:03d}" for i in range(3)]

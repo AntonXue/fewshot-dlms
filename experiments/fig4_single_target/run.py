@@ -1,4 +1,4 @@
-# ported from editdiff/experiments/algo_investigation/dr_worker.py::{seed_of, run_canvas, run_ar_oracle, free_steps, run_qwen, run_perhole} and experiments/gold_reward/gr_worker.py::{gold_canvas, gold_ar, gold_qwen, stop_ids} @ d276fa6
+# ported from editdiff/experiments/algo_investigation/dr_worker.py::{seed_of, run_canvas, run_ar_oracle, free_steps, run_qwen} and experiments/gold_reward/gr_worker.py::{gold_canvas, gold_ar, gold_qwen, stop_ids} @ d276fa6
 """Sample and score the pools of Figure 4 (Section 4.1) and of the cross-benchmark study (Figure 9) on a GPU: one
 process, one model, one GPU.
 
@@ -13,17 +13,14 @@ For every family and cell, K answers are sampled from P1 and scored under P0, as
                    distinct continuations together (16 per pass).
     qwen           Qwen3-8B, free length: each continuation stops at its first token that holds a newline or at
                    <|im_end|> (200-token budget), sampled over the ordinary support plus <|im_end|>; P0 as above (32 per pass).
-    qwen_perhole   Qwen3-8B per-hole prompt (Appendix B.1): the target's output is a placeholder [[1]], the instruction
-                   asks for it, the assistant turn opens with "[[1]]:" and the model writes exactly the oracle length.
-                   J = 1 only: canvas.py builds the one-hole prompt. No figure of the paper uses it.
   --crossbench: the cross-benchmark study, M = 4 and J in {1, 2, 4, 8} targets placed in each family's frozen 12-slot
     master layout (canvas.master_layout), for the three canvas models llada, nemotron_pt (causal prefix, bidirectional
     tail from the first target) and dqwen.
 
 The seed of a family's K answers is the first 16 hex digits of SHA-256("algo_investigation|proposal|<model>|<episode>|
-<M>|<J>") mod 2^31; the cross-benchmark cells append "|('placement', 'master')", the per-hole prompt "|('hole', 0)"
-(`proposal_seed`). One torch.Generator with this seed serves all K draws. The batches above are the authors': bf16
-logits depend on the batch they are computed in (tests/gpu_util.py), so these are what reproduce the stored values.
+<M>|<J>") mod 2^31; the cross-benchmark cells append "|('placement', 'master')" (`proposal_seed`). One torch.Generator
+with this seed serves all K draws. The batches above are the authors': bf16 logits depend on the batch they are computed
+in (tests/gpu_util.py), so these are what reproduce the stored values.
 
 --score-gold also scores the reference answer under P1 and P0 (Figure 4's gold row): canvases teacher-force it in the
 same reveal order; the causal suffix scores its oracle-length tokens; Qwen3-8B scores its tokens and then the probability
@@ -75,17 +72,14 @@ INTERFACE = {
     "nemotron_pt": "canvas",
     "nemotron_ar": "causal_suffix",
     "qwen": "free_length",
-    "qwen_perhole": "per_hole",
 }
-ADAPTER = {"qwen_perhole": "qwen"}
-MODELS41 = ["llada", "nemotron_ar", "dqwen", "qwen", "qwen_perhole"]
+MODELS41 = ["llada", "nemotron_ar", "dqwen", "qwen"]
 MODELS42 = ["llada", "nemotron_pt", "dqwen"]
 M_GRID = [1, 2, 4, 8, 16]
 J_GRID = [1, 2, 4, 8]
 CROSSBENCH_M = 4
 K = 64
-CHUNK = 32  # canvases (or per-hole sequences) per forward pass while sampling and scoring, as in the authors' run
-PERHOLE_P0_CHUNK = 16  # the authors' per-hole P0 scorer ran 16 sequences per pass
+CHUNK = 32  # canvases per forward pass while sampling and scoring, as in the authors' run
 FREE_MAX_NEW = 200  # Qwen3-8B's token budget
 EQUIV_N = 2  # distinct sampled answers rescored with the reference answer (score-equivalence check)
 
@@ -94,17 +88,15 @@ INTERFACE_NAME = {
     "canvas": "{model}_canvas_oracle_length",
     "causal_suffix": "nemotron_causal_suffix_oracle_length",
     "free_length": "qwen3_free_length_stop_at_newline_or_im_end",
-    "per_hole": "qwen3_perhole_fim_oracle_content_length",
 }
 
 
-def proposal_seed(model, episode_id, M, J, master, extra=()):
-    """The seed of a family's K answers (see the module doc). `master` adds the master-layout placement to the key;
-    `extra` adds further parts (the per-hole prompt adds ("hole", 0)). Parts are joined with "|" as str() writes them."""
+def proposal_seed(model, episode_id, M, J, master):
+    """The seed of a family's K answers (see the module doc). `master` adds the master-layout placement to the key.
+    Parts are joined with "|" as str() writes them."""
     parts = ["algo_investigation", "proposal", model, episode_id, M, J]
     if master:
         parts.append(("placement", "master"))
-    parts.extend(extra)
     text = "|".join(str(part) for part in parts)
     return int(hashlib.sha256(text.encode()).hexdigest()[:16], 16) % (2 ** 31)
 
@@ -124,8 +116,10 @@ def first_distinct(traces, n):
 # ---------------------------------------------------------------------------------------------
 
 
-def run_canvas(adapter, family, M, J, master, n_candidates, chunk, audit, score_gold):
-    """One family's pool on a canvas: sample K infills from P1, score the distinct ones under P0; optionally the reference."""
+def run_canvas(adapter, model, family, M, J, master, n_candidates, chunk, audit, score_gold):
+    """One family's pool on a canvas: sample K infills from P1, score the distinct ones under P0; optionally the reference.
+
+    `model` is the name in the seed and the records (the adapter's name for the three canvas models)."""
     placement = "interleaved" if master else "demos_first"
     t0 = time.time()
     lengths = oracle_lengths(adapter, family, J)
@@ -135,7 +129,7 @@ def run_canvas(adapter, family, M, J, master, n_candidates, chunk, audit, score_
     p0 = context_ids(adapter, canvas, hide_E=True)
     allowed = adapter.support("ordinary")
 
-    seed = proposal_seed(adapter.name, family["episode_id"], M, J, master)
+    seed = proposal_seed(model, family["episode_id"], M, J, master)
     infills = sample_fixed_order(adapter, canvas, n_candidates, seed, support=allowed, chunk=chunk)
     traces = [[token for site in infill.toks for token in site] for infill in infills]
     seconds_gen = time.time() - t0
@@ -176,7 +170,7 @@ def run_canvas(adapter, family, M, J, master, n_candidates, chunk, audit, score_
             "truncated": False,
         })
     body = {
-        "interface": INTERFACE_NAME["canvas"].format(model=adapter.name),
+        "interface": INTERFACE_NAME["canvas"].format(model=model),
         "n_tokens": len(canvas.ids),
         "oracle_L": lengths,
         "alloc_L": lengths,
@@ -226,42 +220,29 @@ def gold_canvas(adapter, canvas, p1, p0, order, allowed, chunk, saved, candidate
 
 
 # ---------------------------------------------------------------------------------------------
-# Causal models (nemotron_ar, qwen, qwen_perhole), single target
+# Causal models (nemotron_ar, qwen), single target
 # ---------------------------------------------------------------------------------------------
 
 
-def run_causal(adapter, model, family, M, n_candidates, chunk, audit, score_gold):
+def run_causal(adapter, model, family, M, n_candidates, audit, score_gold):
     """One family's pool of a causal interface (J = 1): K continuations of P1's prompt, the distinct ones scored under
     P0's prompt (demonstration outputs deleted), in the frozen run's batches."""
     interface = INTERFACE[model]
     t0 = time.time()
-    perhole = interface == "per_hole"
-    p1 = ar_prompt_ids(adapter, family, M, 1, placeholder_note=perhole)
-    p0 = ar_prompt_ids(adapter, family, M, 1, placeholder_note=perhole, hide_E=True)
+    p1 = ar_prompt_ids(adapter, family, M, 1)
+    p0 = ar_prompt_ids(adapter, family, M, 1, hide_E=True)
     length = oracle_lengths(adapter, family, 1)[0]
+    support = adapter.default_support
+    sample_chunk = adapter.sample_chunk
+    p0_chunk = adapter.p0_chunk
     if interface == "free_length":
         max_new = FREE_MAX_NEW
         stop_ids = adapter.stop_ids()
-        support = adapter.default_support
-        sample_chunk = adapter.sample_chunk
-        p0_chunk = adapter.p0_chunk
-        extra = ()
-    elif interface == "causal_suffix":
-        max_new = length
-        stop_ids = ()
-        support = adapter.default_support
-        sample_chunk = adapter.sample_chunk
-        p0_chunk = adapter.p0_chunk
-        extra = ()
     else:
         max_new = length
         stop_ids = ()
-        support = "ordinary"
-        sample_chunk = chunk
-        p0_chunk = PERHOLE_P0_CHUNK
-        extra = (("hole", 0),)
 
-    seed = proposal_seed(model, family["episode_id"], M, 1, False, extra)
+    seed = proposal_seed(model, family["episode_id"], M, 1, False)
     draws = sample_ar(adapter, p1, n_candidates, seed, max_new, stop_ids, support=support, chunk=sample_chunk)
     traces = [infill.toks[0] for infill in draws]
     seconds_gen = time.time() - t0
@@ -313,10 +294,8 @@ def run_causal(adapter, model, family, M, n_candidates, chunk, audit, score_gold
         saved = first_distinct(traces, EQUIV_N) if audit else []
         if interface == "free_length":
             body.update(gold_free_length(adapter, family, p1, p0, saved, candidates))
-        elif interface == "causal_suffix":
-            body.update(gold_causal_suffix(adapter, family, p1, p0, saved, candidates))
         else:
-            raise ValueError("--score-gold is not defined for the per-hole prompt")
+            body.update(gold_causal_suffix(adapter, family, p1, p0, saved, candidates))
     return body
 
 
@@ -406,13 +385,11 @@ def gold_free_length(adapter, family, p1, p0, saved, candidates):
 # ---------------------------------------------------------------------------------------------
 
 
-def seed_rule(master, interface):
+def seed_rule(master):
     """The seed rule of a cell, as text (proposal_seed)."""
     key = "algo_investigation|proposal|<model>|<episode_id>|<M>|<J>"
     if master:
         key += "|('placement', 'master')"
-    if interface == "per_hole":
-        key += "|('hole', 0)"
     return f"sha256('{key}')[:16] mod 2**31"
 
 
@@ -433,7 +410,7 @@ def cell_config(model, model_id, revision, bank, task, M, J, master, n_candidate
         "K": n_candidates,
         "placement": "master layout (meta.master_placement, 12 slots)" if master else "demonstrations first, target last",
         "temperature": 1.0,
-        "seed_rule": seed_rule(master, interface),
+        "seed_rule": seed_rule(master),
         "score_gold": bool(score_gold),
     }
     if interface == "canvas":
@@ -445,15 +422,11 @@ def cell_config(model, model_id, revision, bank, task, M, J, master, n_candidate
         config["lengths"] = "oracle"
         config["support"] = "ordinary"
         config["chunk"] = {"sample": 32, "p0": 16, "gold": CHUNK}
-    elif interface == "free_length":
+    else:
         config["lengths"] = "free: stop at the first token with a newline or <|im_end|>"
         config["max_new"] = FREE_MAX_NEW
         config["support"] = "free (ordinary + <|im_end|>)"
         config["chunk"] = {"sample": 32, "p0": 32}
-    else:
-        config["lengths"] = "oracle content length after the forced scaffold '[[1]]:'"
-        config["support"] = "ordinary"
-        config["chunk"] = {"sample": chunk, "p0": PERHOLE_P0_CHUNK}
     return config
 
 
@@ -468,9 +441,8 @@ def write_manifest(directory, cells, plan, model):
     seeds = {}
     for _, families, M, J, name in plan:
         config = cells[name]["config"]
-        extra = (("hole", 0),) if config["interface"] == "per_hole" else ()
         master = config["study"] == "crossbench"
-        seeds[name] = {family["episode_id"]: proposal_seed(model, family["episode_id"], M, J, master, extra) for family in families}
+        seeds[name] = {family["episode_id"]: proposal_seed(model, family["episode_id"], M, J, master) for family in families}
     manifest = {
         "cells": cells,
         "seeds": seeds,
@@ -541,7 +513,7 @@ def main():
     parser.add_argument("--crossbench", action="store_true", help="the cross-benchmark study (M = 4, master layout, J targets)")
     parser.add_argument("--score-gold", action="store_true", help="also score the reference answers under P1 and P0")
     parser.add_argument("--out", default="artifacts/reruns/fig4")
-    parser.add_argument("--chunk", type=int, default=CHUNK, help="canvases per forward pass (canvas and per-hole models)")
+    parser.add_argument("--chunk", type=int, default=CHUNK, help="canvases per forward pass (canvas models)")
     parser.add_argument("--audit-n", type=int, default=2, help="first families of the bank that also run the audit checks")
     parser.add_argument("--device", default="cuda")
     args = parser.parse_args()
@@ -554,7 +526,7 @@ def main():
     Js = args.J if args.crossbench else [1]
 
     started = time.time()
-    adapter = load(ADAPTER.get(args.model, args.model), args.device)
+    adapter = load(args.model, args.device)
     print(f"[fig4] {args.model} {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
     out = Path(args.out) / args.bank / args.model
     out.mkdir(parents=True, exist_ok=True)
@@ -592,9 +564,9 @@ def main():
             audit = index < args.audit_n
             try:
                 if INTERFACE[args.model] == "canvas":
-                    body = run_canvas(adapter, family, M_used, J, args.crossbench, args.K, args.chunk, audit, args.score_gold)
+                    body = run_canvas(adapter, args.model, family, M_used, J, args.crossbench, args.K, args.chunk, audit, args.score_gold)
                 else:
-                    body = run_causal(adapter, args.model, family, M_used, args.K, args.chunk, audit, args.score_gold)
+                    body = run_causal(adapter, args.model, family, M_used, args.K, audit, args.score_gold)
             except Exception as error:  # one failed family must not stop the cell; it is counted and retried on the next run
                 print(f"FAILED {family['episode_id']} {name}: {error}\n{traceback.format_exc()[-1500:]}", flush=True)
                 failures.append((name, family["episode_id"]))
