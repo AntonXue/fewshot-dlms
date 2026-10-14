@@ -43,7 +43,7 @@ CARD_NAME = "README.md"
 ROOT = Path(__file__).resolve().parents[2]
 # group -> (download size, what reads it); the sizes are those of ARTIFACTS.md.
 GROUPS = {
-    "pools": ("376 MB", "Figures 4-6 and 8-11: analyze.py of fig4_single_target, fig5_multi_target, fig6_lengths"),
+    "pools": ("376 MB", "Figures 4-6, Appendix B figures: analyze.py of fig4_single_target, fig5_multi_target, fig6_lengths"),
     "java": ("10 MB", "Figure 7: analyze.py and judge.py of fig7_java"),
     "heads": ("3.47 GB", "the four length heads: run.py --mode learned (fig6), --regime learned (fig7), make test-gpu"),
     "head_training": ("1.28 GB", "the heads' training prompts and configs: fig6_lengths/train_head.py"),
@@ -142,7 +142,7 @@ def group_table():
     for group, (size, readers) in GROUPS.items():
         lines.append(f"{group:<14} {size:>8}  {readers}")
     lines.append("")
-    lines.append("make test-parity and make figures need: python -m fewshot_dlms.fetch pools java")
+    lines.append("make test-parity, make reproduce and every analyze.py need: python -m fewshot_dlms.fetch pools java")
     return "\n".join(lines)
 
 

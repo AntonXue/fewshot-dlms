@@ -149,13 +149,16 @@ GPU sampling is statistical in general, so a rerun is judged by whether the froz
   verdict: the columns `n_unique_text`, `modal_share`, `R_range`, `ESS0.5` and `maxw0.5` of `metrics_by_episode.csv`,
   averaged over the 52 episodes. Ordinary sampling (β = 0) has weight 1/16 on every draw (ESS 16) by construction.
 
-  | pool statistic | rerun mean (median) | frozen pools |
-  |---|---|---|
-  | distinct texts per pool | 3.12 (1) | 3.12 |
-  | share of the most frequent text | 0.853 (1) | 0.853 |
-  | range of R = logp1 − logp0 in a pool | 1.80 (0) | 1.80 |
-  | ESS, ordinary (β = 0) / guided (β = 0.5) | 16 / 14.08 (16) | 16 / 14.08 |
-  | largest weight, ordinary / guided | 0.0625 / 0.120 (0.0625) | 0.0625 / 0.120 |
+  | pool statistic | rerun, mean | rerun, median | paper pools, mean |
+  |---|---|---|---|
+  | distinct texts per pool | 3.12 | 1 | 3.12 |
+  | share of the most frequent text | 0.853 | 1 | 0.853 |
+  | range of R = logp1 − logp0 in a pool | 1.80 | 0 | 1.80 |
+  | ESS, ordinary (β = 0) / guided (β = 0.5) | 16 / 14.08 | 16 / 16 | 16 / 14.08 |
+  | largest weight, ordinary / guided | 0.0625 / 0.120 | 0.0625 / 0.0625 | 0.0625 / 0.120 |
+
+  The last column is `analyze.py` on the downloaded paper pools (`artifacts/java/pools`): the same columns of its
+  `metrics_by_episode.csv`, averaged over the 52 oracle episodes of `M1J1`. No API key was used for this check.
 
 - **With the paper's verdicts.** On this platform the rerun reproduced the frozen pools bit for bit (tokens, texts,
   logp1 and logp0 of all 52 × 16 draws, every episode's statistic above identical), so the shipped verdicts grade every
@@ -171,3 +174,7 @@ GPU sampling is statistical in general, so a rerun is judged by whether the froz
 
   The `M1J1` rows are the check; the `all` rows that `--compare` also prints set the frozen value over all 127
   episodes against this 52-episode rerun and do not apply.
+
+- **Note.** On this stack the "inside" verdicts above hold trivially, because the rerun is bit-identical to the frozen
+  pools; `tests/test_resampling_compare.py` checks that `--compare` also reports "outside" when a rerun's mean is far
+  from the frozen one.

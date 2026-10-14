@@ -1,101 +1,116 @@
 # fewshot-dlms
 
-Code for the paper *Multi-Target Few-Shot Prompting with Diffusion Language Models*.
-
-A diffusion language model fills masked positions anywhere in a sequence, so a prompt can hold several
-few-shot demonstrations and several masked targets at once, and the model answers all targets in one
-pass. The paper studies how to prompt such a model well: how to use the demonstrations as evidence
-(example guidance), how to place several targets on one canvas, and how many tokens each target should
-get. This repository reproduces the paper's figures from frozen artifacts on a CPU in minutes, and
-re-runs the experiments on GPUs with the same seeds.
-
-> Status: work in progress. Built so far: benchmark families, scoring, bootstrap, grading, the
-> canvas for List Functions, the fixed-order sampling loop and the three diffusion-model adapters.
-> Parts marked *coming* are built in later milestones.
-
-## The three ideas
-
-Notation: a *canvas* holds M demonstrations and J masked targets. An *infill* is one token string for
-every masked target. P1 is the model's distribution over infills with the demonstration outputs
-visible; P0 is the same model with the demonstration outputs masked (the positions `E` of the canvas).
-
-**1. Example guidance.** The reward of an infill is how much the demonstration outputs raise its likelihood.
-Sample K infills from P1 and reweight them:
-
-    R = log P1 − log P0                    example reward
-    Q_β ∝ P1 · e^{βR} = P1^{1+β} P0^{−β}  β = 0 is ordinary sampling
-    Q_0.5 ∝ P1^{3/2} P0^{−1/2}             β = 0.5, the paper's common strength
-
-The sharpening control raises the same total power on P1 without using P0: `Q ∝ P1^{3/2}` (temperature 2/3).
-Implemented in `src/fewshot_dlms/scoring.py`: `example_reward`, `pool_weights(ell1, ell0, beta, tau)`,
-`family_metrics` (A_all, A_target, effective sample size).
-
-**2. One canvas, many targets.** Demonstrations and J masked targets are interleaved in one sequence and
-all targets are filled in one pass, in a fixed reveal order. Sampling and the two log-likelihoods
-(P1 with `E` visible, P0 with `E` masked; Lemma 3.1) are in `src/fewshot_dlms/adapters/base.py`; the
-canvas itself, with its target sites and `E`, is `src/fewshot_dlms/canvas.py`.
-
-**3. Target lengths.** A masked target needs a token count. Using the length of the reference answer is
-the oracle setting; Section 4.3 predicts it with a small head on the frozen model. Implemented in
-`src/fewshot_dlms/lengths.py` (*coming*).
-
-## Paper section → directory
-
-| Paper | Content | Directory |
-|---|---|---|
-| Section 4.1 | single target, example guidance | `experiments/fig4_single_target` (*coming*) |
-| Section 4.2 | several targets, M × J grid | `experiments/fig5_multi_target` (*coming*) |
-| Section 4.3 | target lengths | `experiments/fig6_lengths` (*coming*) |
-| Section 5 | Java refactoring | `experiments/fig7_java` (*coming*) |
-
-Frozen benchmark families are in `data/benchmarks/` (see its README).
-
-## Requirements
-
-Python 3.12 with the pinned packages of `pyproject.toml` (torch 2.7.1, transformers 5.13.0). The CPU steps
-need nothing else. The GPU steps (`make test-gpu`, the experiments' `run.py`) load three checkpoints from
-the Hugging Face Hub at pinned revisions (`src/fewshot_dlms/adapters/`):
-
-| name | model | revision | size |
-|---|---|---|---|
-| `llada` | `GSAI-ML/LLaDA-1.5` | `84346fd91ba60252d260022201ad6fc5a3468fb2` | 15 GB |
-| `nemotron_pt` | `nvidia/Nemotron-Labs-Diffusion-8B` (causal prefix, bidirectional tail) | `16c67f0560b912e93e0cabb6e0c4f5c3086d95fc` | 16 GB |
-| `dqwen` | `UT-IFML/dQwen3.5-9B-Base` | `f193fa20e341504f8d9e2b4b8342048c466e6590` | 17 GB |
-| `nemotron_ar` | `nvidia/Nemotron-Labs-Diffusion-8B` (causal suffix, Figure 4; same weights as `nemotron_pt`) | `16c67f0560b912e93e0cabb6e0c4f5c3086d95fc` | 16 GB |
-| `qwen` | `Qwen/Qwen3-8B` (free-length causal continuation, Figure 4) | `b968826d9c46dd6066d109eabc6255188de91218` | 16 GB |
-
-They are downloaded into the Hugging Face cache (`$HF_HOME`) on first use. Without network access, cache
-them beforehand and set `HF_HUB_OFFLINE=1`. All three run their own modelling code (`trust_remote_code`).
-The paper's runs used one H100 (96 GB) per model; scoring one candidate at a time peaks at 15–17 GiB.
-
-For GPU runs install `pip install -e .[gpu]`. dQwen3.5's linear-attention layers get their kernels from
-whatever is installed: the paper's dQwen pools were computed with the Triton kernels of
-flash-linear-attention 0.5.1 and *without* causal-conv1d. Without fla, or with causal-conv1d installed,
-transformers silently switches to other kernels and dQwen's numbers drift from the frozen pools; the
-dQwen adapter warns when this happens.
+Code and frozen artifacts for *Multi-Target Few-Shot Prompting with Diffusion Language Models* (under review, 2026).
+A diffusion language model (DLM) fills masked positions anywhere, so one prompt, the *canvas*, holds M demonstrations
+and J masked targets filled jointly. This repository recomputes every table of the paper and its experimental
+figures (Figures 4–7 and the Appendix B figures) on a CPU from stored candidate pools, and reruns them on a GPU.
 
 ## Reproduce in three commands
 
-    pip install -e .
-    python -m fewshot_dlms.fetch pools java      # downloads the frozen pools (coming)
-    make figures                                 # Figures 4–7 from the pools, on CPU (coming)
+    pip install -e .                             # CPU only: add --extra-index-url https://download.pytorch.org/whl/cpu
+    python -m fewshot_dlms.fetch pools java      # stored pools and judge verdicts, about 390 MB, into artifacts/
+    make reproduce                               # every table from the pools, then every figure; CPU, about 1 min
 
-Today `make test` runs the CPU unit tests, which need no downloads.
+`make reproduce` writes `artifacts/reproduce/` and prints each table's difference to the paper's (`data/tables/`,
+which `make figures` plots offline). The fetcher pins the revision in [`ARTIFACTS.md`](ARTIFACTS.md) and checks
+SHA-256s; while the dataset is private it needs a Hugging Face login. Tests (`pip install -e '.[dev]'` first):
+
+    make test          # CPU unit and fixture tests; no downloads, about 30 s
+    make test-parity   # CPU; every paper table from the pools; needs `fetch pools java`
+    make test-gpu      # GPU replay; needs the checkpoints, flash-attn, `fetch java heads`
+    make test-api      # the judge via the Anthropic API; needs `fetch java` and ANTHROPIC_API_KEY; spends credits
+
+## The three ideas
+
+**Example guidance.** P1 is the model's distribution over infills (a token string per target) with the
+demonstration outputs visible, P0 with them masked (positions `E`); ℓ1 = log P1 (`ell1`), ℓ0 = log P0 (`ell0`).
+Draw K infills from P1, score each under P0, and resample one with weights softmax(βR):
+
+    R     = log P1 − log P0 = ℓ1 − ℓ0       example reward
+    Q_β   ∝ P1 · e^{βR} = P1^{1+β} P0^{−β}  β = 0 is ordinary sampling
+    Q_0.5 ∝ P1^{3/2} P0^{−1/2}              β = 0.5, the paper's common strength
+
+The matched sharpening control has the same power 3/2 on P1, without P0: Q ∝ P1^{3/2} (τ = 2/3).
+Code: `scoring.py` (`example_reward`, `pool_weights(ell1, ell0, beta, tau)`, `family_metrics`).
+
+**Multi-target canvases.** Demonstrations and J targets are interleaved in one sequence. A fixed reveal order
+(ascending position, one token per step) makes the DLM's predictions a normalised distribution over complete infills
+(Lemma 3.1), sampled jointly and scored exactly under P1 and P0. A_all needs every target correct; A_avg
+(`A_target`) averages over targets. Code: `canvas.py`, `adapters/base.py`.
+
+**Length allocation.** A target holds exactly as many tokens as it has masks. *Oracle* lengths are the reference
+answers' token counts; a *learned* head (a trainable copy of the DLM's last block, categorical over 1..256) lets each
+candidate draw its lengths; *offsets* L = L* + Δ measure what a wrong length costs. The head is shared by P1 and P0,
+so it cancels from R. Code: `lengths.py`.
+
+## Paper → directory
+
+| Paper | Content | Directory |
+|---|---|---|
+| Section 4.1, Figure 4 | one target, M demonstrations, four model interfaces | [`experiments/fig4_single_target`](experiments/fig4_single_target/README.md) |
+| Section 4.2, Figure 5 | M × J grid of demonstrations and targets | [`experiments/fig5_multi_target`](experiments/fig5_multi_target/README.md) |
+| Section 4.3, Figure 6; Appendix B, Length Allocation | oracle, learned and offset lengths; the length head and its trainer | [`experiments/fig6_lengths`](experiments/fig6_lengths/README.md) |
+| Section 5, Figure 7; Appendix C, Table 1 | Java helper refactoring, LLM-judged; strata, zero-demonstration ablation | [`experiments/fig7_java`](experiments/fig7_java/README.md) |
+| Appendix B, Experimental Setup (Guidance selection); Single-Target Prompting | model interfaces, development-only β; gold reward row | `fig4_single_target` |
+| Appendix B, Multi-Target Prompting | mechanism figure (Fig. 8, both builds); cross-benchmark figure (Fig. 9, both builds) | `fig5_multi_target` |
+| Appendix B, Likelihood Sharpening | M × J sharpening figure (Fig. 10 ACL / Fig. 11 arXiv); matched-power residuals | `fig5_multi_target`; `fig4_single_target` |
+| Appendix B, Guidance-Strength Sensitivity (arXiv only) | guidance-strength sweep figure (Fig. 10 arXiv) | `fig4_single_target/analyze.py --beta-sweep` |
+
+Appendix material is named by topic: its numbers differ between the ACL and arXiv builds.
+`python examples/walkthrough.py --cached` walks one pool from the canvas to ℓ1, ℓ0, R, weights and picks.
 
 ## Three levels of fidelity
 
-1. **Replay (GPU, exact tokens).** The frozen pools store each candidate's token ids and both
-   log-likelihoods. The ported canvas and adapter must reproduce them for the stored tokens within
-   bf16 tolerance. This checks canvas, reveal order and scoring together (`make test-gpu`). Scored in
-   the batches of the authors' run on an H100 NVL, LLaDA-1.5 and Nemotron reproduce them bit for bit;
-   dQwen3.5 varies slightly from process to process (autotuned Triton kernels; `tests/gpu_util.py`).
-2. **Analysis parity (CPU, exact).** Each `analyze.py` reproduces the paper's tables from the frozen
-   pools to 1e-9 (`make test-parity`); a two-family fixture is checked to 1e-12 on every `make test`.
-3. **Resampling (GPU, statistical).** `make rerun-fig5` samples a cell again from scratch. A rerun is
-   not bit-identical to the paper: it passes when the frozen mean lies inside the rerun's 95 % CI.
+- **Replay (GPU).** In the authors' batches on their stack (one H100 NVL, torch 2.7.1+cu128) the stored ℓ1 and ℓ0
+  are reproduced bit for bit for LLaDA-1.5, Nemotron and Qwen3-8B; dQwen3.5's autotuned kernels vary between
+  processes, so it matches within a tolerance (`make test-gpu`).
+- **Analysis (CPU).** Every table is reproduced from the stored pools to at most 1e-9, and the figures drawn from
+  the tables are pixel-identical to the paper's at 150 dpi (`make test-parity`, `make reproduce`).
+- **Resampling (GPU).** On that stack `run.py` at the paper's K reproduces the frozen records of LLaDA-1.5, Nemotron
+  and Qwen3-8B bit for bit. Elsewhere, with another K, or for dQwen3.5 a rerun passes when the paper's mean lies in
+  its 95 % CI (`analyze.py --compare`; `make rerun-fig4` … `rerun-fig7`; each README's "Resampling check").
+
+## Requirements
+
+Python 3.12 and the versions pinned in `pyproject.toml`. The authors ran every GPU step on one H100 NVL (96 GB) per
+process. The adapters load these checkpoints in bf16 from the Hugging Face cache (`HF_HUB_OFFLINE=1` for offline use):
+
+| adapter | Hugging Face model | pinned revision |
+|---|---|---|
+| `llada` | `GSAI-ML/LLaDA-1.5` | `84346fd91ba60252d260022201ad6fc5a3468fb2` |
+| `nemotron_pt`, `nemotron_ar` | `nvidia/Nemotron-Labs-Diffusion-8B` | `16c67f0560b912e93e0cabb6e0c4f5c3086d95fc` |
+| `dqwen` | `UT-IFML/dQwen3.5-9B-Base` | `f193fa20e341504f8d9e2b4b8342048c466e6590` |
+| `qwen` | `Qwen/Qwen3-8B` | `b968826d9c46dd6066d109eabc6255188de91218` |
+
+dQwen3.5 needs `pip install -e '.[gpu]'`, LLaDA-1.5's length heads flash-attn (install:
+[`experiments/fig6_lengths/README.md`](experiments/fig6_lengths/README.md)).
 
 ## The Java judge
 
-The paper's Java verdicts (Section 5) were produced by Claude Sonnet 5.5 running through Claude Code
-sub-agents. The public `judge.py` (*coming*) calls the Anthropic API with the same rubric. The original
-verdicts ship with the pools, so a replacement judge can be validated against them.
+Figure 7's verdicts come from an LLM judge, Claude Sonnet 5.5 running as Claude Code sub-agents with the rubric
+`experiments/fig7_java/rubric_r1.md`. They ship with the artifacts, so Figure 7 needs no API access; `judge.py`
+re-judges through the Anthropic API, approximately and at a cost.
+
+## Layout and size
+
+    README.md AGENTS.md THIRD_PARTY.md LICENSE ARTIFACTS.md SHA256SUMS Makefile pyproject.toml
+    src/fewshot_dlms/   2,928   the library
+    examples/             241   walkthrough.py
+    experiments/        6,937   one pipeline per figure: run.py, analyze.py, plot.py, README
+    tests/              4,837   CPU, parity, GPU and API tests
+    tools/              1,127   scripts that cut data/ and the artifacts from the authors' runs
+    data/  artifacts_upload/  artifacts/   inputs and the paper's tables; the data card; downloads (not in git)
+
+Lines of Python. A reader needs `src/` and `examples/` (3,169 lines, kept under 5,000); parity tests hold the ports
+in `experiments/` to the paper. A port's first line, `# ported from editdiff/<path> @ <commit>`, names its source in
+the authors' research repository.
+
+## License and citation
+
+The code is MIT ([`LICENSE`](LICENSE)). Fonts, benchmark data, Java excerpts, checkpoints and artifacts keep their
+own terms: see [`THIRD_PARTY.md`](THIRD_PARTY.md) and the data card,
+[huggingface.co/datasets/UT-IFML/fewshot-dlms](https://huggingface.co/datasets/UT-IFML/fewshot-dlms) (private until
+the public release; text in [`artifacts_upload/README.md`](artifacts_upload/README.md)).
+
+    @misc{fewshotdlms2026, title = {Multi-Target Few-Shot Prompting with Diffusion Language Models},
+      year = {2026}, note = {Under review}, url = {https://github.com/AntonXue/fewshot-dlms}}

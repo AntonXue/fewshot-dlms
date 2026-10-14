@@ -1,5 +1,5 @@
 # ported from editdiff/experiments/multimodel/mm_adapters.py::Qwen3 and experiments/algo_investigation/dr_worker.py::{run_qwen, free_steps, IM_END} @ d276fa6
-"""Qwen3-8B, the autoregressive comparison of the single-target study (Figure 4; Appendix B.1).
+"""Qwen3-8B, the autoregressive comparison of the single-target study (Figure 4; Appendix B, Experimental Setup).
 
 Qwen3-8B continues the prompt of canvas.ar_prompt_ids left to right with its own causal attention
 (SDPA, no KV cache), one token per step (adapters.base.sample_ar). The logits for the token at position p

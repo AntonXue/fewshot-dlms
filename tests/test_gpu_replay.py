@@ -13,7 +13,7 @@ stored tokens with the fixed-order loop of Lemma 3.1 (adapters/base.py):
     Nemotron (tests/gpu_util.py explains both tolerances). For dQwen3.5 this test also checks that the
     linear-attention kernels are those of the paper's runs (flash-linear-attention 0.5.1).
 
-The two causal interfaces of Figure 4 (Appendix B.1) are checked the same way on
+The two causal interfaces of Figure 4 (Appendix B, Experimental Setup) are checked the same way on
 data/fixtures/fig4/<model>_sst2_M4.jsonl: two single-target pool records per model (SST-2, M = 4,
 K = 64 continuations). nemotron_ar is Nemotron's causal suffix of the oracle length; qwen is Qwen3-8B's
 free-length continuation, which stops at a newline or <|im_end|>. Here P0 deletes the demonstration

@@ -1,5 +1,6 @@
 # ported from editdiff/experiments/length_project/lpx_ds.py, experiments/length_project/lpx_tables.py and experiments/algo_investigation/fs_analyze_lib.py::{load, cell} @ d276fa6
-"""Figure 6 (Section 4.3) and the appendix fidelity row (Appendix B.5), from the frozen pools (CPU only, no model).
+"""Figure 6 (Section 4.3) and the appendix fidelity row (Appendix B, Length Allocation), from the frozen pools (CPU
+only, no model).
 
 Section 4.3 asks how many tokens each masked target should get. List Functions-Easy, 64 report families, M = 4
 demonstrations, J in {1, 2, 4, 8} targets, ordinary sampling (beta = 0: every candidate has weight 1/K). A pool file

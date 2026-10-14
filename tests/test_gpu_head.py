@@ -1,4 +1,4 @@
-"""The ported length head reproduces the authors' frozen LLaDA-1.5 head (Section 4.3, Appendix B.5).
+"""The ported length head reproduces the authors' frozen LLaDA-1.5 head (Section 4.3, Appendix B, Length Allocation).
 
 data/fixtures/fig6/head_predictions_llada.json holds, for the first ten report families of List
 Functions-Easy at M = 4 demonstrations and J = 2 targets, the frozen head's distributions over the lengths

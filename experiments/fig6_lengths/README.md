@@ -8,7 +8,7 @@ a learned length head, and measures how much accuracy a forced offset L = L* + �
 |---|---|---|---|
 | Figure 6 (Section 4.3), top row | A_avg with sampled learned lengths vs oracle lengths, against J | `fig6.pdf` | `sec43_downstream.csv` |
 | Figure 6 (Section 4.3), bottom row | A_avg with L = L* + Δ at every target, J = 1, 2 | `fig6.pdf` | `sec43_length_perturbation.csv` |
-| Appendix B.5, fidelity row | the head's mass on the exact length and within 1 and 2 tokens | `fidelity_row.pdf` | `sec43_length_metrics.csv` |
+| Appendix B, Length Allocation, fidelity row | the head's mass on the exact length and within 1 and 2 tokens | `fidelity_row.pdf` | `sec43_length_metrics.csv` |
 
 A_avg is the per-target accuracy (`A_target` in the tables). `sec43_length_metrics.csv` also holds the
 visible-demonstration prior (the empirical distribution of the M demonstration output lengths), the reference the head
@@ -29,8 +29,8 @@ is compared with.
     skipped and counted, never clipped: 3 families at J = 1 and 6 at J = 2 for Δ < 0. (`lengths.allocate("offset")`
     clips; `run.py` skips first.)
 - **K.** K = 64 / J candidates (64, 32, 16, 8), so every cell samples 64 targets per family. The oracle arm is the
-  K = 64 pool of the same families from the Section 4.1/4.2 sweep (the cross-benchmark study of Figure 9), which
-  `run.py --mode oracle --K 64` reproduces token for token.
+  K = 64 pool of the same families from the Section 4.1/4.2 sweep (the cross-benchmark study; Fig. 9, both
+  builds), which `run.py --mode oracle --K 64` reproduces token for token.
 - **Sampling.** Candidates with the same allocation share a canvas, and candidate k is revealed on the canvas of its
   own allocation (`adapters.base.reveal` with one context per distinct allocation; Lemma 3.1, ascending positions, one
   token per step, ordinary support, chunks of 32 canvases). All K draws of a family come from one torch Generator
@@ -70,7 +70,7 @@ is compared with.
     artifacts/pools/fig6/<model>/length_head_report.jsonl               per (family, J): oracle lengths, demonstration
                                                                         lengths demo_L, and the compact prompt
 
-`run.py --mode learned` and `train_head.py` also use (same fetch):
+`run.py --mode learned` and `train_head.py` also use (`python -m fewshot_dlms.fetch heads head_training`):
 
     artifacts/heads/<backbone>.pt                         the frozen heads, <backbone> = llada, nemotron, dqwen
     artifacts/head_training/fsp_<backbone>_train.jsonl    structured few-shot training prompts (100,000 per backbone)
@@ -152,13 +152,17 @@ GPU sampling is statistical in general, so a rerun is judged by whether the froz
   | 0 | A_avg (learned lengths) | 0.250 | 0.250 [0.187, 0.317] | inside |
 
 - **Note.** On this platform the rerun reproduced the frozen pool bit for bit (allocations, tokens and ell1 of all
-  64 × 32 candidates): `--compare` reports a largest difference of 0 (2.8e-17 in `pr_L_ne_Lstar_given_correct`) in
-  every column except `diff_vs_oracle`, `diff_lo` and `diff_hi`, which are empty because the rerun directory holds no
-  oracle pool. On another GPU the draws differ and the verdict is the check.
+  64 × 32 candidates): `--compare` reports a largest difference of at most 2.8e-17 (in
+  `pr_L_ne_Lstar_given_correct`) in every column except `diff_vs_oracle`, `diff_lo` and `diff_hi`, which are empty
+  because the rerun directory holds no oracle pool. On another GPU the draws differ and the verdict is the check. On
+  this stack the "inside" verdicts therefore hold trivially; `tests/test_resampling_compare.py` checks that
+  `--compare` also reports "outside" when a rerun's mean is far from the frozen one (on Figure 5's `analyze.py`,
+  which prints the same verdict rule).
 
 ## Training a length head (optional)
 
-The paper's heads ship frozen; `train_head.py` retrains one (Appendix B.5). Restated with `frozen_config.json`:
+The paper's heads ship frozen; `train_head.py` retrains one (Appendix B, Length Allocation). Restated with
+`frozen_config.json`:
 
 - **Architecture.** The backbone stays frozen. A trainable fp32 copy of its last transformer block and final norm
   (LLaDA-1.5: block 31 and ln_f; Nemotron: layer 33 and encoder.norm; dQwen3.5: layer 31 and model.norm) reads the

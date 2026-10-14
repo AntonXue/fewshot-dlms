@@ -2,7 +2,8 @@
 
 Maintainer tool, run once per release; users download its result with `python -m fewshot_dlms.fetch`, which places
 the tree under artifacts/. The script copies the authors' pools, length heads and head-training data from their
-private run directories (the SOURCES block) into one upload directory with exactly that layout:
+private run directories (tools/sources.local.json, not in the repository) into one upload directory with
+exactly that layout:
 
   pools/fig4/{report,dev}/<model>/<task>_M{M}_J1.jsonl         Section 4.1 pools (llada, nemotron_ar, dqwen, qwen)
   pools/fig4/{report,dev}/<model>/<task>_M4_J{J}_il.jsonl      cross-benchmark pools (llada, nemotron_pt, dqwen)
@@ -31,7 +32,9 @@ What changes on the way; everything else is copied byte for byte:
 Then it hashes the tree into SHA256SUMS (also written to the repository root, where fetch.py verifies downloads
 against it) and checks it: no record keeps a key of RUN_METADATA, no SST-2 or MIT Movie record keeps prompt text,
 and no file, text or binary, matches PRIVATE_PATTERN (in JSONL files, sampled candidate texts excepted). With --check
-it also requires the tree to match the repository's SHA256SUMS and writes nothing. It exits with status 1 if a check fails or a source is missing.
+it also requires the tree to match the repository's SHA256SUMS and writes nothing. It exits with status 1 if a check
+fails or a source is missing, and with status 2 if tools/sources.local.json is missing or incomplete (with --check
+it needs only upload_dir).
 
 Re-running is safe: unchanged outputs are not rewritten; files that are no longer planned and leftover temporary
 files (*.tmp) are removed, and any other file outside the plan stops the run. The
@@ -57,16 +60,19 @@ import torch
 from extract_fixtures import without_benchmark_text  # tools/ is on sys.path when this script runs
 from fewshot_dlms.data import TEXT_FREE_BENCHMARKS
 
-# ---- SOURCES: the authors' private run directories (machine-specific; the public release replaces this block) ----
-FINAL_SWEEPS = Path("/disk-a-redacted/user-redacted/final_sweeps_4_1_4_2_4_4_20261003-062825/pools")
-GOLD_PROBE = Path("/disk-a-redacted/user-redacted/gold_reward_20261007-173712/report")
-MJ_GRID = Path("/disk-a-redacted/user-redacted/sec42_mj_20261011-070018/pools")
-LENGTH_PROJECT = Path("/disk-a-redacted/user-redacted/length_project_20261007-061559")
-JAVA_LENGTH = Path("/disk-a-redacted/user-redacted/sec5_length_20261010-205040")
-JAVA_RUN = Path("/private-repo-redacted/private-docs-redacted/20261011-012221-sec5-final-helper-run")
-JAVA_ZERO_DEMO = Path("/private-repo-redacted/private-docs-redacted/20261011-055211-s5-zero-demo-ablation")
-UPLOAD_DIR = Path("/disk-a-redacted/user-redacted/fewshot_dlms_upload")
-# ---- end SOURCES ----
+# The authors' private run directories are not in the repository: tools/sources.local.json (git-ignored) maps each
+# key of SOURCE_KEYS to a directory; tools/sources.example.json lists the keys with placeholder paths.
+SOURCES_FILE = Path(__file__).resolve().parent / "sources.local.json"
+SOURCE_KEYS = (
+    "final_sweeps",  # the Section 4.1 and cross-benchmark pools: <bank>/<model>/<task>_M{M}_J{J}[_il].jsonl
+    "gold_probe",  # the reference answers scored under P1 and P0: <model>/<task>_M{M}_J{J}[_il].jsonl
+    "mj_grid",  # the M x J grid: <model>/list_easy_fam_M{M}_J{J}.jsonl
+    "length_project",  # Section 4.3: ds_run/, eval/, data/, runs/<head run>/
+    "java_length",  # head C of Section 5: eval/, data/, runs/s5hc_C/, corpus_audit.json
+    "java_run",  # the Section 5 run: generation/report/, judging/, length/
+    "java_zero_demo",  # the zero-demonstration ablation: generation/report/, judging/
+    "upload_dir",  # the default --dest: the upload directory, outside the repository
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 CARD = ROOT / "artifacts_upload" / "README.md"
@@ -94,7 +100,7 @@ HEAD_C_CORPUS = ("s5g", "s5h")
 RUN_METADATA = ("host", "hostname", "gpu_env", "gpu", "device", "pid", "cwd", "root", "wall_time", "pool_file",
                 "lengths_file")
 CONFIG_DROPPED = ("root", "gpu")  # a head's training config (JSON): the run directory and the GPU index
-HEAD_CONFIG_DROPPED = ("root",)  # the config pickled in a head checkpoint: the run directory only (R33)
+HEAD_CONFIG_DROPPED = ("root",)  # the config pickled in a head checkpoint: the run directory only; weights unchanged
 MANIFEST_DROPPED = ("input_ids", "mask_positions")  # head C's corpus rows: the tokenised code
 # Text that must not reach the tree: machine paths and internal working notes (generic, no names).
 PRIVATE_PATTERN = re.compile(rb"/(?:hdd|ssd)\d|/home/|/mnt/|hand-off|\.claude")
@@ -103,75 +109,99 @@ TOP_LEVEL = ("pools", "java", "heads", "head_training", "SHA256SUMS")
 MAX_BYTES = 12 * 10 ** 9
 
 
-def plan():
+def load_sources(path=SOURCES_FILE, required=SOURCE_KEYS):
+    """The directories of `path` (JSON: key -> directory) for the keys of SOURCE_KEYS it holds; exits with status 2
+    without the file or without a key of `required`."""
+    if not path.is_file():
+        print(f"no {path.name}: copy tools/sources.example.json to {path} and set the authors' run directories",
+              file=sys.stderr)
+        sys.exit(2)
+    sources = json.loads(path.read_text(encoding="utf-8"))
+    missing = [key for key in required if key not in sources]
+    if missing:
+        print(f"{path.name} lacks the keys {', '.join(missing)} (see tools/sources.example.json)", file=sys.stderr)
+        sys.exit(2)
+    return {key: Path(sources[key]) for key in SOURCE_KEYS if key in sources}
+
+
+def plan(sources):
     """Every file of the tree except README.md and SHA256SUMS: a list of (path in the tree, source, kind).
+
+    `sources` maps each key of SOURCE_KEYS to its directory (load_sources).
 
     kind is "copy" (bytes), "jsonl" (records without RUN_METADATA and benchmark text), "config" (JSON without
     CONFIG_DROPPED), "manifest" (JSONL rows without MANIFEST_DROPPED) or "head" (a checkpoint re-saved without
     HEAD_CONFIG_DROPPED in its training config).
     """
+    final_sweeps = sources["final_sweeps"]
+    gold_probe = sources["gold_probe"]
+    mj_grid = sources["mj_grid"]
+    length_project = sources["length_project"]
+    java_length = sources["java_length"]
+    java_run = sources["java_run"]
+    java_zero_demo = sources["java_zero_demo"]
     files = []
     for bank in ("report", "dev"):
         for model in SECTION41_MODELS:
             for task in TASKS:
                 for M in DEMO_COUNTS:
                     name = f"{bank}/{model}/{task}_M{M}_J1.jsonl"
-                    files.append((f"pools/fig4/{name}", FINAL_SWEEPS / name, "jsonl"))
+                    files.append((f"pools/fig4/{name}", final_sweeps / name, "jsonl"))
         for model in CANVAS_MODELS:
             for task in TASKS:
                 for J in TARGET_COUNTS:
                     name = f"{bank}/{model}/{task}_M4_J{J}_il.jsonl"
-                    files.append((f"pools/fig4/{name}", FINAL_SWEEPS / name, "jsonl"))
+                    files.append((f"pools/fig4/{name}", final_sweeps / name, "jsonl"))
     for model in SECTION41_MODELS:
         for task in TASKS:
             for M in DEMO_COUNTS:
                 name = f"{model}/{task}_M{M}_J1.jsonl"
-                files.append((f"pools/fig4/gold/{name}", GOLD_PROBE / name, "jsonl"))
+                files.append((f"pools/fig4/gold/{name}", gold_probe / name, "jsonl"))
     for model in CANVAS_MODELS:
         for M in GRID_DEMO_COUNTS:
             for J in TARGET_COUNTS:
                 name = f"{model}/list_easy_fam_M{M}_J{J}.jsonl"
-                files.append((f"pools/fig5/{name}", MJ_GRID / name, "jsonl"))
+                files.append((f"pools/fig5/{name}", mj_grid / name, "jsonl"))
         for task in TASKS:
             name = f"{model}/{task}_M4_J8_il.jsonl"
-            files.append((f"pools/fig5/crossbench_gold/{name}", GOLD_PROBE / name, "jsonl"))
+            files.append((f"pools/fig5/crossbench_gold/{name}", gold_probe / name, "jsonl"))
     for model, (backbone, run) in HEAD_RUNS.items():
         dest = f"pools/fig6/{model}"
-        ds_run = LENGTH_PROJECT / "ds_run" / "pools" / "report" / model
+        ds_run = length_project / "ds_run" / "pools" / "report" / model
         for J in TARGET_COUNTS:
-            files.append((f"{dest}/list_easy_fam_M4_J{J}_oracle.jsonl", FINAL_SWEEPS / "report" / model / f"list_easy_fam_M4_J{J}_il.jsonl", "jsonl"))
+            files.append((f"{dest}/list_easy_fam_M4_J{J}_oracle.jsonl", final_sweeps / "report" / model / f"list_easy_fam_M4_J{J}_il.jsonl", "jsonl"))
             files.append((f"{dest}/list_easy_fam_M4_J{J}_learned.jsonl", ds_run / f"list_easy_fam_M4_J{J}_pc_learned_{run}.jsonl", "jsonl"))
         offsets = OFFSETS + ("0",) if model == "dqwen" else OFFSETS
         for J in (1, 2):
             for delta in offsets:
                 files.append((f"{dest}/list_easy_fam_M4_J{J}_delta{delta}.jsonl", ds_run / f"list_easy_fam_M4_J{J}_pc_delta{delta}.jsonl", "jsonl"))
-        files.append((f"{dest}/length_head_report.npz", LENGTH_PROJECT / "eval" / f"{run}_listbench_report.npz", "copy"))
-        files.append((f"{dest}/length_head_report.jsonl", LENGTH_PROJECT / "data" / f"listbench_report_{backbone}.jsonl", "jsonl"))
+        files.append((f"{dest}/length_head_report.npz", length_project / "eval" / f"{run}_listbench_report.npz", "copy"))
+        files.append((f"{dest}/length_head_report.jsonl", length_project / "data" / f"listbench_report_{backbone}.jsonl", "jsonl"))
     for name in JAVA_POOLS:
-        files.append((f"java/pools/pools_{name}.jsonl", JAVA_RUN / "generation" / "report" / f"pools_{name}.jsonl", "jsonl"))
+        files.append((f"java/pools/pools_{name}.jsonl", java_run / "generation" / "report" / f"pools_{name}.jsonl", "jsonl"))
     for name in ("verdicts.jsonl", "packet_index.jsonl"):
-        files.append((f"java/judging/{name}", JAVA_RUN / "judging" / name, "jsonl"))
-        files.append((f"java/zero_demo/judging/{name}", JAVA_ZERO_DEMO / "judging" / name, "jsonl"))
-    files.append(("java/judging/calibration.csv", JAVA_RUN / "judging" / "calibration.csv", "copy"))
-    files.append(("java/judging/calibration/controls.jsonl", JAVA_RUN / "judging" / "calibration" / "controls.jsonl", "jsonl"))
+        files.append((f"java/judging/{name}", java_run / "judging" / name, "jsonl"))
+        files.append((f"java/zero_demo/judging/{name}", java_zero_demo / "judging" / name, "jsonl"))
+    files.append(("java/judging/calibration.csv", java_run / "judging" / "calibration.csv", "copy"))
+    files.append(("java/judging/calibration/controls.jsonl", java_run / "judging" / "calibration" / "controls.jsonl", "jsonl"))
     for head in JAVA_LENGTH_HEADS:
-        files.append((f"java/length/{head}_s5final_G4.npz", JAVA_LENGTH / "eval" / f"{head}_s5final_G4.npz", "copy"))
-    files.append(("java/length/fin_llada_m70_100k_s5final_G4.npz", LENGTH_PROJECT / "eval" / "fin_llada_m70_100k_s5final_G4.npz", "copy"))
-    files.append(("java/length/prior_s5h_train.json", JAVA_RUN / "length" / "prior_s5h_train.json", "copy"))
+        files.append((f"java/length/{head}_s5final_G4.npz", java_length / "eval" / f"{head}_s5final_G4.npz", "copy"))
+    files.append(("java/length/fin_llada_m70_100k_s5final_G4.npz", length_project / "eval" / "fin_llada_m70_100k_s5final_G4.npz", "copy"))
+    files.append(("java/length/prior_s5h_train.json", java_run / "length" / "prior_s5h_train.json", "copy"))
     for name in ZERO_DEMO_POOLS:
-        files.append((f"java/zero_demo/pools/pools_{name}.jsonl", JAVA_ZERO_DEMO / "generation" / "report" / f"pools_{name}.jsonl", "jsonl"))
+        files.append((f"java/zero_demo/pools/pools_{name}.jsonl", java_zero_demo / "generation" / "report" / f"pools_{name}.jsonl", "jsonl"))
     for backbone, run in HEAD_RUNS.values():
-        files.append((f"heads/{backbone}.pt", LENGTH_PROJECT / "runs" / run / "final.pt", "head"))
-        files.append((f"head_training/configs/{backbone}.json", LENGTH_PROJECT / "runs" / run / "config.json", "config"))
+        files.append((f"heads/{backbone}.pt", length_project / "runs" / run / "final.pt", "head"))
+        files.append((f"head_training/configs/{backbone}.json", length_project / "runs" / run / "config.json", "config"))
         for name in (f"fsp_{backbone}_train", f"edit_{backbone}_train", f"listbench_dev_{backbone}", f"edit_{backbone}_dev"):
-            files.append((f"head_training/{name}.jsonl", LENGTH_PROJECT / "data" / f"{name}.jsonl", "jsonl"))
-    files.append(("head_training/fsp_logical_train.jsonl", LENGTH_PROJECT / "data" / "fsp_logical_train.jsonl", "jsonl"))
-    files.append(("heads/java_head_C.pt", JAVA_LENGTH / "runs" / "s5hc_C" / "final.pt", "head"))
-    files.append(("head_training/configs/java_head_C.json", JAVA_LENGTH / "runs" / "s5hc_C" / "config.json", "config"))
+            files.append((f"head_training/{name}.jsonl", length_project / "data" / f"{name}.jsonl", "jsonl"))
+    files.append(("head_training/fsp_logical_train.jsonl", length_project / "data" / "fsp_logical_train.jsonl", "jsonl"))
+    files.append(("heads/java_head_C.pt", java_length / "runs" / "s5hc_C" / "final.pt", "head"))
+    files.append(("head_training/configs/java_head_C.json", java_length / "runs" / "s5hc_C" / "config.json", "config"))
     for corpus in HEAD_C_CORPUS:
         for split in ("train", "dev"):
-            files.append((f"head_training/java_head_C/{corpus}_{split}_manifest.jsonl", JAVA_LENGTH / "data" / f"{corpus}_llada_{split}.jsonl", "manifest"))
-    files.append(("head_training/java_head_C/corpus_audit.json", JAVA_LENGTH / "corpus_audit.json", "copy"))
+            files.append((f"head_training/java_head_C/{corpus}_{split}_manifest.jsonl", java_length / "data" / f"{corpus}_llada_{split}.jsonl", "manifest"))
+    files.append(("head_training/java_head_C/corpus_audit.json", java_length / "corpus_audit.json", "copy"))
     return files
 
 
@@ -463,13 +493,14 @@ def link_top_level(dest):
 
 
 def main():
-    print("warning: tools/assemble_artifacts.py reads the authors' private run directories (SOURCES block)", file=sys.stderr)
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--dest", type=Path, default=UPLOAD_DIR, help="the upload directory")
+    parser.add_argument("--dest", type=Path, default=None, help="the upload directory (default: upload_dir of the sources)")
     parser.add_argument("--check", action="store_true", help="only hash and check the existing tree; writes nothing")
     args = parser.parse_args()
-    args.dest = args.dest.resolve()
-    files = plan()
+    sources = load_sources(required=("upload_dir",) if args.check else SOURCE_KEYS)  # --check reads only the tree
+    print(f"warning: tools/assemble_artifacts.py reads the authors' private run directories ({SOURCES_FILE.name})", file=sys.stderr)
+    args.dest = (args.dest or sources["upload_dir"]).resolve()
+    files = plan({key: sources.get(key, Path()) for key in SOURCE_KEYS})  # --check only needs the planned names
     if not args.check:
         missing = [str(source) for _, source, _ in files if not source.is_file()]
         if missing or not CARD.is_file():

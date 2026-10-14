@@ -1,5 +1,6 @@
 # ported from editdiff/experiments/paper_integration/figure_redesign/fig_finalize.py::{fig6, fig6_fidelity_row} (the production Figure 6) and experiments/length_project/lpx_figs43d.py @ d276fa6
-"""Figure 6 (Section 4.3) and the appendix fidelity row (Appendix B.5) from the tables in data/tables/fig6 (CPU only).
+"""Figure 6 (Section 4.3) and the appendix fidelity row (Appendix B, Length Allocation) from the tables in
+data/tables/fig6 (CPU only).
 
     fig6.pdf          Figure 6. Three panels per row, one per diffusion model, M = 4, beta = 0, List Functions-Easy.
                       Top row: per-target accuracy A_avg (A_target) with sampled learned lengths vs oracle lengths,
