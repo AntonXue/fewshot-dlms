@@ -76,7 +76,7 @@ run's own checks.
 ## Provenance
 
 All files come from the authors' runs on H100 NVL GPUs (96 GB), torch 2.7.1+cu128, transformers 5.13.0, with the
-models at the revisions below. Section numbers refer to the paper.
+models at the revisions below. Section numbers refer to the paper; Appendix B is cited by subsection title.
 
 | model | Hugging Face id | revision |
 |---|---|---|
@@ -85,23 +85,23 @@ models at the revisions below. Section numbers refer to the paper.
 | dQwen3.5 | `UT-IFML/dQwen3.5-9B-Base` | `f193fa20e341504f8d9e2b4b8342048c466e6590` |
 | Qwen3-8B | `Qwen/Qwen3-8B` | `b968826d9c46dd6066d109eabc6255188de91218` |
 
-- **`pools/fig4`** (Sections 4.1, 4.4, Appendix B). The four-benchmark oracle-length sweep: development bank (32 / 21 /
+- **`pools/fig4`** (Section 4.1; Appendix B, Single-Target Prompting and Likelihood Sharpening). The four-benchmark oracle-length sweep: development bank (32 / 21 /
   32 / 32 families for SST-2 / List / SALT / Movie) and report bank (64 per benchmark), 16 ordered demonstrations and 8
   ordered targets per family, nested prefixes. Families and placements were frozen before any inference with the seed
   strings `mtfsp-20261003-final-v1` (source partitions), `mtfsp-20261003-dev-v1`, `mtfsp-20261003-report-v1` and
   `mtfsp-20261003-placement-v1` (the 12-slot master layout of the cross-benchmark cells). The K = 64 answers of a
   family share one torch generator seeded with the first 16 hex digits of SHA-256(`algo_investigation|proposal|<model>|
   <episode>|<M>|<J>`) mod 2^31; cross-benchmark cells append `|('placement', 'master')`. `gold/` holds the reference
-  answers of the Section 4.1 report cells, teacher-forced and scored under P1 and P0 (Figure 4's gold row).
+  answers of the Section 4.1 report cells, teacher-forced and scored under P1 and P0 (the gold row of Appendix B, Single-Target Prompting).
   The development bank fixed each model's β before any report table was computed (`data/tables/fig4/beta_locks.json`
   in the code repository).
-- **`pools/fig5`** (Section 4.2, Appendix A). List Functions–Easy, the 64 report families, M ∈ {2, 4, 8, 16} × J ∈
+- **`pools/fig5`** (Section 4.2; Appendix B, Multi-Target Prompting). List Functions–Easy, the 64 report families, M ∈ {2, 4, 8, 16} × J ∈
   {1, 2, 4, 8}, K = 16, three DLMs. Protocol hash `98fe06a36f6b6503` (every record's `protocol_hash`); proposal seed =
   first 16 hex digits of SHA-256(`sec42_mj|proposal|<model>|<episode>|<M>|<J>|master24`) mod 2^31; bootstrap seed
   string `mtfsp-20261011-mj-bootstrap-v1`. Two files hold one family twice (LLaDA-1.5 M = 16, J = 8; dQwen3.5 M = 16,
   J = 4); the analysis keeps the first complete record. `crossbench_gold/` holds the reference answers of the J = 8
-  cross-benchmark cells of `pools/fig4`, scored target by target (Figure 8).
-- **`pools/fig6`** (Section 4.3, Appendix B.5). The oracle pools are the List Functions–Easy cross-benchmark report pools
+  cross-benchmark cells of `pools/fig4`, scored target by target (the mechanism figure, Figure 8 in both builds; Appendix B, Multi-Target Prompting).
+- **`pools/fig6`** (Section 4.3; Appendix B, Length Allocation). The oracle pools are the List Functions–Easy cross-benchmark report pools
   of `pools/fig4` (`pools/fig4/report/<model>/list_easy_fam_M4_J{J}_il.jsonl`): the same bytes, shipped twice so that
   each figure's directory is complete. The learned and offset pools sample K = 64 / J candidates per family, each on
   its own canvas with the lengths drawn from the frozen head (seed of the allocations: (bank, backbone, family, J),
@@ -116,10 +116,14 @@ models at the revisions below. Section numbers refer to the paper.
   key12(`0e1d3c9040b09598`, `s5final`, regime, episode, allocation) mod 2^31, an ablation arm with
   key12(`c2a07e4a701f0a41`, `demo_ablation`, anchor, target sites, M) mod 2^31, where key12 is the first 12 hex digits
   of SHA-256 of the parts joined by `|` (`experiments/fig7_java/run.py`). The 8 pool files are the run's worker files as written; 23
-  units appear in two of them with identical bytes. The verdicts were produced by Claude Sonnet 5.5 running as Claude
-  Code sub-agents with rubric r1 (`experiments/fig7_java/rubric_r1.md`, SHA-256 `7a893ac4a9d60950a050c16d16b3fa21e5af15c7982efeb9a87ec3f91e59f327`): 2,089 report
+  units appear in two of them with identical bytes. The verdicts were produced by Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+  running as Claude Code (version 2.1.288) general-purpose sub-agents with the Read and Write tools, up to five packets
+  per call, extended thinking enabled (content not retained), no temperature or max-token settings, with rubric r1
+  (`experiments/fig7_java/rubric_r1.md`, SHA-256 `7a893ac4a9d60950a050c16d16b3fa21e5af15c7982efeb9a87ec3f91e59f327`): 2,089 report
   packets, 46 calibration controls (`calibration/controls.jsonl`, the judge's verdicts on them in `calibration.csv`) and
-  698 ablation packets. The packet texts are not shipped; `judge.py` rebuilds them byte for byte. The three `npz` files
+  698 ablation packets. For the main run the code repository's own records (`experiments/fig7_java/README.md`) count
+  272 batched calls (329 in total); an audit of the session transcripts counts 420 batched calls of at most five
+  packets (477 in total); the verdicts are unaffected. The packet texts are not shipped; `judge.py` rebuilds them byte for byte. The three `npz` files
   hold the predicted length distributions (float32, `P [214, 256]`) of head C and of two comparator heads at the 214
   target sites; the comparator heads themselves are not shipped.
 - **`heads`**. The checkpoints used for the paper's pools, re-saved with one entry removed from the training
@@ -188,8 +192,15 @@ Third-party content keeps its own terms:
 
 - **Benchmarks.** The pools of List Functions (BIG-bench) and SALT carry their inputs and outputs; the SST-2 and MIT
   Movie pools carry only reference answers (SST-2's are opaque letter codes, Movie's are director names) and the
-  models' samples. The sources and their pinned versions are listed in the code repository's
-  `data/benchmarks/README.md`.
+  models' samples. Sources, pinned versions and licences (as in the code repository's `data/benchmarks/README.md`):
+
+  | benchmark | source | version used | licence |
+  |---|---|---|---|
+  | `sst2_fam` | SST-2 (Socher et al., 2013, <https://aclanthology.org/D13-1170/>), as distributed in GLUE (Wang et al., 2018, <https://aclanthology.org/W18-5446/>) | Hugging Face `nyu-mll/glue`, config `sst2`, `train` split, revision `bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c` | as published by GLUE / SST: see source; the text is not in the pools |
+  | `list_easy_fam` | List Functions (Rule, 2020, <https://dspace.mit.edu/handle/1721.1/129232>), the BIG-bench task `list_functions` (Srivastava et al., 2022, <https://arxiv.org/abs/2206.04615>) | `github.com/google/BIG-bench` at commit `092b196c1f8f14a54bbc62f24759d43bde46dd3b`: 250 functions with 32 input/output pairs each | Apache-2.0 (the BIG-bench repository) |
+  | `salt_rep_fam` | SALT (Zheng et al., 2025, "The Curse of CoT", <https://arxiv.org/abs/2504.05081>) | `salt/salt.json` of `github.com/HKUST-KnowComp/CoT-ICL-Eval` at commit `3af5a9b0bc28b0059f0289d3790dc8b2a96cf06f` | MIT (the repository's `LICENSE`) |
+  | `movie_dir_fam` | MIT Movie, trivia10k13 corpus (Liu et al., 2012, "A Conversational Movie Search System Based on Conditional Random Fields"; MIT Spoken Language Systems group) | the copy in `github.com/tonyzhaozh/few-shot-learning` (Zhao et al., 2021, "Calibrate Before Use") at commit `e04d8643be91c2cce63f33e07760ff75d5aa3ad0` | see source (that repository is Apache-2.0; the corpus keeps its own terms); the benchmark text is not in the pools |
+
 - **Structured few-shot training prompts** (`head_training/fsp_*`). They contain MIT Movie queries (fields other than
   Director) and ATIS queries, taken from `github.com/tonyzhaozh/few-shot-learning` at commit
   `e04d8643be91c2cce63f33e07760ff75d5aa3ad0` (`data/slot-movies/train`, `data/atis/atis.train.pkl`; that repository is
