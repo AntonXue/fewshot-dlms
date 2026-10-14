@@ -63,9 +63,11 @@ GPU, one model per process:
     make rerun-fig5        # LLaDA-1.5, cell M = 4, J = 2, first 8 families, then analyze.py --compare
 
 `--families N` keeps the first N families. Records are appended to
-`<out>/<model>/list_easy_fam_M{M}_J{J}.jsonl` as families finish, so an interrupted run resumes;
-`<out>/<model>/manifest_<hash>.json` holds the configuration, its hash (the records' `protocol_hash`), every
-seed, and the library and GPU versions.
+`<out>/<model>/list_easy_fam_M{M}_J{J}.jsonl` as families finish. Each carries its cell's `protocol_hash`, which
+depends on that cell alone; an interrupted run resumes after the families with that hash and, before loading the
+model, refuses a file holding records of another protocol (exit status 2, naming the file).
+`<out>/<model>/manifest_<hash>.json` holds the run's configuration and hash, every pool's hash, every seed, and the
+library and GPU versions.
 
 ## Runtime
 
