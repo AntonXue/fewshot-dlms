@@ -27,8 +27,8 @@ Packet identity. The cache key of a packet is the first 20 hex digits of
 SHA-256("<rubric sha16>|<episode_id>|<demo sites joined by '|'>|<candidate texts as sorted JSON>"); a text judged
 once is never judged again, also across regimes. The target order uses random.Random(key12("s5final-judge", key)).
 
-    python experiments/fig7_java/judge.py --pools artifacts/reruns/fig7/pools --out artifacts/reruns/fig7/judging/verdicts.jsonl
-    python experiments/fig7_java/judge.py --calibrate --limit 5      # the calibration controls of Appendix C (costs API calls)
+    python experiments/java_refactoring/judge.py --pools artifacts/reruns/java_refactoring/pools --out artifacts/reruns/java_refactoring/judging/verdicts.jsonl
+    python experiments/java_refactoring/judge.py --calibrate --limit 5      # the calibration controls of Appendix C.1 (costs API calls)
 """
 import argparse
 import csv
@@ -359,7 +359,7 @@ def judge_report(args, episodes):
 
 
 def judge_calibration(args, episodes):
-    """The calibration controls of Appendix C: reference, no-op, partial edit, argument swap, polarity flip,
+    """The calibration controls of Appendix C.1: reference, no-op, partial edit, argument swap, polarity flip,
     wrong receiver (expected incorrect) and an equivalent reordering or a harmless comment (expected correct).
 
     Prints, per control, the verdict, the expected verdict and the paper judge's verdict (calibration.csv).
@@ -392,7 +392,7 @@ def judge_calibration(args, episodes):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--pools", default="artifacts/reruns/fig7/pools", help="directory with pools_*.jsonl (run.py)")
+    parser.add_argument("--pools", default="artifacts/reruns/java_refactoring/pools", help="directory with pools_*.jsonl (run.py)")
     parser.add_argument("--rubric", default=str(RUBRIC))
     parser.add_argument("--model", default=MODEL)
     parser.add_argument("--out", default=None, help="verdicts JSONL (appended; default <pools>/../judging/verdicts.jsonl)")
@@ -407,7 +407,7 @@ def main():
             print(f"no calibration controls at {args.controls}; run: python -m fewshot_dlms.fetch pools java", file=sys.stderr)
             sys.exit(2)
         require_api_key()
-        args.out = args.out or "artifacts/reruns/fig7/judging/calibration_verdicts.jsonl"
+        args.out = args.out or "artifacts/reruns/java_refactoring/judging/calibration_verdicts.jsonl"
         Path(args.out).parent.mkdir(parents=True, exist_ok=True)
         judge_calibration(args, episodes)
         return

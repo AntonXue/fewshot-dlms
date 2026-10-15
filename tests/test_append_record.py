@@ -1,4 +1,4 @@
-"""append_record of every pipeline that appends JSON lines (the four run.py and fig7's judge.py) after a killed write.
+"""append_record of every pipeline that appends JSON lines (the four run.py and java_refactoring's judge.py) after a killed write.
 
 A run killed in the middle of a write can leave a pool file whose last line is cut off, without its newline. The next
 record must start on a line of its own: appended to the cut-off line it would make both unreadable. The resume reader
@@ -11,11 +11,11 @@ import pytest
 
 # script -> (key that identifies a unit, hash field of the records)
 SCRIPTS = {
-    "fig4_single_target/run.py": ("episode_id", "protocol_hash"),
-    "fig5_multi_target/run.py": ("episode_id", "protocol_hash"),
-    "fig6_lengths/run.py": ("episode_id", "protocol_hash"),
-    "fig7_java/run.py": ("episode_id", "config_hash"),
-    "fig7_java/judge.py": ("key", None),
+    "single_target/run.py": ("episode_id", "protocol_hash"),
+    "multi_target/run.py": ("episode_id", "protocol_hash"),
+    "length_allocation/run.py": ("episode_id", "protocol_hash"),
+    "java_refactoring/run.py": ("episode_id", "config_hash"),
+    "java_refactoring/judge.py": ("key", None),
 }
 DIGEST = "0123456789abcdef"
 
@@ -29,9 +29,9 @@ def load_script(root, script):
 
 def done(module, script, path):
     """The units that the script's resume reader finds complete in `path`."""
-    if script == "fig7_java/judge.py":
+    if script == "java_refactoring/judge.py":
         return module.judged_keys(path)
-    if script == "fig7_java/run.py":
+    if script == "java_refactoring/run.py":
         return module.done_units(path, "episode_id", DIGEST)
     return module.done_episodes(path, DIGEST)
 

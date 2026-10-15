@@ -1,13 +1,13 @@
 """Walk through one pool of the paper: the canvas, K candidates with ell1 / ell0 / R / w_0.5, and the two picks.
 
-One List Functions-Easy family (family 0 of the report bank), M = 2 demonstrations, J = 2 targets, and K = 8
-candidate infills from LLaDA-1.5. The script prints
+One List Functions-Easy family (family 0 of the report bank), D = 2 demonstrations (M in the code), J = 2 targets,
+and K = 8 candidate infills from LLaDA-1.5. The script prints
 
   1. the canvas, with the J target sites marked (the model fills their mask tokens in one pass);
   2. one row per candidate: ell1 = log P1 (demonstration outputs visible), ell0 = log P0 (demonstration
      outputs masked), the example reward R = ell1 - ell0, the guided pool weight w_0.5 = softmax(0.5 R), and
      whether each target and all targets together are correct;
-  3. the ordinary pick (beta = 0: every candidate has weight 1/K) and the guided pick (beta = 0.5: weights
+  3. the unguided pick (beta = 0: every candidate has weight 1/K) and the guided pick (beta = 0.5: weights
      w_0.5, the target Q_0.5 ∝ P1^{3/2} P0^{-1/2}), and the expected accuracy of the pool under both.
 
     python examples/walkthrough.py --cached     # a stored pool: no GPU, no torch, instant
@@ -16,13 +16,13 @@ candidate infills from LLaDA-1.5. The script prints
 
 --cached reads data/fixtures/walkthrough.jsonl (--fixture names another stored pool), the pool that the live
 command wrote, and prints the same table; a live run prints the table first, then --save-fixture writes the
-record. The live run is Figure 5's own sampling and scoring (experiments/fig5_multi_target/run.py::run_canvas)
-for one family and one cell, so its record is a Figure 5 pool record.
+record. The live run is Figure 6's own sampling and scoring (experiments/multi_target/run.py::run_canvas)
+for one family and one cell, so its record is a Figure 6 pool record.
 
-"Ordinary" is what scoring.family_metrics calls beta = 0: the K candidates are draws from P1 and carry equal
-weights, so an ordinary answer is a uniform draw from the pool. A guided answer is a draw from the pool with
-weights w_0.5. Both picks below use the same uniform random number, so a single run compares them on one draw;
-the expected accuracies are the quantities that the paper averages over families.
+Unguided sampling is beta = 0 (the code and the stored records call it "ordinary"): the K samples are draws from P1
+and carry equal weights, so an unguided answer is a uniform draw from the pool. A guided answer is a draw from the
+pool with weights w_0.5. Both picks below use the same uniform random number, so a single run compares them on one
+draw; the expected accuracies are the quantities that the paper averages over families.
 """
 import argparse
 import datetime
@@ -43,7 +43,7 @@ from fewshot_dlms.scoring import pool_weights
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "data" / "fixtures" / "walkthrough.jsonl"
-FIG5_RUN = ROOT / "experiments" / "fig5_multi_target" / "run.py"
+MULTI_TARGET_RUN = ROOT / "experiments" / "multi_target" / "run.py"
 
 MODEL = "llada"
 BANK = "report"
@@ -60,9 +60,9 @@ PICK_SEED = 0  # the uniform random number shared by the two picks
 # ---------------------------------------------------------------------------------------------
 
 
-def load_fig5_run():
-    """The module experiments/fig5_multi_target/run.py (it is a script, not a package)."""
-    spec = importlib.util.spec_from_file_location("fig5_run", FIG5_RUN)
+def load_multi_target_run():
+    """The module experiments/multi_target/run.py (it is a script, not a package)."""
+    spec = importlib.util.spec_from_file_location("multi_target_run", MULTI_TARGET_RUN)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -92,22 +92,22 @@ def device_name(device):
 
 
 def pool_protocol_hash(run, adapter):
-    """The protocol_hash of the walkthrough's pool: Figure 5's hash of the cell (M, J) at K candidates
-    (run.pool_config), as experiments/fig5_multi_target/run.py writes it. `adapter` needs only name, model_id and
+    """The protocol_hash of the walkthrough's pool: Figure 6's hash of the cell (M, J) at K candidates
+    (run.pool_config), as experiments/multi_target/run.py writes it. `adapter` needs only name, model_id and
     revision."""
     settings = SimpleNamespace(bank=BANK, M=[M], J=[J], K=K, chunk=run.CHUNK)
     return run.protocol_hash(run.pool_config(run.config_of(settings, adapter), M, J))
 
 
 def live_record(device):
-    """Sample and score the pool on a GPU, with the calls of Figure 5, and return it as one record."""
+    """Sample and score the pool on a GPU, with the calls of Figure 6, and return it as one record."""
     import torch
     import transformers
 
     from fewshot_dlms.adapters import load
     from fewshot_dlms.canvas import build_canvas
 
-    run = load_fig5_run()
+    run = load_multi_target_run()
     family = load_families(run.TASK, BANK)[FAMILY]
     adapter = load(MODEL, device)
     print(f"loaded {adapter.model_id} @ {adapter.revision[:8]}; sampling {K} candidates ...", file=sys.stderr)
@@ -175,7 +175,7 @@ def answers_of(record, k):
 
 
 def print_report(record):
-    """Print the canvas, the table of candidates and the ordinary and guided picks of one pool record."""
+    """Print the canvas, the table of candidates and the unguided and guided picks of one pool record."""
     candidates = record["candidates"]
     ell1 = np.array([candidate["ell1"] for candidate in candidates])
     ell0 = np.array([candidate["ell0"] for candidate in candidates])
@@ -186,7 +186,7 @@ def print_report(record):
     joint = correct.all(1)
     provenance = record["provenance"]
 
-    print(f"Pool: {record['episode_id']}  M = {record['M']} demonstrations, J = {record['J']} targets, "
+    print(f"Pool: {record['episode_id']}  D = {record['M']} demonstrations, J = {record['J']} targets, "
           f"K = {record['K']} candidates, {record['n_tokens']} canvas tokens")
     print(f"      {provenance['model_id']} @ {provenance['revision'][:8]}, seed {provenance['seed']}, "
           f"{provenance['gpu']}, torch {provenance['torch']}, {provenance['date']}")
@@ -210,12 +210,12 @@ def print_report(record):
         print(f"{k:>3} {ell1[k]:>9.2f} {ell0[k]:>9.2f} {reward[k]:>8.2f} {w_guided[k]:>7.4f} "
               f"{per_target} {int(joint[k]):>6}  {answers_of(record, k)}")
     print(f"    (T1.. and joint: 1 = correct. {len({tuple(c['toks']) for c in candidates})} distinct candidates "
-          f"of {len(candidates)}; w_0.5 = softmax(0.5 R), each ordinary weight is 1/{len(candidates)})")
+          f"of {len(candidates)}; w_0.5 = softmax(0.5 R), each unguided weight is 1/{len(candidates)})")
     print()
 
     u = float(np.random.default_rng(PICK_SEED).random())
-    print(f"3. Ordinary pick (beta = 0) and guided pick (Q_0.5, beta = {BETA}); one draw each, same u = {u:.4f}")
-    for label, weights in (("ordinary  Q_0  ", w_ordinary), (f"guided    Q_{BETA}", w_guided)):
+    print(f"3. Unguided pick (beta = 0) and guided pick (Q_0.5, beta = {BETA}); one draw each, same u = {u:.4f}")
+    for label, weights in (("unguided  Q_0  ", w_ordinary), (f"guided    Q_{BETA}", w_guided)):
         k = draw(weights, u)
         verdict = " ".join(f"T{j + 1} {'correct' if correct[k, j] else 'wrong'}" for j in range(record["J"]))
         print(f"   {label}: candidate {k}, {answers_of(record, k)}   ({verdict}; "

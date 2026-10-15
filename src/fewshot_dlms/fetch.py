@@ -10,7 +10,7 @@ Run from the repository root (the tests and every analyze.py read artifacts/ the
 
 A group is a top-level directory of the dataset. Every download is at PINNED_REVISION, the dataset commit
 recorded in data/artifacts_revision.txt and ARTIFACTS.md, and lands under artifacts/ (--dest) with the dataset's
-layout, e.g. artifacts/pools/fig5/llada/list_easy_fam_M4_J2.jsonl. SHA256SUMS and README.md (the data card) come
+layout, e.g. artifacts/pools/multi_target/llada/list_easy_fam_M4_J2.jsonl. SHA256SUMS and README.md (the data card) come
 with every group, so the check below also works offline later.
 
 After the download, every file present under artifacts/ is checked against SHA256SUMS ("<sha256>  <path>" per
@@ -42,19 +42,19 @@ REPO_ID = "UT-IFML/fewshot-dlms"
 REPO_TYPE = "dataset"
 # The dataset commit of the frozen artifacts. tests/test_fetch.py checks it against data/artifacts_revision.txt
 # and ARTIFACTS.md, so a stale pin fails make test.
-PINNED_REVISION = "f65650d34e80892b94a69083371fd939ed64edcc"
+PINNED_REVISION = "bbea43135098534b92cad7c44014f9c0fac94ba7"
 # SHA-256 of SHA256SUMS at PINNED_REVISION (ARTIFACTS.md), checked against the downloaded copy.
-SUMS_SHA256 = "c22f4e3f3609ab684b50c073816a9984684f8adf685b927426a67ad79317cd49"
+SUMS_SHA256 = "2fe80a4bc7887064976881bfdb9b285e1c4d75d99991caab2ffe28483c6c1304"
 SUMS_NAME = "SHA256SUMS"
 CARD_NAME = "README.md"
 # The repository root (src/fewshot_dlms/fetch.py -> ../..), which holds the committed SHA256SUMS.
 ROOT = Path(__file__).resolve().parents[2]
-# group -> (download size, what reads it); the sizes are those of ARTIFACTS.md.
+# group -> (download size, what reads it); the sizes are those of ARTIFACTS.md, figure numbers those of arXiv v1.
 GROUPS = {
-    "pools": ("376 MB", "Figures 4-6, Appendix B figures: analyze.py of fig4_single_target, fig5_multi_target, fig6_lengths"),
-    "java": ("10 MB", "Figure 7: analyze.py and judge.py of fig7_java"),
-    "heads": ("3.47 GB", "the four length heads: run.py --mode learned (fig6), --regime learned (fig7), make test-gpu"),
-    "head_training": ("1.03 GB", "the heads' training prompts and configs: fig6_lengths/train_head.py"),
+    "pools": ("376 MB", "pools/{single_target,multi_target,length_allocation}: Figures 5-7, 9-12, their analyze.py"),
+    "java": ("10 MB", "Figure 8, Appendix C: analyze.py and judge.py of java_refactoring"),
+    "heads": ("3.47 GB", "the four length heads (predictors): run.py --mode learned (length_allocation), --regime learned (java_refactoring), make test-gpu"),
+    "head_training": ("1.03 GB", "the heads' training prompts and configs: length_allocation/train_head.py"),
 }
 SUMS_LINE = re.compile(r"^([0-9a-f]{64}) [ *](.+)$")
 BLOCK_BYTES = 1 << 20

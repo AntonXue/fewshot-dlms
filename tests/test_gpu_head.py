@@ -1,6 +1,6 @@
-"""The ported length head reproduces the authors' frozen LLaDA-1.5 head (Section 4.3, Appendix B, Length Allocation).
+"""The ported length head reproduces the authors' frozen LLaDA-1.5 head (Section 4.3, Appendix B.4, Length Allocation).
 
-data/fixtures/fig6/head_predictions_llada.json holds, for the first ten report families of List
+data/fixtures/length_allocation/head_predictions_llada.json holds, for the first ten report families of List
 Functions-Easy at M = 4 demonstrations and J = 2 targets, the frozen head's distributions over the lengths
 1..256 at both target sites, as the authors' evaluation computed them (tools/extract_fixtures.py). The tests
 rebuild each canvas with canvas.py at its oracle lengths, check that the compact prompt the head reads is the
@@ -58,7 +58,7 @@ def sha256_of(ids):
 
 @pytest.fixture(scope="module")
 def fixture(root):
-    path = root / "data" / "fixtures" / "fig6" / "head_predictions_llada.json"
+    path = root / "data" / "fixtures" / "length_allocation" / "head_predictions_llada.json"
     return json.loads(path.read_text(encoding="utf-8"))
 
 

@@ -1,17 +1,19 @@
 # ported from editdiff/experiments/paper_integration/figure_redesign/fig_finalize.py::fig7 (the production Figure 7, no error bars) @ d276fa6
-"""Figure 7 (Section 5) from the tables in data/tables/fig7 (CPU only).
+"""Figure 8 (Section 5) from the tables in data/tables/java_refactoring (CPU only). Figure numbers are those of the
+arXiv version (v1); the code writes M for the paper's D.
 
-    fig7.pdf   left: length allocation on the 80 unique target sites of the Java episodes, by the length of the
-               reference replacement: the mass that length head C puts within +-2 tokens of the reference length,
-               next to the training-label prior (length_fidelity_by_bin.csv, head s5hc_C);
-               right: joint LLM-judged success per cell (M, J) with oracle and learned target lengths, ordinary
-               sampling (beta = 0) and example guidance (beta = 0.5), commit-level means
-               (summary_by_cell.csv, primary stratum). Means only, as in the paper; the 95 % commit-bootstrap
-               intervals are in the tables.
+    java_refactoring.pdf   left: length allocation on the 80 unique target sites of the Java episodes, by the length
+                           of the reference replacement: the mass that the Java predictor (head s5hc_C) puts within
+                           +-2 tokens of the reference length, next to the training-label prior
+                           (length_fidelity_by_bin.csv); right: joint LLM-judged success per cell (D, J) with oracle
+                           and learned target lengths, unguided sampling (beta = 0) and example guidance
+                           (beta = 0.5), commit-level means (summary_by_cell.csv, primary stratum). Means only, as in
+                           the paper; the 95 % commit-bootstrap intervals are in the tables.
 
-Rendered at 150 dpi, the PDF is pixel-identical to the paper's figure when TeX Gyre Pagella is used.
+The tables name the two rules `ordinary` (unguided, beta = 0) and `tilting` (example guidance, beta = 0.5). Rendered
+at 150 dpi, the PDF is pixel-identical to the arXiv figure when TeX Gyre Pagella is used.
 
-    python experiments/fig7_java/plot.py [--tables data/tables/fig7] [--out experiments/fig7_java/out]
+    python experiments/java_refactoring/plot.py [--tables data/tables/java_refactoring] [--out experiments/java_refactoring/out]
 """
 import argparse
 import csv
@@ -26,7 +28,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 
 PRIOR_COLOR = "#CBD5E1"  # the training-label prior (slate-300)
-HEAD = "s5hc_C"  # length head C
+HEAD = "s5hc_C"  # the Java predictor (length head C)
 CELLS = ["M1J1", "M2J1", "M1J2", "M2J2"]  # left to right: J = 1, then J = 2
 # (regime, rule, colour, marker, filled): oracle lengths are circles, learned lengths diamonds; guidance is filled.
 CONDITIONS = [
@@ -48,11 +50,12 @@ def read_rows(path):
 
 
 def length_panel(fig, ax, bins):
-    """Left panel: % of head C's length mass within +-2 tokens of the reference length, and the prior's, per bin."""
+    """Left panel: % of the Java predictor's length mass within +-2 tokens of the reference length, and the prior's,
+    per bin."""
     for i, row in enumerate(bins):
         head = 100 * float(row["F2"])
         prior = 100 * float(row["prior_F2"])
-        ax.bar(i - BAR_WIDTH / 2, head, BAR_WIDTH, color=F.TEAL, zorder=2, label="length head C" if i == 0 else None)
+        ax.bar(i - BAR_WIDTH / 2, head, BAR_WIDTH, color=F.TEAL, zorder=2, label="Java predictor" if i == 0 else None)
         ax.bar(i + BAR_WIDTH / 2, prior, BAR_WIDTH, color=PRIOR_COLOR, zorder=2, label="training-label prior" if i == 0 else None)
         ax.text(i, max(head, prior) + 2.5, f"n={row['unique_sites']}", ha="center", va="bottom", fontsize=F.PT["annot"])
     ax.set_xticks(range(len(bins)))
@@ -105,15 +108,14 @@ def success_panel(fig, ax, summary):
     commits = {cell: next(r["n_commits"] for r in summary if r["cell"] == cell and r["regime"] == "oracle" and r["rule"] == "ordinary") for cell in CELLS}
     ax.set_xticks(range(len(CELLS)))
     ax.set_xticklabels([f"({cell[1]},{cell[3]})\n{commits[cell]} commits" for cell in CELLS])
-    ax.set_xlabel(r"($M$ demonstrations, $J$ targets)")
-    ax.set_ylabel("% joint LLM-judged success")
+    ax.set_xlabel(r"($D$ demonstrations, $J$ targets)")  # no y label, as in Figure 8 of arXiv v1 (the authors' script lost it); kept for pixel parity
     ax.set_ylim(*RIGHT_LIMITS)
     ax.set_yticks([0, 25, 50, 75, 100])
     ax.set_xlim(-0.5, len(CELLS) - 0.5)
     ax.grid(axis="x", visible=False)
     handles = [
-        Line2D([], [], ls="", marker="o", color=F.EPMUTED, mfc="white", mec=F.EPMUTED, ms=4.0, label=r"ordinary ($\beta=0$)"),
-        Line2D([], [], ls="", marker="o", color=F.DIFFADD, mfc=F.DIFFADD, mec=F.DIFFADD, ms=4.0, label=r"example guidance ($\beta=0.5$)"),
+        Line2D([], [], ls="", marker="o", color=F.EPMUTED, mfc="white", mec=F.EPMUTED, ms=4.0, label="unguided"),
+        Line2D([], [], ls="", marker="o", color=F.DIFFADD, mfc=F.DIFFADD, mec=F.DIFFADD, ms=4.0, label="guided"),
         Line2D([], [], ls="", marker="o", color=F.INK, mfc="white", mec=F.INK, ms=4.0, label="oracle lengths"),
         Line2D([], [], ls="", marker="D", color=F.INK, mfc="white", mec=F.INK, ms=3.6, label="learned lengths"),
     ]
@@ -125,8 +127,8 @@ def success_panel(fig, ax, summary):
     fig.canvas.draw()
 
 
-def figure7(bins, summary, path):
-    """Figure 7 of Section 5 (two panels, full text width)."""
+def java_refactoring_figure(bins, summary, path):
+    """Figure 8 of Section 5 (two panels, full text width)."""
     fig, (left, right) = plt.subplots(1, 2, figsize=(F.FIGW, HEIGHT), layout="constrained", gridspec_kw={"width_ratios": [1.0, 1.32]})
     fig.get_layout_engine().set(w_pad=0.03, h_pad=0.02, wspace=0.06)
     length_panel(fig, left, bins)
@@ -138,7 +140,7 @@ def figure7(bins, summary, path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--tables", default=str(ROOT / "data" / "tables" / "fig7"))
+    parser.add_argument("--tables", default=str(ROOT / "data" / "tables" / "java_refactoring"))
     parser.add_argument("--out", default=str(HERE / "out"))
     args = parser.parse_args()
     tables = Path(args.tables)
@@ -147,7 +149,7 @@ def main():
     F.use_font()
     bins = [row for row in read_rows(tables / "length_fidelity_by_bin.csv") if row["population"] == "B" and row["head"] == HEAD]
     summary = [row for row in read_rows(tables / "summary_by_cell.csv") if row["stratum"] == "primary" and row["cell"] != "all"]
-    figure7(bins, summary, out / "fig7.pdf")
+    java_refactoring_figure(bins, summary, out / "java_refactoring.pdf")
 
 
 if __name__ == "__main__":

@@ -54,7 +54,7 @@ def test_sums_are_sorted_and_cover_every_group(sums):
     paths = list(sums)
     assert paths == sorted(paths)
     assert "README.md" in sums
-    for group in ("pools/fig4/", "pools/fig5/", "pools/fig6/", "java/", "heads/", "head_training/"):
+    for group in ("pools/single_target/", "pools/multi_target/", "pools/length_allocation/", "java/", "heads/", "head_training/"):
         assert any(path.startswith(group) for path in paths), group
 
 

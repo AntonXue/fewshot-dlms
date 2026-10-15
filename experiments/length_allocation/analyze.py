@@ -1,9 +1,9 @@
 # ported from editdiff/experiments/length_project/lpx_ds.py, experiments/length_project/lpx_tables.py and experiments/algo_investigation/fs_analyze_lib.py::{load, cell} @ d276fa6
-"""Figure 6 (Section 4.3) and the appendix fidelity row (Appendix B, Length Allocation), from the frozen pools (CPU
+"""Figure 7 (Section 4.3) and the length-fidelity row (Appendix B.4, Length Allocation), from the frozen pools (CPU
 only, no model).
 
 Section 4.3 asks how many tokens each masked target should get. List Functions-Easy, 64 report families, M = 4
-demonstrations, J in {1, 2, 4, 8} targets, ordinary sampling (beta = 0: every candidate has weight 1/K). A pool file
+demonstrations (the paper's D), J in {1, 2, 4, 8} targets, unguided sampling (beta = 0: every candidate has weight 1/K). A pool file
 holds one record per family (see run.py), one file per model, J and allocation condition:
 
     <pools>/<model>/list_easy_fam_M4_J{J}_<condition>.jsonl
@@ -15,13 +15,13 @@ holds one record per family (see run.py), one file per model, J and allocation c
 
 Per family, with c_kj = 1 if target j of candidate k is correct (grading.py), and per cell over families:
 
-    A_target = mean_k mean_j c_kj    per-target accuracy (A_avg in the paper; Figure 6 plots it)
+    A_target = mean_k mean_j c_kj    per-target accuracy (A_avg in the paper; Figure 7 plots it)
     A_all    = mean_k prod_j c_kj    every target correct
     learned - oracle                 the per-family difference of A_target, with a paired family bootstrap
     length_exact                     share of allocated lengths L_kj equal to L*_j
     Pr(L != L* | correct)            among correct targets, the share whose length was not the reference's
 
-The length head's own accuracy (sec43_length_metrics.csv, the appendix fidelity row) comes from its distributions
+The length head's own accuracy (sec43_length_metrics.csv, the length-fidelity row) comes from its distributions
 q_j over the lengths 1..256 at every target site of the report prompts, as the authors' evaluation computed them:
 
     <pools>/<model>/length_head_report.npz     P [sites, 256] (float32), ids "<family>|<J>|<j>", y = L*_j
@@ -38,14 +38,14 @@ SHA-256("lpx-bootstrap-v1") = BOOTSTRAP_SEED plus J (A_target), 100 + J (learned
 common-family view of the offsets uses seed 1000 + J (lpx_tables.py). Families are resampled in pool-file order
 (A_target, offsets) or in sorted order (paired differences, P_r), as in the authors' analysis.
 
-Outputs in --out: sec43_downstream.csv (Figure 6, top row), sec43_length_perturbation.csv (Figure 6, bottom row),
-sec43_length_metrics.csv (appendix fidelity row), families.csv (per-family values), coverage.json.
+Outputs in --out: sec43_downstream.csv (Figure 7, top row), sec43_length_perturbation.csv (Figure 7, bottom row),
+sec43_length_metrics.csv (length-fidelity row), families.csv (per-family values), coverage.json.
 
 --compare DIR prints, for every table also in DIR, the largest |difference| per numeric column, and for every
 downstream cell a resampling verdict (README.md, fidelity level 3): is the frozen A_avg inside the 95 % CI of the
 pools analysed here?
 
-    python experiments/fig6_lengths/analyze.py --pools artifacts/pools/fig6 --compare data/tables/fig6
+    python experiments/length_allocation/analyze.py --pools artifacts/pools/length_allocation --compare data/tables/length_allocation
 """
 import argparse
 import hashlib
@@ -170,7 +170,7 @@ def family_cell(model, record):
 
 
 # ---------------------------------------------------------------------------------------------
-# Downstream accuracy (Figure 6)
+# Downstream accuracy (Figure 7)
 # ---------------------------------------------------------------------------------------------
 
 
@@ -289,7 +289,7 @@ def common_family_rows(backbone, per_family):
 
 
 # ---------------------------------------------------------------------------------------------
-# Length-head fidelity (appendix fidelity row)
+# Length-head fidelity (the length-fidelity row, Appendix B.4)
 # ---------------------------------------------------------------------------------------------
 
 
@@ -524,13 +524,13 @@ def main():
     parser.add_argument("--pools", required=True, help="directory with <model>/list_easy_fam_M4_J{J}_<condition>.jsonl")
     parser.add_argument("--out", default=str(HERE / "out"))
     parser.add_argument("--models", default=",".join(model for model, _ in MODELS))
-    parser.add_argument("--compare", default=None, help="directory of reference tables, e.g. data/tables/fig6")
+    parser.add_argument("--compare", default=None, help="directory of reference tables, e.g. data/tables/length_allocation")
     args = parser.parse_args()
 
     pools = Path(args.pools)
     models = args.models.split(",")
     if not pools.is_dir() or not any((pools / model).is_dir() for model in models):
-        print(f"no Figure 6 pools in {pools}; {FETCH_HINT}", file=sys.stderr)
+        print(f"no Figure 7 pools in {pools}; {FETCH_HINT}", file=sys.stderr)
         sys.exit(2)
 
     parts, family_rows, coverage = analyse(pools, models)

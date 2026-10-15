@@ -1,6 +1,6 @@
 """Replay (fidelity level 1 of README.md): the ported adapters reproduce the authors' stored log-likelihoods.
 
-data/fixtures/fig5/<model>_M4_J2.jsonl holds two Figure 5 pool records per model (List Functions-Easy,
+data/fixtures/multi_target/<model>_M4_J2.jsonl holds two Figure 6 pool records per model (List Functions-Easy,
 M = 4 demonstrations, J = 2 targets, K = 16 candidates). Each candidate stores its token ids in reveal
 order and the two log-likelihoods of the paper: ell1 = log P1 (demonstration outputs visible) and
 ell0 = log P0 (demonstration outputs masked at E). The tests rebuild each canvas with this repository's
@@ -13,8 +13,8 @@ stored tokens with the fixed-order loop of Lemma 3.1 (adapters/base.py):
     Nemotron (tests/gpu_util.py explains both tolerances). For dQwen3.5 this test also checks that the
     linear-attention kernels are those of the paper's runs (flash-linear-attention 0.5.1).
 
-The two causal interfaces of Figure 4 (Appendix B, Experimental Setup) are checked the same way on
-data/fixtures/fig4/<model>_sst2_M4.jsonl: two single-target pool records per model (SST-2, M = 4,
+The two causal interfaces of Figure 5 (Appendix B.1, Experimental Setup) are checked the same way on
+data/fixtures/single_target/<model>_sst2_M4.jsonl: two single-target pool records per model (SST-2, M = 4,
 K = 64 continuations). nemotron_ar is Nemotron's causal suffix of the oracle length; qwen is Qwen3-8B's
 free-length continuation, which stops at a newline or <|im_end|>. Here P0 deletes the demonstration
 outputs from the prompt. The tests rebuild both prompts with canvas.ar_prompt_ids, compare them with the
@@ -22,7 +22,7 @@ decoded prompts the frozen run stored (by SHA-256: the fixtures do not redistrib
 the stored continuations (one at a time with logprob_ar, and in the frozen run's batches with decode_ar),
 and draw the 64 continuations again from the frozen run's seed.
 
-GPU only (`make test-gpu`); needs the four pinned checkpoints (see README.md) and, for the Figure 4
+GPU only (`make test-gpu`); needs the four pinned checkpoints (see README.md) and, for the Figure 5
 records, the rebuilt SST-2 text (`python data/benchmarks/build.py`).
 """
 import hashlib
@@ -52,18 +52,18 @@ from tests.gpu_util import tolerance
 pytestmark = pytest.mark.gpu
 
 POOL = {
-    "llada": "fig5/llada_M4_J2.jsonl",
-    "nemotron_pt": "fig5/nemotron_pt_M4_J2.jsonl",
-    "dqwen": "fig5/dqwen_M4_J2.jsonl",
+    "llada": "multi_target/llada_M4_J2.jsonl",
+    "nemotron_pt": "multi_target/nemotron_pt_M4_J2.jsonl",
+    "dqwen": "multi_target/dqwen_M4_J2.jsonl",
 }
 N_RECORDS = 2  # pool records (families) per model
 N_CANDIDATES = 4  # distinct candidates scored one at a time per record (fewer if the record has fewer)
 
-# The causal interfaces of Figure 4 and their fixtures. How the frozen run decoded them (the support of every
+# The causal interfaces of Figure 5 and their fixtures. How the frozen run decoded them (the support of every
 # step, the batch sizes of sampling and of P0 scoring) is on the adapters: default_support, sample_chunk, p0_chunk.
 AR_POOL = {
-    "nemotron_ar": "fig4/nemotron_ar_sst2_M4.jsonl",
-    "qwen": "fig4/qwen_sst2_M4.jsonl",
+    "nemotron_ar": "single_target/nemotron_ar_sst2_M4.jsonl",
+    "qwen": "single_target/qwen_sst2_M4.jsonl",
 }
 
 
@@ -175,7 +175,7 @@ def test_replay_with_the_frozen_batches(adapter, families, root, record_property
 
 
 # ---------------------------------------------------------------------------------------------
-# The causal interfaces of Figure 4
+# The causal interfaces of Figure 5
 # ---------------------------------------------------------------------------------------------
 
 
@@ -204,7 +204,7 @@ def sha256_of_text(text):
 
 
 def ar_seed(name, record):
-    """The frozen run's sampling seed of a single-target record (the proposal key, reduced to 31 bits)."""
+    """The frozen run's sampling seed of a single-target record (the key of proposal_seed, reduced to 31 bits)."""
     parts = ("algo_investigation", "proposal", name, record["episode_id"], record["M"], record["J"])
     digest = hashlib.sha256("|".join(str(part) for part in parts).encode()).hexdigest()
     return int(digest[:16], 16) % (2**31)

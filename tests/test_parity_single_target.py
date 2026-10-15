@@ -1,17 +1,17 @@
-"""Analysis parity (fidelity level 2 of README.md) for Figure 4, its development-bank beta selection and the
-appendix tables that share its pools (cross-benchmark and guidance-strength sweep figures).
+"""Analysis parity (fidelity level 2 of README.md) for Figure 5, its development-bank beta selection and the
+appendix tables that share its pools (Figures 10 and 11).
 
-experiments/fig4_single_target/analyze.py recomputes the paper's tables from the frozen pools and must
+experiments/single_target/analyze.py recomputes the paper's tables from the frozen pools and must
 reproduce them to 1e-9 in every numeric column (and exactly in every other column):
 
-  sec41_accuracy.csv     Figure 4 and Section 4.1: accuracy and paired gains per (model, benchmark, M, beta)
-  gold_reward_cells.csv  gold example reward per target token per (model, benchmark, M) (Figure 4's gold row)
+  sec41_accuracy.csv     Figure 5 and Section 4.1: accuracy and paired gains per (model, benchmark, M, beta)
+  gold_reward_cells.csv  reference-answer example reward per target token per (model, benchmark, M) (Appendix B.2)
   dev_sec41.csv          the same cells on the development bank (beta selection)
   dev_sec42.csv          the cross-benchmark cells on the development bank (beta selection)
   sec44_power.csv        sharpening residuals: guidance against the matched-exponent power control (LLaDA-1.5)
-  cells_crossbench.csv   cross-benchmark figure (Fig. 9, both builds), in data/tables/fig5/: the cross-benchmark
+  cells_crossbench.csv   cross-benchmark figure (Fig. 10), in data/tables/multi_target/: the cross-benchmark
                          study, M = 4, K = 64
-  beta_sweep.csv         guidance-strength sweep figure (Fig. 10, arXiv version only): the guidance-strength sweep
+  beta_sweep.csv         guidance-strength sweep figure (Fig. 11): the guidance-strength sweep
                          on List Functions-Easy
   beta_locks.json        the development-only beta of each model, recomputed from the development bank
 
@@ -31,24 +31,24 @@ import numpy as np
 import pandas as pd
 import pytest
 
-ANALYZE = "experiments/fig4_single_target/analyze.py"
+ANALYZE = "experiments/single_target/analyze.py"
 TOLERANCE = 1e-9
 # table -> (reference table under data/tables, the columns that identify a row)
 TABLES = {
-    "sec41_accuracy": ("fig4/sec41_accuracy.csv", ["bank", "model", "source", "M", "beta"]),
-    "gold_reward_cells": ("fig4/gold_reward_cells.csv", ["model", "source", "M"]),
-    "dev_sec41": ("fig4/dev_sec41.csv", ["bank", "model", "source", "M", "beta"]),
-    "dev_sec42": ("fig4/dev_sec42.csv", ["bank", "model", "source", "J", "beta"]),
-    "sec44_power": ("fig4/sec44_power.csv", ["bank", "source", "J", "tau", "beta"]),
-    "cells_crossbench": ("fig5/cells_crossbench.csv", ["bank", "model", "source", "J", "beta"]),
-    "beta_sweep": ("fig4/beta_sweep.csv", ["model", "J", "beta"]),
+    "sec41_accuracy": ("single_target/sec41_accuracy.csv", ["bank", "model", "source", "M", "beta"]),
+    "gold_reward_cells": ("single_target/gold_reward_cells.csv", ["model", "source", "M"]),
+    "dev_sec41": ("single_target/dev_sec41.csv", ["bank", "model", "source", "M", "beta"]),
+    "dev_sec42": ("single_target/dev_sec42.csv", ["bank", "model", "source", "J", "beta"]),
+    "sec44_power": ("single_target/sec44_power.csv", ["bank", "source", "J", "tau", "beta"]),
+    "cells_crossbench": ("multi_target/cells_crossbench.csv", ["bank", "model", "source", "J", "beta"]),
+    "beta_sweep": ("single_target/beta_sweep.csv", ["model", "J", "beta"]),
 }
 # The fields of a frozen lock file that the development bank determines.
 LOCK_FIELDS = ["beta", "n_cells", "cells", "cell_set", "best_positive_below_ordinary", "partial_cells_excluded", "sections"]
 COMPARE_LINE = re.compile(
     r"^(\S+) (\S+) M=(\d+): frozen accuracy ([0-9.]+), rerun CI \[([0-9.]+), ([0-9.]+)\] -> frozen mean (inside|outside)"
 )
-# The verdict of the same cell under guidance at beta = 0.5 (Figure 4's strength), printed after the ordinary one.
+# The verdict of the same cell under guidance at beta = 0.5 (Figure 5's strength), printed after the unguided one.
 COMPARE_LINE_GUIDED = re.compile(
     r"^(\S+) (\S+) M=(\d+) beta=0\.5: frozen accuracy ([0-9.]+), rerun CI \[([0-9.]+), ([0-9.]+)\] -> frozen mean (inside|outside)"
 )
@@ -69,11 +69,11 @@ def load_module(root, path, name):
 @pytest.fixture(scope="module")
 def analysis(root, artifacts, tmp_path_factory):
     """Run analyze.py once on the frozen pools with every option; returns (output directory, stdout)."""
-    pools = artifacts / "pools" / "fig4"
+    pools = artifacts / "pools" / "single_target"
     if not pools.exists():
-        pytest.skip("Figure 4 pools not fetched: run `python -m fewshot_dlms.fetch pools java`")
-    out = tmp_path_factory.mktemp("fig4")
-    reference = root / "data" / "tables" / "fig4"
+        pytest.skip("Figure 5 pools not fetched: run `python -m fewshot_dlms.fetch pools java`")
+    out = tmp_path_factory.mktemp("single_target")
+    reference = root / "data" / "tables" / "single_target"
     result = run_analyze(root, pools, out, "--crossbench", "--beta-sweep", "--compare", str(reference))
     assert result.returncode == 0, result.stderr
     return out, result.stdout
@@ -124,7 +124,7 @@ def test_beta_locks_match_frozen(root, analysis):
     """
     out, _ = analysis
     ours = json.loads((out / "beta_locks.json").read_text())
-    frozen = json.loads((root / "data" / "tables" / "fig4" / "beta_locks.json").read_text())
+    frozen = json.loads((root / "data" / "tables" / "single_target" / "beta_locks.json").read_text())
     assert ours["rule"] == frozen["rule"]
     assert ours["betas"] == frozen["betas"]
     assert sorted(ours["models"]) == sorted(frozen["models"])
@@ -155,15 +155,15 @@ def test_compare_reports_inside_ci(root, tmp_path):
     """A resampled cell is judged by whether the frozen mean lies inside the rerun's 95 % CI.
 
     The two-family fixture pool of Qwen3-8B (SST-2, M = 4, K = 64) plays the rerun of that cell; --compare prints one
-    verdict for ordinary sampling (beta = 0) and one for guidance at beta = 0.5.
+    verdict for unguided sampling (beta = 0) and one for guidance at beta = 0.5.
     """
     pools = tmp_path / "pools" / "report" / "qwen"
     pools.mkdir(parents=True)
-    shutil.copy(root / "data" / "fixtures" / "fig4" / "qwen_sst2_M4.jsonl", pools / "sst2_fam_M4_J1.jsonl")
-    result = run_analyze(root, tmp_path / "pools", tmp_path / "out", "--compare", str(root / "data" / "tables" / "fig4"))
+    shutil.copy(root / "data" / "fixtures" / "single_target" / "qwen_sst2_M4.jsonl", pools / "sst2_fam_M4_J1.jsonl")
+    result = run_analyze(root, tmp_path / "pools", tmp_path / "out", "--compare", str(root / "data" / "tables" / "single_target"))
     assert result.returncode == 0, result.stderr
     lines = result.stdout.splitlines()
-    paper = pd.read_csv(root / "data" / "tables" / "fig4" / "sec41_accuracy.csv")
+    paper = pd.read_csv(root / "data" / "tables" / "single_target" / "sec41_accuracy.csv")
     rerun = pd.read_csv(tmp_path / "out" / "sec41_accuracy.csv")
     for beta, pattern in ((0.0, COMPARE_LINE), (0.5, COMPARE_LINE_GUIDED)):
         matches = [match for match in map(pattern.match, lines) if match]
@@ -180,7 +180,7 @@ def test_compare_reports_inside_ci(root, tmp_path):
         inside = rerun_cell.ci_lo <= paper_cell.accuracy <= rerun_cell.ci_hi
         assert verdict == ("inside" if inside else "outside")
     guided = next(index for index, line in enumerate(lines) if COMPARE_LINE_GUIDED.match(line))
-    assert COMPARE_LINE.match(lines[guided - 1])  # each cell's guided verdict follows its ordinary one
+    assert COMPARE_LINE.match(lines[guided - 1])  # each cell's guided verdict follows its unguided one
 
 
 def test_missing_pools_name_the_fetch_command(root, tmp_path):
@@ -194,7 +194,7 @@ def test_missing_optional_pools_name_the_input_and_the_fetch_command(root, tmp_p
     """--crossbench and --beta-sweep need the cross-benchmark pools; without them analyze.py says which and exits 2."""
     pools = tmp_path / "pools" / "report" / "qwen"
     pools.mkdir(parents=True)
-    shutil.copy(root / "data" / "fixtures" / "fig4" / "qwen_sst2_M4.jsonl", pools / "sst2_fam_M4_J1.jsonl")
+    shutil.copy(root / "data" / "fixtures" / "single_target" / "qwen_sst2_M4.jsonl", pools / "sst2_fam_M4_J1.jsonl")
     result = run_analyze(root, tmp_path / "pools", tmp_path / "out", option)
     assert result.returncode == 2
     assert option in result.stderr
@@ -204,24 +204,24 @@ def test_missing_optional_pools_name_the_input_and_the_fetch_command(root, tmp_p
 
 
 def test_plot_writes_the_figures(root, tmp_path):
-    """plot.py draws Figure 4, its gold-reward row and the guidance-strength sweep figure from the committed tables
+    """plot.py draws Figure 5, the reference-reward row and Figure 11 from the committed tables
     alone (no pools, no GPU)."""
-    command = [sys.executable, str(root / "experiments/fig4_single_target/plot.py"), "--out", str(tmp_path)]
+    command = [sys.executable, str(root / "experiments/single_target/plot.py"), "--out", str(tmp_path)]
     result = subprocess.run(command, capture_output=True, text=True, cwd=root)
     assert result.returncode == 0, result.stderr
-    for name in ("fig4", "gold_reward_row", "fig11_beta_sweep"):
+    for name in ("single_target", "reference_reward_row", "guidance_strength"):
         assert (tmp_path / f"{name}.pdf").stat().st_size > 10_000, name
 
 
 def test_run_seed_rule_is_the_replayed_one(root):
-    """run.py's proposal seed of a single-target record is the seed with which tests/test_gpu_replay.py redraws the
+    """run.py's sampling seed (proposal_seed) of a single-target record is the seed with which tests/test_gpu_replay.py redraws the
     frozen continuations token for token; the cross-benchmark cells add the placement to the key."""
-    run = load_module(root, "experiments/fig4_single_target/run.py", "fig4_run")
+    run = load_module(root, "experiments/single_target/run.py", "single_target_run")
     replay = load_module(root, "tests/test_gpu_replay.py", "gpu_replay")
     from fewshot_dlms.data import read_jsonl
 
     for name in ("nemotron_ar", "qwen"):
-        for record in read_jsonl(root / "data" / "fixtures" / "fig4" / f"{name}_sst2_M4.jsonl"):
+        for record in read_jsonl(root / "data" / "fixtures" / "single_target" / f"{name}_sst2_M4.jsonl"):
             assert run.proposal_seed(name, record["episode_id"], record["M"], record["J"], False) == replay.ar_seed(name, record)
     single = run.proposal_seed("llada", "list_easy_fam:report:000", 4, 1, False)
     master = run.proposal_seed("llada", "list_easy_fam:report:000", 4, 1, True)
@@ -230,7 +230,7 @@ def test_run_seed_rule_is_the_replayed_one(root):
 
 def test_run_protocol_hash_does_not_depend_on_the_other_cells(root):
     """A cell's protocol hash is a function of that cell alone: requesting more cells or tasks does not change it."""
-    run = load_module(root, "experiments/fig4_single_target/run.py", "fig4_run")
+    run = load_module(root, "experiments/single_target/run.py", "single_target_run")
     def config(K=64, master=False):
         return run.cell_config("llada", "GSAI-ML/LLaDA-1.5", "rev", "report", "list_easy_fam", 4, 1, master, K, 32, False)
 
@@ -306,7 +306,7 @@ class ToyText:
 
 def test_run_writes_complete_records_on_toy_models(root):
     """run.py's run functions on a byte-level toy: K answers, P0 scores for each, the reference scored, the seed."""
-    run = load_module(root, "experiments/fig4_single_target/run.py", "fig4_run")
+    run = load_module(root, "experiments/single_target/run.py", "single_target_run")
     from fewshot_dlms.data import load_families
 
     family = load_families("list_easy_fam", "report")[0]
@@ -343,7 +343,7 @@ def toy_run(root, monkeypatch, capsys):
     """run.py with the toy canvas model in place of a checkpoint and no GPU; returns (module, call) where
     call(out, *arguments) runs main() for LLaDA-1.5's List Functions-Easy cells and returns (exit code, stdout), or
     (exit code, stdout, stderr) with stderr=True. Every model load is counted in run.loads."""
-    run = load_module(root, "experiments/fig4_single_target/run.py", "fig4_run_main")
+    run = load_module(root, "experiments/single_target/run.py", "single_target_run_main")
     run.loads = []
 
     def toy_load(name, device):
@@ -434,7 +434,7 @@ def test_run_refuses_a_pool_of_another_protocol(toy_run, tmp_path):
 def test_done_episodes_resumes_only_records_of_the_same_protocol(root, tmp_path):
     """done_episodes returns the families a run of the same protocol may skip (a cut-off last line is sampled again),
     and refuses a file that holds a record of another protocol, or one without a protocol hash (the frozen pools)."""
-    run = load_module(root, "experiments/fig4_single_target/run.py", "fig4_run")
+    run = load_module(root, "experiments/single_target/run.py", "single_target_run")
     config = run.cell_config("llada", "GSAI-ML/LLaDA-1.5", "rev", "report", "list_easy_fam", 2, 1, False, 4, 32, False)
     digest = run.protocol_hash(config)
     path = tmp_path / "pool.jsonl"
@@ -454,7 +454,7 @@ def test_run_script_refuses_a_pool_of_another_protocol(root, tmp_path):
     pool = tmp_path / "report" / "llada" / "list_easy_fam_M4_J1.jsonl"
     pool.parent.mkdir(parents=True)
     pool.write_text(json.dumps({"episode_id": "list_easy_fam:report:000", "protocol_hash": "0123456789abcdef"}) + "\n")
-    command = [sys.executable, str(root / "experiments/fig4_single_target/run.py"), "--model", "llada"]
+    command = [sys.executable, str(root / "experiments/single_target/run.py"), "--model", "llada"]
     command += ["--tasks", "list_easy_fam", "--M", "4", "--K", "4", "--families", "2"]
     command += ["--out", str(tmp_path), "--device", "cpu"]
     result = subprocess.run(command, capture_output=True, text=True, cwd=root)

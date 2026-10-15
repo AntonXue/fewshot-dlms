@@ -1,13 +1,13 @@
 # ported from editdiff/<the authors' Section 5 run package>: fr_gen.py (main run) and zd_gen.py (zero-demonstration ablation) @ d276fa6
-"""Sample and score the Java pools of Section 5 (Figure 7) on a GPU: LLaDA-1.5, one process, one GPU.
+"""Sample and score the Java pools of Section 5 (Figure 8) on a GPU: LLaDA-1.5, one process, one GPU.
 
-Main run (--study main). For every episode of data/java in the chosen cells (M demonstrations, J targets) and a
-length regime:
+Main run (--study main). For every episode of data/java in the chosen cells (M demonstrations, the paper's D; J
+targets) and a length regime:
   oracle   every target gets its reference token count (episode["oracle_lengths"]): one canvas;
-  learned  each of the K candidates draws its own target lengths from length head C (Appendix C): candidate k,
-           target j gets F_j^{-1}(u) with u = SHA-256("s5-final-alloc-v1" | protocol hash | episode | J | k | j |
-           redraw) / 2^64 (allocation_uniform); a draw whose canvas would exceed 2,048 tokens is redrawn with the
-           next redraw counter (learned_allocations). One canvas per distinct allocation.
+  learned  each of the K candidates draws its own target lengths from the Java predictor (length head C;
+           Appendix C.2): candidate k, target j gets F_j^{-1}(u) with u = SHA-256("s5-final-alloc-v1" | protocol
+           hash | episode | J | k | j | redraw) / 2^64 (allocation_uniform); a draw whose canvas would exceed 2,048
+           tokens is redrawn with the next redraw counter (learned_allocations). One canvas per distinct allocation.
 For each distinct allocation, as in the paper's run:
   1. Sample its candidates from P1 by fixed-order decoding (Lemma 3.1), all in one reveal, with one
      torch.Generator seeded with generation_seed(regime, episode, allocation); logp1_sampletime is the sum taken
@@ -16,7 +16,7 @@ For each distinct allocation, as in the paper's run:
      the canvas with the demonstrations' accepted edits E masked (logp0); R = logp1 - logp0. Both use the batched
      loop of sampling, so with K <= 16 (one chunk) the replayed logp1 equals logp1_sampletime exactly.
 
-Zero-demonstration ablation (--study zero_demo, Appendix C). Each M = 1 episode is an anchor; it is run with no
+Zero-demonstration ablation (--study zero_demo, Appendix C.2). Each M = 1 episode is an anchor; it is run with no
 demonstration (M = 0), with its demonstration (M = 1) and, when the cell M = 2 holds the same targets, with both
 demonstrations of that episode (M = 2), all under the neutral instruction canvas.JAVA_ZERO_DEMO_INSTRUCTION, at
 oracle lengths, K draws from P1 per arm, no P0 (beta = 0 only). Seed: zero_demo_seed(unit).
@@ -33,9 +33,9 @@ configurations as one pool. A unit that raises is reported and counted, the othe
 RUN_FAILED and exit status 1; the next run samples only the failed units. <out>/manifest_<hash>.json records the
 run's configuration and hash, the pool's hash, every seed and the library versions.
 
-    python experiments/fig7_java/run.py --regime oracle --M 1,2 --J 1,2 --K 16 --out artifacts/reruns/fig7/pools
-    python experiments/fig7_java/run.py --regime learned --head artifacts/heads/java_head_C.pt --out artifacts/reruns/fig7/pools
-    python experiments/fig7_java/run.py --study zero_demo --M 0,1,2 --J 1,2 --out artifacts/reruns/fig7/zero_demo/pools
+    python experiments/java_refactoring/run.py --regime oracle --M 1,2 --J 1,2 --K 16 --out artifacts/reruns/java_refactoring/pools
+    python experiments/java_refactoring/run.py --regime learned --head artifacts/heads/java_head_C.pt --out artifacts/reruns/java_refactoring/pools
+    python experiments/java_refactoring/run.py --study zero_demo --M 0,1,2 --J 1,2 --out artifacts/reruns/java_refactoring/zero_demo/pools
 """
 import argparse
 import collections
@@ -78,10 +78,11 @@ PROTOCOL_HASH = "0e1d3c9040b09598"
 ZERO_DEMO_PROTOCOL_HASH = "c2a07e4a701f0a41"
 ALLOC_TAG = "s5-final-alloc-v1"
 
-# Length head C (Appendix C): the SHA-256 of the published checkpoint (artifacts/heads/java_head_C.pt) and the file of
-# its stored predictions in java/length. The published file is the authors' final.pt re-saved without the run
-# directory pickled in its training config, tensors identical; the stored pools and predictions record the original
-# file's SHA-256 (TRAINED_HEAD_CKPT_SHA) in head_ckpt_sha / ckpt_sha, and a live run records the file it reads.
+# The Java predictor, length head C (Appendix C.2): the SHA-256 of the published checkpoint
+# (artifacts/heads/java_head_C.pt) and the file of its stored predictions in java/length. The published file is the
+# authors' final.pt re-saved without the run directory pickled in its training config, tensors identical; the stored
+# pools and predictions record the original file's SHA-256 (TRAINED_HEAD_CKPT_SHA) in head_ckpt_sha / ckpt_sha, and a
+# live run records the file it reads.
 HEAD_CKPT_SHA = "b2efefded5ac382b5fc67ace4ee6d9f0ebfa15b820f2431b6f67cdb09721cebf"
 TRAINED_HEAD_CKPT_SHA = "ea54c8b92110f4c5c4dbe838721d23961775082712247f8099b74e8d7d312309"
 HEAD_PROBS_FILE = "s5hc_C_s5final_G4.npz"
@@ -116,7 +117,7 @@ def allocation_uniform(episode_id, J, k, j, redraw):
 
 
 def learned_allocations(episode, probs, n_candidates):
-    """The target lengths of K candidates drawn from head C's per-site distributions, and the number of redraws.
+    """The target lengths of K candidates drawn from the Java predictor's (head C's) per-site distributions, and the number of redraws.
 
     probs maps "<episode_id>|<J>|<j>" to the head's probabilities over the lengths 1..256 (float64). Candidate k
     takes, per target j, the inverse CDF at allocation_uniform(episode, J, k, j, r), starting at r = 0; if the
@@ -156,7 +157,7 @@ def file_sha256(path):
 
 
 def head_probs(adapter, head_path, episodes, device):
-    """Head C's distributions for the target sites of `episodes`, computed on the GPU (lengths.LengthHead).
+    """The Java predictor's (head C) distributions for the target sites of `episodes`, computed on the GPU (lengths.LengthHead).
 
     The head reads each episode's compact prompt (one mask per target). The probabilities are rounded to float32
     and back, the precision in which the paper's run stored them before drawing.
@@ -321,7 +322,7 @@ def zero_demo_units(episodes, arms, Js):
 
 
 def run_zero_demo_unit(adapter, unit, source, n_candidates, chunk):
-    """Sample one ablation arm (ordinary sampling from P1 at oracle lengths, neutral instruction)."""
+    """Sample one ablation arm (unguided sampling from P1 at oracle lengths, neutral instruction)."""
     M = unit["M"]
     J = unit["J"]
     keys = target_keys(J)
@@ -472,7 +473,7 @@ def int_list(text):
 
 
 def head_sha_of(args):
-    """The SHA-256 of length head C that a learned main run uses (the stored predictions' ckpt_sha with --head-probs,
+    """The SHA-256 of the Java predictor (head C) that a learned main run uses (the stored predictions' ckpt_sha with --head-probs,
     else the checkpoint file's), or "" for the oracle regime and the ablation. Read before the model is loaded."""
     if args.study != "main" or args.regime != "learned":
         return ""
@@ -486,7 +487,7 @@ def head_sha_of(args):
         sys.exit(2)
     head_sha = file_sha256(args.head)
     if head_sha not in (HEAD_CKPT_SHA, TRAINED_HEAD_CKPT_SHA):
-        print(f"warning: {args.head} is not the paper's head C (sha256 {head_sha[:12]}...)", flush=True)
+        print(f"warning: {args.head} is not the paper's Java predictor, head C (sha256 {head_sha[:12]}...)", flush=True)
     return head_sha
 
 
@@ -578,9 +579,9 @@ def main():
     parser.add_argument("--J", type=int_list, default=[1, 2], help="targets J in {1, 2}")
     parser.add_argument("--K", type=int, default=K, help="infills sampled per episode (per arm)")
     parser.add_argument("--families", type=int, default=None, help="only the first N episodes (anchors) in data/java order")
-    parser.add_argument("--head", default="artifacts/heads/java_head_C.pt", help="length head C (learned regime)")
+    parser.add_argument("--head", default="artifacts/heads/java_head_C.pt", help="the Java predictor, length head C (learned regime)")
     parser.add_argument("--head-probs", default=None, help="stored head predictions (.npz) instead of running the head")
-    parser.add_argument("--out", default=None, help="pool directory (default artifacts/reruns/fig7/pools, or .../zero_demo/pools)")
+    parser.add_argument("--out", default=None, help="pool directory (default artifacts/reruns/java_refactoring/pools, or .../zero_demo/pools)")
     parser.add_argument("--tag", default="rerun")
     parser.add_argument("--chunk", type=int, default=CHUNK)
     parser.add_argument("--device", default="cuda")
@@ -591,7 +592,7 @@ def main():
         parser.error("the main run has cells with M in {1, 2}; M = 0 is the zero_demo study")
     if args.study == "zero_demo" and not set(args.M) <= {0, 1, 2}:
         parser.error("the zero-demonstration ablation has arms M in {0, 1, 2}")
-    default_out = "artifacts/reruns/fig7/pools" if args.study == "main" else "artifacts/reruns/fig7/zero_demo/pools"
+    default_out = "artifacts/reruns/java_refactoring/pools" if args.study == "main" else "artifacts/reruns/java_refactoring/zero_demo/pools"
     out = Path(args.out or default_out)
 
     # The pool this run appends to, checked before the model is loaded: resume a pool of the same configuration only.
@@ -608,7 +609,7 @@ def main():
 
     started = time.time()
     adapter = load(MODEL, args.device)
-    print(f"[fig7] {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
+    print(f"[java_refactoring] {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
     out.mkdir(parents=True, exist_ok=True)
     if args.study == "main":
         failed = run_main(args, adapter, episodes, out, config, done, head_sha)

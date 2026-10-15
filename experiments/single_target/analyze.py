@@ -1,13 +1,13 @@
 # ported from editdiff/experiments/algo_investigation/fs_analyze.py and fs_analyze_lib.py::{load, cell, weights, fam_metrics}, experiments/paper_integration/agent_a/fig5_compute.py (gold rows) and experiments/gold_reward/gr_analyze.py (gold reward per family) @ d276fa6; experiments/beta_sweep/bs_sweep.py (Appendix B, Guidance-Strength Sensitivity) @ 1aeba87
-"""Figure 4 (Section 4.1), the development-bank choice of beta, the sharpening residuals (Appendix B, Likelihood
-Sharpening) and the two appendix studies that reuse these pools: the cross-benchmark figure (Fig. 9, both builds;
-Appendix B, Multi-Target Prompting) and the guidance-strength sweep figure (Fig. 10, arXiv version only; Appendix B,
-Guidance-Strength Sensitivity). CPU only, no model.
+"""Figure 5 (Section 4.1), the development-bank choice of beta, the sharpening residuals (Appendix B.6, Likelihood
+Sharpening) and the two appendix studies that reuse these pools: the cross-benchmark study (Figure 10; Appendix B.3,
+Multi-Target Experiments) and the guidance-strength sweep (Figure 11; Appendix B.5, Guidance-Strength Sensitivity).
+Figure and appendix numbers are those of the arXiv version (v1). CPU only, no model.
 
 The single-target study of Section 4.1: four benchmarks (SST-2 with opaque output codes, List Functions-Easy, SALT,
 Movie Director), four model interfaces (LLaDA-1.5 and dQwen3.5 canvases, Nemotron's causal suffix, Qwen3-8B free-length
-continuation), M in {1, 2, 4, 8, 16} demonstrations followed by one target (J = 1), K = 64 answers per family sampled from
-P1, oracle target length (Qwen3-8B: free length). A pool file holds one record per family (see run.py):
+continuation), M in {1, 2, 4, 8, 16} demonstrations (the paper's D) followed by one target (J = 1), K = 64 answers
+per family sampled from P1, oracle target length (Qwen3-8B: free length). A pool file holds one record per family (see run.py):
 
     <pools>/<bank>/<model>/<task>_M{M}_J1.jsonl           Section 4.1 (demonstrations first, target last)
     <pools>/<bank>/<model>/<task>_M4_J{J}_il.jsonl        cross-benchmark study, J in {1, 2, 4, 8} targets placed in the
@@ -16,37 +16,36 @@ P1, oracle target length (Qwen3-8B: free length). A pool file holds one record p
 
 Per family, with weights w = softmax(beta * (ell1 - ell0)) over its K answers (scoring.pool_weights),
 
-    A_target = sum_k w_k mean_j c_kj      accuracy (with J = 1, the accuracy of Figure 4)
+    A_target = sum_k w_k mean_j c_kj      accuracy (with J = 1, the accuracy of Figure 5)
     A_all    = sum_k w_k prod_j c_kj      every target correct (the cross-benchmark study)
 
-where c_kj is 1 if target j of answer k is correct (grading.py). beta = 0 is ordinary sampling; beta = 0.5 is the common
-strength of Figure 4. Cells are resampled over families (bootstrap.py): seed string mtfsp-20261003-bootstrap-v1, cell
+where c_kj is 1 if target j of answer k is correct (grading.py). beta = 0 is unguided sampling; beta = 0.5 is the common
+strength of Figure 5. Cells are resampled over families (bootstrap.py): seed string mtfsp-20261003-bootstrap-v1, cell
 key "<model>|<task>", one index matrix shared by every beta (paired gains) and by every M or J of that model and task.
 Families are taken in the order of the pool file, as the paper's analysis took them.
 
 Outputs in --out:
-    sec41_accuracy.csv      Figure 4: accuracy and the paired gain over beta = 0 at every beta, per (model, task, M)
-    gold_reward_cells.csv   Figure 4's gold row: gold example reward per target token (ell1* - ell0*) / T per cell
+    sec41_accuracy.csv      Figure 5: accuracy and the paired gain over beta = 0 at every beta, per (model, task, M)
+    gold_reward_cells.csv   the reference-reward row (Appendix B.2): the reference answer's example reward per target
+                            token (ell1* - ell0*) / T per cell
     gold_families.csv       the same per family (T counts Qwen3-8B's stop token)
     dev_sec41.csv           the Section 4.1 cells on the development bank (A_target, A_all and both gains)
     dev_sec42.csv           the cross-benchmark cells on the development bank
-    beta_locks.json         the development-only beta of each model (Appendix B, Experimental Setup, Guidance
-                            selection), recomputed from the two tables above
-    sec44_power.csv         sharpening residuals (LLaDA-1.5): guidance at (beta, tau) against ordinary power sampling at
+    beta_locks.json         the development-only beta of each model (a record of the authors' selection; arXiv v1
+                            reports the common beta = 0.5), recomputed from the two tables above
+    sec44_power.csv         sharpening residuals (LLaDA-1.5): guidance at (beta, tau) against unguided power sampling at
                             the matched exponent tau_eff = 1 / (1 / tau + beta), J in {1, 4, 8}
     diagnostics.csv         per cell: coverage, malformed rate, reward spread, prompt sizes, ESS at the locked beta
-    cells_crossbench.csv    with --crossbench: the cross-benchmark figure, A_all and its paired gain per (model, task,
-                            J), M = 4
-    beta_sweep.csv          with --beta-sweep: the guidance-strength sweep figure, A_all gain and effective support
-                            exp(H) / K against beta,
+    cells_crossbench.csv    with --crossbench: Figure 10, A_all and its paired gain per (model, task, J), M = 4
+    beta_sweep.csv          with --beta-sweep: Figure 11, A_all gain and the effective fraction exp(H) / K against beta,
                             List Functions-Easy, M = 4, J in {1, 4}
 
 --compare DIR [DIR ...] prints, for every table also in a DIR, the largest |difference| per numeric column, and for
-every Section 4.1 cell a resampling verdict (README.md, fidelity level 3): is the frozen ordinary accuracy inside the
+every Section 4.1 cell a resampling verdict (README.md, fidelity level 3): is the frozen unguided accuracy inside the
 95 % CI of the pools analysed here?
 
-    python experiments/fig4_single_target/analyze.py --pools artifacts/pools/fig4 --crossbench --beta-sweep \\
-        --compare data/tables/fig4 data/tables/fig5
+    python experiments/single_target/analyze.py --pools artifacts/pools/single_target --crossbench --beta-sweep \\
+        --compare data/tables/single_target data/tables/multi_target
 """
 import argparse
 import io
@@ -83,14 +82,14 @@ MODELS42 = ["llada", "nemotron_pt", "dqwen"]
 M_GRID = [1, 2, 4, 8, 16]
 J_GRID = [1, 2, 4, 8]
 CROSSBENCH_M = 4
-BETAS = [0, 0.025, 0.05, 0.125, 0.25, 0.5, 1, 2]  # beta = 0 is ordinary sampling (the paper's beta grid, as frozen)
-# Appendix B, Likelihood Sharpening: temperatures of power sampling, P1^(1/tau)
+BETAS = [0, 0.025, 0.05, 0.125, 0.25, 0.5, 1, 2]  # beta = 0 is unguided sampling (the paper's beta grid, as frozen)
+# Appendix B.6, Likelihood Sharpening: temperatures of power sampling, P1^(1/tau)
 TAUS = [1, 0.85, 0.7, 0.5, 0.35, 0.25, 0.1]
-FIGURE_BETA = 0.5  # the common guidance strength of Figure 4
+FIGURE_BETA = 0.5  # the common guidance strength of Figure 5
 NBOOT = 10000
 BOOTSTRAP_SEED = "mtfsp-20261003-bootstrap-v1"  # cell key f"{model}|{task}"
 
-# Appendix B, Experimental Setup (Guidance selection): the development-only choice of beta. Per model, the mean
+# The development-only choice of beta (the authors' selection record; arXiv v1 reports beta = 0.5). Per model, the mean
 # A_target over its development cells (Section 4.1: M in {2, 4, 8, 16}; cross-benchmark study: J in {1, 2, 4, 8}),
 # equal cell weights; the best positive beta, ties within 0.25 pp going to the smallest. A cell counts once at least
 # MIN_DEV_FAMILIES of its families are complete.
@@ -122,13 +121,13 @@ FROZEN_LOCK_CELLS = {
     },
 }
 
-# Appendix B, Likelihood Sharpening: the sharpening residuals use LLaDA-1.5's report pools at M = 4: J = 1 is the
+# Appendix B.6, Likelihood Sharpening: the sharpening residuals use LLaDA-1.5's report pools at M = 4: J = 1 is the
 # Section 4.1 pool, J = 4 and J = 8 the cross-benchmark pools. Their own family resamples: cell key
 # f"llada|{task}|44|J{J}".
 POWER_MODEL = "llada"
 POWER_J = [1, 4, 8]
 
-# Appendix B, Guidance-Strength Sensitivity (Fig. 10, arXiv version only): the guidance-strength sweep over the stored
+# Appendix B.5, Guidance-Strength Sensitivity (Fig. 11): the guidance-strength sweep over the stored
 # cross-benchmark pools of List Functions-Easy.
 SWEEP_TASK = "list_easy_fam"
 SWEEP_MODELS = [
@@ -139,7 +138,7 @@ SWEEP_MODELS = [
 SWEEP_J = [1, 4]
 SWEEP_BETAS = [0.0, 0.25, 0.5, 1.0, 2.0]
 
-# Per-family gold table: the benchmark names of the gold-reward probe.
+# Per-family reference-answer table: the benchmark names of the authors' reference-reward probe.
 GOLD_LABELS = {"sst2_fam": "SST-2", "list_easy_fam": "List Functions", "salt_rep_fam": "SALT", "movie_dir_fam": "Movie Director"}
 
 # The tables of --compare and the columns that identify a row.
@@ -411,7 +410,7 @@ def crossbench_table(rows):
 
 
 # ---------------------------------------------------------------------------------------------
-# Development-only beta (Appendix B, Experimental Setup, Guidance selection)
+# Development-only beta (the authors' selection record)
 # ---------------------------------------------------------------------------------------------
 
 
@@ -472,7 +471,7 @@ def frozen_cells(dev41, cells, frozen):
 
 
 def beta_locks(dev41, dev42):
-    """beta_locks.json: per model, the development-only beta and its statistic (Appendix B, Experimental Setup)."""
+    """beta_locks.json: per model, the development-only beta and its statistic (the authors' selection record)."""
     locks = {"rule": LOCK_RULE, "bank": "dev", "betas": BETAS, "models": {}}
     for model in LOCK_SECTIONS:
         cells, partial = dev_cells(dev41, dev42, model)
@@ -495,21 +494,21 @@ def beta_locks(dev41, dev42):
         locks["models"][model] = lock
         print(
             f"lock {model:11s} beta {lock['beta']} ({lock['n_cells']} cells, +{lock['dev_gain_vs_ordinary_pp']:.2f} pp over"
-            f" ordinary); rule on all {everything['n_cells']} complete cells: beta {everything['beta']}",
+            f" unguided); rule on all {everything['n_cells']} complete cells: beta {everything['beta']}",
             flush=True,
         )
     return locks
 
 
 # ---------------------------------------------------------------------------------------------
-# Gold example reward (Figure 4's gold row)
+# The reference answer's example reward (the reference-reward row, Appendix B.2)
 # ---------------------------------------------------------------------------------------------
 
 
 def gold_records(pools, model, task, M):
     """The reference answers of a Section 4.1 report cell scored under P1 and P0, one dict per family in file order.
 
-    run.py --score-gold stores them in the pool records (gold_ell1, gold_ell0, gold_T); the frozen gold-reward probe
+    run.py --score-gold stores them in the pool records (gold_ell1, gold_ell0, gold_T); the frozen reference-reward probe
     stores them in <pools>/gold/<model>/<task>_M{M}_J1.jsonl (ell1, ell0, T). T is the number of target tokens of the
     reference answer; for Qwen3-8B it counts the stop token, whose probability is part of ell1 and ell0.
     """
@@ -546,7 +545,8 @@ def gold_records(pools, model, task, M):
 
 
 def gold_family_rows(model, task, M, gold):
-    """Per family: the gold reward R* = ell1* - ell0*, per target token, and the gold perplexities under P1 and P0."""
+    """Per family: the reference reward R* = ell1* - ell0*, per target token, and the reference perplexities under P1
+    and P0."""
     rows = []
     for g in gold:
         T = g["T"]
@@ -578,8 +578,9 @@ def gold_family_rows(model, task, M, gold):
 
 
 def gold_cell_row(model, task, label, M, family_rows, nboot):
-    """The gold row of Figure 4 for one cell: mean gold reward per target token with a 95 % family-bootstrap interval
-    (bootstrap.boot_sd, seed string f"4.1|{model}|{task}|{M}|rpt"), and the mean gold NLL per token under P1 and P0."""
+    """The reference-reward row for one cell: mean reference reward per target token with a 95 % family-bootstrap
+    interval (bootstrap.boot_sd, seed string f"4.1|{model}|{task}|{M}|rpt"), and the mean reference NLL per token under
+    P1 and P0."""
     reward = np.array([row["reward_per_token"] for row in family_rows])
     mean, lo, hi = boot_sd(reward, f"4.1|{model}|{task}|{M}|rpt", nboot)
     return {
@@ -615,7 +616,7 @@ def gold_tables(pools, nboot):
 
 
 # ---------------------------------------------------------------------------------------------
-# Appendix B, Likelihood Sharpening: sharpening residuals
+# Appendix B.6, Likelihood Sharpening: sharpening residuals
 # ---------------------------------------------------------------------------------------------
 
 
@@ -623,7 +624,7 @@ def power_rows(pools, codes, lock_beta, nboot):
     """sec44_power.csv: LLaDA-1.5, M = 4, J in {1, 4, 8}; every (tau, beta) of the grid.
 
     Guidance at (beta, tau) targets P1^(1/tau + beta) P0^(-beta), pool weights pool_weights(ell1, ell0, beta, tau). Its
-    total exponent on P1 equals that of ordinary power sampling at tau_eff = 1 / (1 / tau + beta) (weights
+    total exponent on P1 equals that of unguided power sampling at tau_eff = 1 / (1 / tau + beta) (weights
     pool_weights(ell1, ell0, 0, tau_eff)). gain_vs_matched_power = A_target(beta, tau) - A_target(0, tau_eff), with
     paired family-bootstrap intervals (cell key f"llada|{task}|44|J{J}"). is_locked_beta marks LLaDA-1.5's locked beta.
     """
@@ -671,7 +672,7 @@ def power_rows(pools, codes, lock_beta, nboot):
 
 
 # ---------------------------------------------------------------------------------------------
-# Appendix B, Guidance-Strength Sensitivity: guidance-strength sweep
+# Appendix B.5, Guidance-Strength Sensitivity: guidance-strength sweep
 # ---------------------------------------------------------------------------------------------
 
 
@@ -690,12 +691,11 @@ def weights_and_entropy(ell1, ell0, beta):
 
 
 def sweep_rows(pools, nboot):
-    """beta_sweep.csv: the guidance-strength sweep of Appendix B, Guidance-Strength Sensitivity (Fig. 10, arXiv
-    version only).
+    """beta_sweep.csv: the guidance-strength sweep of Appendix B.5, Guidance-Strength Sensitivity (Fig. 11).
 
     Cells: List Functions-Easy, cross-benchmark pools (M = 4, K = 64, oracle lengths), J in {1, 4}, three diffusion models.
     Per family and beta: w = softmax(beta R), A_all = sum_k w_k c_k (c_k = every target of draw k correct),
-    H = -sum_k w_k log w_k, effective support D_eff = exp(H) / K (1 at beta = 0), ESS = 1 / sum w^2. Cell values are family
+    H = -sum_k w_k log w_k, effective fraction D_eff = exp(H) / K (1 at beta = 0), ESS = 1 / sum w^2. Cell values are family
     means with 95 % family-bootstrap intervals (the cell's index matrix, key f"{model}|list_easy_fam", shared across beta,
     so the gains over beta = 0 are paired). A_all and the gains in percent / percentage points.
     """
@@ -763,8 +763,8 @@ def sweep_rows(pools, nboot):
 
 
 def frozen_lock_beta(model):
-    """The locked beta of `model` in data/tables/fig4/beta_locks.json (used when the development pools are absent)."""
-    path = ROOT / "data" / "tables" / "fig4" / "beta_locks.json"
+    """The locked beta of `model` in data/tables/single_target/beta_locks.json (used when the development pools are absent)."""
+    path = ROOT / "data" / "tables" / "single_target" / "beta_locks.json"
     return json.loads(path.read_text())["models"][model]["beta"]
 
 
@@ -849,7 +849,7 @@ def max_abs_diff(a, b):
 def compare(frames, references):
     """Print the largest |difference| per numeric column against the tables in the reference directories, then the
     resampling verdicts of every Section 4.1 cell: is the frozen accuracy inside the 95 % CI computed here, for
-    ordinary sampling (beta = 0) and for guidance at FIGURE_BETA? One line each; the guided line names its beta.
+    unguided sampling (beta = 0) and for guidance at FIGURE_BETA? One line each; the guided line names its beta.
 
     CSVs are parsed with float_precision="round_trip", so a value written by pandas reads back exactly.
     """
@@ -929,16 +929,16 @@ def main():
     parser.add_argument("--pools", required=True, help="directory with <bank>/<model>/<task>_M{M}_J{J}[_il].jsonl and gold/")
     parser.add_argument("--out", default=str(HERE / "out"))
     parser.add_argument("--crossbench", action="store_true",
-                        help="also the cross-benchmark report cells (the cross-benchmark figure)")
+                        help="also the cross-benchmark report cells (Figure 10)")
     parser.add_argument("--beta-sweep", action="store_true",
-                        help="also the guidance-strength sweep figure (arXiv version only)")
+                        help="also the guidance-strength sweep (Figure 11)")
     parser.add_argument("--nboot", type=int, default=NBOOT)
-    parser.add_argument("--compare", nargs="+", default=None, help="directories of reference tables, e.g. data/tables/fig4")
+    parser.add_argument("--compare", nargs="+", default=None, help="directories of reference tables, e.g. data/tables/single_target")
     args = parser.parse_args()
 
     pools = Path(args.pools)
     if not pools.is_dir() or not has_pools(pools):
-        print(f"no Figure 4 pools in {pools}; {FETCH_HINT}", file=sys.stderr)
+        print(f"no Figure 5 pools in {pools}; {FETCH_HINT}", file=sys.stderr)
         sys.exit(2)
 
     missing = missing_inputs(pools, args.crossbench, args.beta_sweep)

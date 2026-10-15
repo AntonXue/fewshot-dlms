@@ -1,7 +1,7 @@
 """Target lengths (Section 4.3): allocation modes, the compact prompt the length head reads, and sampling.
 
 CPU only; no model, no tokenizer download. The canvases use `FakeAdapter`. The frozen head's distributions
-and the allocations the authors drew from them are in data/fixtures/fig6/head_predictions_llada.json
+and the allocations the authors drew from them are in data/fixtures/length_allocation/head_predictions_llada.json
 (tools/extract_fixtures.py); tests/test_gpu_head.py checks that the ported head reproduces the distributions.
 """
 import hashlib
@@ -29,7 +29,7 @@ FAMILY = load_families("list_easy_fam", "report")[0]
 
 @pytest.fixture(scope="module")
 def head_fixture(root):
-    path = root / "data" / "fixtures" / "fig6" / "head_predictions_llada.json"
+    path = root / "data" / "fixtures" / "length_allocation" / "head_predictions_llada.json"
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -169,7 +169,7 @@ def test_sampler_reproduces_the_frozen_allocations(head_fixture):
 
 def test_head_sample_rounds_through_float32_as_the_pipelines_do():
     """LengthHead.sample draws from the head's float64 probabilities rounded to float32 and back, the two-step path of
-    the fig6 and fig7 run.py. The vector puts site 0's CDF 1e-9 below candidate 0's uniform, where the rounding
+    the length_allocation and java_refactoring run.py. The vector puts site 0's CDF 1e-9 below candidate 0's uniform, where the rounding
     decides the length."""
     seed = section43_seed("report", "llada", FAMILY["episode_id"], 1)
     u = hashed_uniform(ALLOC_TAG, *seed, 0, 0)

@@ -1,7 +1,7 @@
 # ported from editdiff/experiments/sec42_mj/mj_worker.py @ d276fa6
-"""Sample and score the pools of Figure 5 (Section 4.2) on a GPU: one process, one model, one GPU.
+"""Sample and score the pools of Figure 6 (Section 4.2) on a GPU: one process, one model, one GPU.
 
-For every family and cell (M demonstrations, J targets) of List Functions-Easy, the canvas has the oracle
+For every family and cell (M demonstrations, the paper's D; J targets) of List Functions-Easy, the canvas has the oracle
 length of every target (the token count of " <answer>" under the model's tokenizer). Then, as in the paper:
 
   1. Sample K infills from P1 by fixed-order decoding (Lemma 3.1), all K in one reveal: one torch
@@ -25,7 +25,7 @@ are written, and the run ends with RUN_FAILED and exit status 1; the next run sa
 <out>/<model>/manifest_<hash>.json records the run's
 configuration and hash, the hash of every pool, the seeds and the library versions. analyze.py reads the pools.
 
-    python experiments/fig5_multi_target/run.py --model llada --M 4 --J 2 --K 16 --families 8 --out artifacts/reruns/fig5
+    python experiments/multi_target/run.py --model llada --M 4 --J 2 --K 16 --families 8 --out artifacts/reruns/multi_target
 """
 import argparse
 import hashlib
@@ -62,7 +62,7 @@ J_GRID = [1, 2, 4, 8]
 K = 16
 CHUNK = 16  # most canvases per forward pass, as in the authors' run
 
-# How each model attends over the canvas (the `attention` field of the authors' records; Appendix B, Experimental
+# How each model attends over the canvas (the `attention` field of the authors' records; Appendix B.1, Experimental
 # Setup).
 ATTENTION = {
     "llada": "full bidirectional (LLaDA architecture; no attention mask)",
@@ -79,7 +79,7 @@ ATTENTION = {
 
 
 def proposal_seed(model, episode_id, M, J):
-    """The seed of a cell's K proposals: SHA-256 of "sec42_mj|proposal|<model>|<episode>|<M>|<J>|master24",
+    """The seed of a cell's K samples: SHA-256 of "sec42_mj|proposal|<model>|<episode>|<M>|<J>|master24",
     first 16 hex digits, mod 2**31. The same seed gives the same draws for the same logits."""
     text = "|".join(str(part) for part in ("sec42_mj", "proposal", model, episode_id, M, J, "master24"))
     return int(hashlib.sha256(text.encode()).hexdigest()[:16], 16) % (2 ** 31)
@@ -326,7 +326,7 @@ def main():
     parser.add_argument("--K", type=int, default=K, help="infills sampled per family")
     parser.add_argument("--families", type=int, default=None, help="only the first N families of the bank")
     parser.add_argument("--bank", default="report", choices=["dev", "report"])
-    parser.add_argument("--out", default="artifacts/reruns/fig5")
+    parser.add_argument("--out", default="artifacts/reruns/multi_target")
     parser.add_argument("--chunk", type=int, default=CHUNK)
     parser.add_argument("--audit-n", type=int, default=2, help="families per cell that also run the audit checks")
     parser.add_argument("--device", default="cuda")
@@ -353,7 +353,7 @@ def main():
 
     started = time.time()
     adapter = load(args.model, args.device)
-    print(f"[fig5] {args.model} {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
+    print(f"[multi_target] {args.model} {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
     out.mkdir(parents=True, exist_ok=True)
     pool_hashes = {path.name: pool_digest for _, _, path, pool_digest, _ in pools}
     write_manifest(out / f"manifest_{digest}.json", config, digest, pool_hashes, families, args)
@@ -401,7 +401,7 @@ def main():
                 f"[{args.model}] M={M} J={J} {family['episode_id']} tokens={body['n_tokens']} L={body['oracle_L']}"
                 f" distinct={body['n_unique']} gen {body['seconds_gen']:.1f}s score {body['seconds_score']:.1f}s"
                 + (f" replay {body['checks']['replay_P1_max_abs_seq']:.1e}" if body["checks"] else "")
-                + f" | gold R {body['gold_ell1'] - body['gold_ell0']:+.1f}",
+                + f" | reference R {body['gold_ell1'] - body['gold_ell0']:+.1f}",
                 flush=True,
             )
         print(f"CELL_DONE {args.model} M={M} J={J} new={written} {time.time() - job_start:.0f}s", flush=True)

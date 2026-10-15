@@ -2,17 +2,19 @@
 """Answer extraction and the fixed graders that decide correctness for all four benchmarks.
 
 A pool record carries one raw text per target. `answer` turns it into the model's answer string and `grade`
-compares that string with the record's gold under the record's `grader`:
+compares that string with the record's reference answer (`gold`) under the record's `grader`:
 
-  int_list      List Functions: the answer must be a bracketed integer list; correct if its integers equal the gold's.
-  int_row       1D-ARC: the answer must be whitespace-separated single digits; correct if the tokens equal the gold's.
+  int_list      List Functions: the answer must be a bracketed integer list; correct if its integers equal the
+                reference's.
+  int_row       1D-ARC: the answer must be whitespace-separated single digits; correct if the tokens equal the
+                reference's.
   anything else exact string match (the pools name it `exact_string`): SST-2 letter codes, SALT words, Movie Director names.
 
 Outer whitespace is trimmed, nothing else (exact match is case-sensitive). `grade` returns (correct, parse_ok):
 parse_ok says the answer was well formed for the grader (non-empty for exact match), correct says it is also right.
 
 Model-name convention: `answer` takes the model name stored in the record ("llada", "qwen", "dqwen", ...). The
-fs_analyze_lib loader (Figures 4 and 5, Qwen per-hole pools) first maps every name starting with "qwen" to "qwen";
+fs_analyze_lib loader (Figures 5 and 6, Qwen per-hole pools) first maps every name starting with "qwen" to "qwen";
 callers that follow it must do the same before calling `answer`.
 """
 import re

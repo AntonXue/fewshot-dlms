@@ -1,14 +1,15 @@
-"""Analysis parity (fidelity level 2 of README.md) for Figure 6 (Section 4.3) and its appendix fidelity row.
+"""Analysis parity (fidelity level 2 of README.md) for Figure 7 (Section 4.3) and the length-fidelity row
+(Appendix B.4).
 
-experiments/fig6_lengths/analyze.py recomputes the paper's Section 4.3 tables from the frozen pools and the frozen
-head's distributions, and must reproduce data/tables/fig6/ to 1e-9 in every numeric column (and exactly in every
+experiments/length_allocation/analyze.py recomputes the paper's Section 4.3 tables from the frozen pools and the frozen
+head's distributions, and must reproduce data/tables/length_allocation/ to 1e-9 in every numeric column (and exactly in every
 other column):
 
   sec43_length_metrics.csv       per backbone and J: the learned head's mass at |L - L*| <= 0, 1, 2 (P0, P1, P2)
                                  with family-bootstrap intervals, NLL, E|L - L*|, mode exact, ECE; and the
-                                 visible-demonstration length prior (appendix fidelity row)
-  sec43_downstream.csv           Figure 6, top row: A_avg (A_target) with oracle vs sampled learned lengths against J
-  sec43_length_perturbation.csv  Figure 6, bottom row: A_avg with L = L* + delta at every target, J = 1, 2
+                                 visible-demonstration length prior (length-fidelity row)
+  sec43_downstream.csv           Figure 7, top row: A_avg (A_target) with oracle vs sampled learned lengths against J
+  sec43_length_perturbation.csv  Figure 7, bottom row: A_avg with L = L* + delta at every target, J = 1, 2
 
 The parity tests need the fetched pools (`python -m fewshot_dlms.fetch pools java`). The other tests run on every
 `make test`: analyze.py on a small synthetic pool, the message for missing pools, plot.py on the committed tables,
@@ -31,7 +32,7 @@ from fewshot_dlms.data import read_jsonl
 from fewshot_dlms.lengths import length_mass
 from fewshot_dlms.lengths import site_metrics
 
-ANALYZE = "experiments/fig6_lengths/analyze.py"
+ANALYZE = "experiments/length_allocation/analyze.py"
 TOLERANCE = 1e-9
 KEYS = {
     "sec43_length_metrics": ["backbone", "J", "run"],
@@ -51,7 +52,7 @@ def run_analyze(root, pools, out, *extra):
 
 def load_module(root, name):
     """An experiment script imported as a module (run.py and analyze.py are scripts, not package modules)."""
-    spec = importlib.util.spec_from_file_location(f"fig6_{name}", root / "experiments" / "fig6_lengths" / f"{name}.py")
+    spec = importlib.util.spec_from_file_location(f"length_allocation_{name}", root / "experiments" / "length_allocation" / f"{name}.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -60,11 +61,11 @@ def load_module(root, name):
 @pytest.fixture(scope="module")
 def analysis(root, artifacts, tmp_path_factory):
     """Run analyze.py once on the frozen pools; returns (output directory, stdout of --compare)."""
-    pools = artifacts / "pools" / "fig6"
+    pools = artifacts / "pools" / "length_allocation"
     if not pools.exists():
-        pytest.skip("Figure 6 pools not fetched: run `python -m fewshot_dlms.fetch pools java`")
-    out = tmp_path_factory.mktemp("fig6")
-    result = run_analyze(root, pools, out, "--compare", str(root / "data" / "tables" / "fig6"))
+        pytest.skip("Figure 7 pools not fetched: run `python -m fewshot_dlms.fetch pools java`")
+    out = tmp_path_factory.mktemp("length_allocation")
+    result = run_analyze(root, pools, out, "--compare", str(root / "data" / "tables" / "length_allocation"))
     assert result.returncode == 0, result.stderr
     return out, result.stdout
 
@@ -97,7 +98,7 @@ def max_abs_diff(ours, paper, keys):
 def test_table_matches_paper(root, analysis, name):
     out, _ = analysis
     ours = pd.read_csv(out / f"{name}.csv", float_precision="round_trip")
-    paper = pd.read_csv(root / "data" / "tables" / "fig6" / f"{name}.csv", float_precision="round_trip")
+    paper = pd.read_csv(root / "data" / "tables" / "length_allocation" / f"{name}.csv", float_precision="round_trip")
     assert max_abs_diff(ours, paper, KEYS[name]) < TOLERANCE, name
 
 
@@ -116,9 +117,9 @@ def test_frozen_pools_lie_inside_their_own_intervals(analysis):
 def test_offset_pools_hold_exactly_the_families_run_keeps(root, artifacts, model):
     """The forced-offset pools skip a family when some L*_j + delta < 1 (never clipped); run.py keeps the same families."""
     run = load_module(root, "run")
-    pools = artifacts / "pools" / "fig6" / model
+    pools = artifacts / "pools" / "length_allocation" / model
     if not (pools / "length_head_report.jsonl").exists():
-        pytest.skip(f"Figure 6 pools of {model} not fetched: run `python -m fewshot_dlms.fetch pools java`")
+        pytest.skip(f"Figure 7 pools of {model} not fetched: run `python -m fewshot_dlms.fetch pools java`")
     oracle = {(row["episode_id"], row["J"]): row["oracle"] for row in read_jsonl(pools / "length_head_report.jsonl")}
     family_ids = [family["episode_id"] for family in load_families("list_easy_fam", "report")]
     for J in (1, 2):
@@ -172,7 +173,7 @@ def test_analyze_on_a_synthetic_pool(root, tmp_path):
         learned.append(synthetic_record(family, 1, [[gold], [" ["], [gold], [gold + "]"]], [[L], [L - 1], [L], [L + 2]]))
     write_pool(pools / "llada" / "list_easy_fam_M4_J1_oracle.jsonl", oracle)
     write_pool(pools / "llada" / "list_easy_fam_M4_J1_learned.jsonl", learned)
-    result = run_analyze(root, pools, tmp_path / "out", "--compare", str(root / "data" / "tables" / "fig6"))
+    result = run_analyze(root, pools, tmp_path / "out", "--compare", str(root / "data" / "tables" / "length_allocation"))
     assert result.returncode == 0, result.stderr
 
     table = pd.read_csv(tmp_path / "out" / "sec43_downstream.csv").set_index("condition")
@@ -201,11 +202,11 @@ def test_missing_pools_name_the_fetch_command(root, tmp_path):
 
 
 def test_plot_writes_the_figures(root, tmp_path):
-    """plot.py draws Figure 6 and the appendix fidelity row from the committed tables alone (no pools, no GPU)."""
-    command = [sys.executable, str(root / "experiments/fig6_lengths/plot.py"), "--out", str(tmp_path)]
+    """plot.py draws Figure 7 and the length-fidelity row from the committed tables alone (no pools, no GPU)."""
+    command = [sys.executable, str(root / "experiments/length_allocation/plot.py"), "--out", str(tmp_path)]
     result = subprocess.run(command, capture_output=True, text=True, cwd=root)
     assert result.returncode == 0, result.stderr
-    for name in ("fig6", "fidelity_row"):
+    for name in ("length_allocation", "length_fidelity"):
         assert (tmp_path / f"{name}.pdf").stat().st_size > 10_000, name
 
 
@@ -285,7 +286,7 @@ def test_run_refuses_a_pool_of_another_protocol(root, tmp_path):
     """run.py exits with status 2, naming the file, before it loads a model, when its pool holds another protocol."""
     pool = tmp_path / "llada" / "list_easy_fam_M4_J1_oracle.jsonl"
     write_pool(pool, [{"episode_id": "list_easy_fam:report:000", "protocol_hash": "0123456789abcdef"}])
-    command = [sys.executable, str(root / "experiments/fig6_lengths/run.py"), "--model", "llada", "--mode", "oracle"]
+    command = [sys.executable, str(root / "experiments/length_allocation/run.py"), "--model", "llada", "--mode", "oracle"]
     command += ["--J", "1", "--K", "4", "--families", "2", "--out", str(tmp_path), "--device", "cpu"]
     result = subprocess.run(command, capture_output=True, text=True, cwd=root)
     assert result.returncode == 2, result.stderr
@@ -296,7 +297,7 @@ def test_run_refuses_a_pool_of_another_protocol(root, tmp_path):
 def test_learned_run_without_its_head_names_the_fetch_command(root, tmp_path):
     """run.py --mode learned exits with status 2 and the fetch command, before it loads a model, when the head file is
     missing."""
-    command = [sys.executable, str(root / "experiments/fig6_lengths/run.py"), "--model", "llada", "--mode", "learned"]
+    command = [sys.executable, str(root / "experiments/length_allocation/run.py"), "--model", "llada", "--mode", "learned"]
     command += ["--head", str(tmp_path / "missing.pt"), "--J", "1", "--families", "1", "--out", str(tmp_path), "--device", "cpu"]
     result = subprocess.run(command, capture_output=True, text=True, cwd=root)
     assert result.returncode == 2, result.stderr
@@ -335,8 +336,8 @@ def test_run_counts_a_family_whose_lengths_fail(root, tmp_path, monkeypatch, cap
 
 
 def test_frozen_config_has_no_absolute_paths(root):
-    """experiments/fig6_lengths/frozen_config.json is the authors' freeze record with machine paths removed."""
-    text = (root / "experiments" / "fig6_lengths" / "frozen_config.json").read_text(encoding="utf-8")
+    """experiments/length_allocation/frozen_config.json is the authors' freeze record with machine paths removed."""
+    text = (root / "experiments" / "length_allocation" / "frozen_config.json").read_text(encoding="utf-8")
     config = json.loads(text)
     assert not re.search(r'"/[A-Za-z]', text), "a JSON string starts with an absolute path"
     assert not re.search(r"[\s(]/[A-Za-z]+/", text), "a text field names an absolute path"

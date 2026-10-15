@@ -24,12 +24,12 @@ import torch
 # and 0.05. The deviation does not grow with |ell| (LLaDA's largest is at |ell| = 8), so the tolerance is
 # absolute: about 1.6 to 1.9 times the largest measured value.
 #
-# The causal interfaces of Figure 4 were measured the same way on the frozen single-target M = 4 pools, every
+# The causal interfaces of Figure 5 were measured the same way on the frozen single-target M = 4 pools, every
 # distinct continuation of the first 8 SST-2 and the first 4 List Functions-Easy report families ({ell1, ell0}
 # each; 214 + 150 values for nemotron_ar, 180 + 98 for qwen). Nemotron's causal suffix was exact on SST-2 (one
 # answer token, so every forward pass held one sequence anyway) and deviated by at most 0.33 (mean 0.08) on the
-# multi-token List Functions answers; Qwen3-8B deviated by at most 0.18 (mean 0.02) on SST-2 and 0.54 (mean
-# 0.08) on List Functions. The tolerances are about 1.8 times the largest value.
+# multi-token List Functions–Easy answers; Qwen3-8B deviated by at most 0.18 (mean 0.02) on SST-2 and 0.54 (mean
+# 0.08) on List Functions–Easy. The tolerances are about 1.8 times the largest value.
 TOLERANCES = {
     "llada": 0.3,
     "nemotron_pt": 0.75,

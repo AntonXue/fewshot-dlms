@@ -1,12 +1,12 @@
 # ported from editdiff/experiments/algo_investigation/dr_worker.py::{seed_of, run_canvas_pc} and experiments/length_project/lpx_alloc.py (alloc) @ d276fa6
-"""Sample the pools of Figure 6 (Section 4.3) on a GPU: one process, one model, one GPU.
+"""Sample the pools of Figure 7 (Section 4.3) on a GPU: one process, one model, one GPU.
 
-Every family of List Functions-Easy (report bank) gets a canvas with M = 4 demonstrations and J targets in the
+Every family of List Functions-Easy (report bank) gets a canvas with M = 4 demonstrations (the paper's D) and J targets in the
 published 12-slot layout. Each of the K candidates gets its own target lengths L^(k) = (L_1, ..., L_J), the
 *allocation*, from one of three modes (lengths.allocate):
 
     oracle   L_j = L*_j, the token count of " <answer>" under the model's tokenizer
-    learned  L^(k) drawn from the frozen length head (Appendix B, Length Allocation): the head reads the compact
+    learned  L^(k) drawn from the frozen length head, the paper's length predictor (Appendix B.4): the head reads the compact
              prompt once (lengths.compact_prompt) and candidate k, target j draws L = F_j^{-1}(u_kj) with the hashed
              uniform u_kj of lengths.sample_allocations under the seed (bank, backbone, family, J)
              (lengths.section43_seed)
@@ -32,8 +32,8 @@ without its head file (fetch heads). A family that fails (head, canvas or sampli
 run; the run then exits with status 1. <out>/<model>/manifest_<hash>.json holds the
 run's configuration, the hash of every pool, every seed, and the library and GPU versions. analyze.py reads the pools.
 
-    python experiments/fig6_lengths/run.py --model llada --mode learned --J 1,2,4,8 --out artifacts/reruns/fig6
-    python experiments/fig6_lengths/run.py --model llada --mode offset --delta=-2,-1,1,2 --J 1,2 --out artifacts/reruns/fig6
+    python experiments/length_allocation/run.py --model llada --mode learned --J 1,2,4,8 --out artifacts/reruns/length_allocation
+    python experiments/length_allocation/run.py --model llada --mode offset --delta=-2,-1,1,2 --J 1,2 --out artifacts/reruns/length_allocation
 """
 import argparse
 import collections
@@ -334,7 +334,7 @@ def main():
     parser.add_argument("--K", type=int, default=None, help="candidates per family (default: 64 / J, the paper's K)")
     parser.add_argument("--families", type=int, default=None, help="only the first N families of the report bank")
     parser.add_argument("--head", default=None, help="learned mode: the head checkpoint (default artifacts/heads/<backbone>.pt)")
-    parser.add_argument("--out", default="artifacts/reruns/fig6")
+    parser.add_argument("--out", default="artifacts/reruns/length_allocation")
     parser.add_argument("--chunk", type=int, default=CHUNK)
     parser.add_argument("--audit-n", type=int, default=2, help="families per pool that also replay their draws under P1")
     parser.add_argument("--device", default="cuda")
@@ -375,11 +375,11 @@ def main():
 
     started = time.time()
     adapter = load(args.model, args.device)
-    print(f"[fig6] {args.model} {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
+    print(f"[length_allocation] {args.model} {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
     head = None
     if args.mode == "learned":
         head = LengthHead.load(adapter, head_path, args.device)
-        print(f"[fig6] length head {head_path} (sha256 {head_sha[:16]})", flush=True)
+        print(f"[length_allocation] length head {head_path} (sha256 {head_sha[:16]})", flush=True)
     out.mkdir(parents=True, exist_ok=True)
     pool_hashes = {path.name: pool_digest for _, _, _, _, path, pool_digest, _ in pools}
     write_manifest(out / f"manifest_{digest}.json", config, digest, pool_hashes, families, args, Ks)

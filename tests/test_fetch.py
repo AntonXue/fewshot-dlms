@@ -61,7 +61,7 @@ def test_download_defaults_and_unknown_group(monkeypatch):
     assert calls[0]["local_dir"] == Path("artifacts")
     assert calls[0]["revision"] == fetch.PINNED_REVISION
     with pytest.raises(ValueError, match="unknown group"):
-        fetch.download(["pools/fig5"])
+        fetch.download(["pools/multi_target"])
     assert len(calls) == 1
 
 
@@ -72,10 +72,10 @@ def test_sums_hash_is_pinned(root):
 
 
 def test_fetch_message_without_artifacts(root, tmp_path):
-    """analyze.py on a missing pools directory exits 2 and names the fetch command (fig4, 6, 7: test_parity_fig*)."""
+    """analyze.py on a missing pools directory exits 2 and names the fetch command (single_target, length_allocation, java_refactoring: test_parity_*)."""
     command = [
         sys.executable,
-        str(root / "experiments/fig5_multi_target/analyze.py"),
+        str(root / "experiments/multi_target/analyze.py"),
         "--pools",
         str(tmp_path / "no_pools"),
         "--out",

@@ -1,10 +1,10 @@
 # ported from editdiff/experiments/algo_investigation/dr_worker.py::{seed_of, run_canvas, run_ar_oracle, free_steps, run_qwen} and experiments/gold_reward/gr_worker.py::{gold_canvas, gold_ar, gold_qwen, stop_ids} @ d276fa6
-"""Sample and score the pools of Figure 4 (Section 4.1) and of the cross-benchmark study (Fig. 9, both builds) on a
+"""Sample and score the pools of Figure 5 (Section 4.1) and of the cross-benchmark study (Fig. 10) on a
 GPU: one process, one model, one GPU.
 
 For every family and cell, K answers are sampled from P1 and scored under P0, as in the paper:
 
-  Section 4.1 (default): the first M demonstrations, then the target T1 (J = 1), M in {1, 2, 4, 8, 16}.
+  Section 4.1 (default): the first M demonstrations (the paper's D), then the target T1 (J = 1), M in {1, 2, 4, 8, 16}.
     llada, dqwen   canvas: the target gets its oracle length (token count of " <answer>"); the K infills are drawn by
                    fixed-order decoding (Lemma 3.1), all K in one reveal, 32 canvases per forward pass; P0 masks the
                    demonstration outputs in place and scores the distinct infills together.
@@ -22,7 +22,7 @@ The seed of a family's K answers is the first 16 hex digits of SHA-256("algo_inv
 with this seed serves all K draws. The batches above are the authors': bf16 logits depend on the batch they are computed
 in (tests/gpu_util.py), so these are what reproduce the stored values.
 
---score-gold also scores the reference answer under P1 and P0 (Figure 4's gold row): canvases teacher-force it in the
+--score-gold also scores the reference answer under P1 and P0 (the reference-reward row, Appendix B.2): canvases teacher-force it in the
 same reveal order; the causal suffix scores its oracle-length tokens; Qwen3-8B scores its tokens and then the probability
 of stopping right after them (any pure terminator: <|im_end|> or a whitespace token with a newline), so its T counts the
 stop. On the first --audit-n families the reference is scored together with the first two distinct sampled answers,
@@ -37,8 +37,8 @@ status 2, naming the file, before the model is loaded, so that analyze.py never 
 resumed run appends its own), the library versions and the command. A family that fails is reported and counted; the run exits with status 1 if any did. analyze.py reads the
 pools.
 
-    CUDA_VISIBLE_DEVICES=0 python experiments/fig4_single_target/run.py --model llada --tasks list_easy_fam --M 4 \\
-        --K 64 --families 8 --score-gold --out artifacts/reruns/fig4
+    CUDA_VISIBLE_DEVICES=0 python experiments/single_target/run.py --model llada --tasks list_easy_fam --M 4 \\
+        --K 64 --families 8 --score-gold --out artifacts/reruns/single_target
 """
 import argparse
 import hashlib
@@ -69,7 +69,7 @@ from fewshot_dlms.canvas import build_canvas
 from fewshot_dlms.data import BENCHMARKS
 from fewshot_dlms.data import load_families
 
-# How each model is run (Appendix B, Experimental Setup), and which adapter it loads.
+# How each model is run (Appendix B.1, Experimental Setup), and which adapter it loads.
 INTERFACE = {
     "llada": "canvas",
     "dqwen": "canvas",
@@ -544,7 +544,7 @@ def main():
     parser.add_argument("--families", type=int, default=None, help="only the first N families of the bank")
     parser.add_argument("--crossbench", action="store_true", help="the cross-benchmark study (M = 4, master layout, J targets)")
     parser.add_argument("--score-gold", action="store_true", help="also score the reference answers under P1 and P0")
-    parser.add_argument("--out", default="artifacts/reruns/fig4")
+    parser.add_argument("--out", default="artifacts/reruns/single_target")
     parser.add_argument("--chunk", type=int, default=CHUNK, help="canvases per forward pass (canvas models)")
     parser.add_argument("--audit-n", type=int, default=2, help="first families of the bank that also run the audit checks")
     parser.add_argument("--device", default="cuda")
@@ -582,10 +582,10 @@ def main():
 
     started = time.time()
     adapter = load(args.model, args.device)
-    print(f"[fig4] {args.model} {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
+    print(f"[single_target] {args.model} {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
     out.mkdir(parents=True, exist_ok=True)
     manifest = write_manifest(out, cells, plan, args.model)
-    print(f"[fig4] manifest {manifest}", flush=True)
+    print(f"[single_target] manifest {manifest}", flush=True)
 
     failures = []
     for task, families, M, J, name in plan:
@@ -637,7 +637,7 @@ def main():
             }
             append_record(path, record)
             written += 1
-            gold_note = f" | gold R {body['gold_ell1'] - body['gold_ell0']:+.2f}" if "gold_ell1" in body else ""
+            gold_note = f" | reference R {body['gold_ell1'] - body['gold_ell0']:+.2f}" if "gold_ell1" in body else ""
             replay_note = f" replay {body['checks']['replay_P1_max_abs_seq']:.1e}" if body["checks"] else ""
             print(
                 f"[{args.model}] {name} {family['episode_id']} tokens={body['n_tokens']} L={body['oracle_L']} distinct={body['n_unique']}"

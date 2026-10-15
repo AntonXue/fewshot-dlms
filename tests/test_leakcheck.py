@@ -19,7 +19,7 @@ def test_find_private_names_every_generic_pattern():
 
 
 def test_find_private_passes_clean_text():
-    for text in ("artifacts/pools/fig5/llada", "/ssd", "home/x", "hostname", '"host_id": 3', "/hdd/1", ""):
+    for text in ("artifacts/pools/multi_target/llada", "/ssd", "home/x", "hostname", '"host_id": 3', "/hdd/1", ""):
         assert find_private(text) == [], text
 
 

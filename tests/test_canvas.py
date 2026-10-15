@@ -30,7 +30,7 @@ LIST_DEV = load_families("list_easy_fam", "dev")
 SALT_REPORT = load_families("salt_rep_fam", "report")
 FAM = LIST_REPORT[0]
 
-# The first report family of the 24-slot layout used by the M x J grid, as the authors froze it
+# The first report family of the 24-slot layout used by the D x J grid, as the authors froze it
 # (function c030; its 12-slot layout is FAM["meta"]["master_placement"]).
 C030_LAYOUT_24 = [
     "D1", "D5", "D6", "D7", "D2", "T1",
@@ -407,7 +407,7 @@ def test_java_canvas_rejects_bad_arguments():
 
 
 # ---------------------------------------------------------------------------------------------
-# The single-target prompt of the causal interfaces (Figure 4)
+# The single-target prompt of the causal interfaces (Figure 5)
 # ---------------------------------------------------------------------------------------------
 
 
@@ -536,11 +536,11 @@ def sha256_of_text(text):
 
 
 def test_ar_prompt_is_the_frozen_nemotron_prompt_text(root):
-    # The first two records of each frozen Figure 4 pool store the decoded P1 and P0 prompts of their episode; the
+    # The first two records of each frozen Figure 5 pool store the decoded P1 and P0 prompts of their episode; the
     # fixtures keep their SHA-256 (SST-2 text is not redistributed).
     families = sst2_report_families()
     adapter = NemotronText()
-    for record in read_jsonl(root / "data" / "fixtures" / "fig4" / "nemotron_ar_sst2_M4.jsonl"):
+    for record in read_jsonl(root / "data" / "fixtures" / "single_target" / "nemotron_ar_sst2_M4.jsonl"):
         family = families[record["episode_id"]]
         text, gold = build_ar_prompt(adapter, family, record["M"], 1)
         p0_text = adapter.decode(ar_prompt_ids(adapter, family, record["M"], 1, hide_E=True))

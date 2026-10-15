@@ -38,8 +38,8 @@ replacement `span_new` is at most 80 LLaDA-1.5 tokens, its enclosing method is a
 canvas with oracle lengths of every shipped episode has at most 2,048 tokens (the cap on the canvas; the longest is
 1,797), and the longest target is 74 tokens.
 
-**Roles and cells.** The four cells are `M x J` in `{1, 2} x {1, 2}`: M demonstrations and J targets, with D1, T1, T2, D2
-as the roles. The eligible sites of a group are put in order of their line position and rotated by
+**Roles and cells.** The four cells are `M x J` in `{1, 2} x {1, 2}`: M demonstrations and J targets (the data and the
+code write `M` for the paper's D), with D1, T1, T2, D2 as the roles. The eligible sites of a group are put in order of their line position and rotated by
 `key(260929, "swe_explore", group_id) mod n`. Here `key` is the first 12 hexadecimal digits of the SHA-256 of the
 `|`-joined parts, read as an integer, and the rotation is stored in the field `rotation`. D1, T1, T2 and D2 are the
 first four sites of the rotated order; D2 is the third site if the group has only three eligible sites. The order
@@ -186,8 +186,8 @@ of the model:
 `sites[j]` are the mask positions of target `j`; `E` are the positions of the demonstrations' `span_new` tokens (the
 accepted edits whose log-likelihood the paper's `P0` hides); `gold` are the reference replacements, which never enter
 `ids`. `lengths` is the number of mask tokens given to each target: the *oracle* regime of the paper passes
-`oracle_lengths`, the *learned* regime passes lengths drawn from the length head. With `M = 0` the canvas has no
-demonstration block (the zero-demonstration ablation of Appendix C, which uses `JAVA_ZERO_DEMO_INSTRUCTION` for all
+`oracle_lengths`, the *learned* regime passes lengths drawn from the Java predictor (length head C). With `M = 0` the canvas has no
+demonstration block (the zero-demonstration ablation of Appendix C.2, which uses `JAVA_ZERO_DEMO_INSTRUCTION` for all
 `M`).
 
 **Checks.** With the LLaDA-1.5 tokenizer, `build_java_canvas` reproduces, for all 127 episodes, the recorded

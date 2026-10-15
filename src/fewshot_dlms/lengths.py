@@ -1,6 +1,6 @@
 # ported from editdiff/experiments/length_project/lpx_alloc.py, experiments/length_project/lpx_ds.py (length_mass), experiments/length_project/lpx_model.py::{StopForward, Trunk, Branch, site_metrics}, experiments/length_pilot/lp_model.py::{rot_half, block_forward, Packed, Trunk, Branch, load_branch, predict} and experiments/length_pilot/lp_common.py::{collapse_window, L_MAX} @ d276fa6
-"""Target lengths (Section 3.3, Section 4.3, Appendix B, Length Allocation): allocation modes and the learned
-length head.
+"""Target lengths (Section 3.1, Section 4.3, Appendix B.4, Length Allocation): allocation modes and the learned
+length predictor, which the code calls the length head.
 
 A masked target needs a token count before the model fills it: a canvas with L_j masks at target j can only
 hold an answer of exactly L_j tokens. `allocate` gives the J target lengths of one candidate in one of three
@@ -8,9 +8,9 @@ modes:
 
     oracle   L_j = L*_j, the token count of the reference answer (Sections 4.1 and 4.2)
     offset   L_j = L*_j + delta, clipped to 1..lmax (the controlled offsets of Section 4.3)
-    learned  L_j drawn from the length head below (Section 4.3; the Java head C of Section 5)
+    learned  L_j drawn from the length head below (Section 4.3; the Java predictor, head C, of Section 5)
 
-The length head (Appendix B, Length Allocation)
+The length head (Appendix B.4, Length Allocation)
 -----------------------------------------------
 A frozen DLM reads a compact prompt z~ that holds one placeholder per target site. The hidden state that
 enters the backbone's last transformer block feeds a trainable copy of that block and of the final
@@ -32,7 +32,7 @@ positions are renumbered from 0. It is therefore the same for every allocation o
 learned), and the reference answers never enter it. For the canvases of Sections 4.2 and 4.3 it equals
 `build_canvas(adapter, family, M, J, [1] * J).ids`, which is how the authors rendered the head's prompts (the
 production renderer with one mask per target); tests/test_gpu_head.py checks it token for token through the
-SHA-256 of the frozen prompts. The Java head C reads the same construction applied to `build_java_canvas`
+SHA-256 of the frozen prompts. The Java predictor (head C) reads the same construction applied to `build_java_canvas`
 (Section 5). The head reads its distribution at the J placeholders, in site order.
 
 The forward pass on each backbone (lpx_model.py):
@@ -52,7 +52,7 @@ The forward pass on each backbone (lpx_model.py):
 
 The checkpoints are the authors' final.pt files, loaded unchanged: {"config": {..., "backbone": "llada" |
 "nemotron" | "dqwen", "lmax": 256}, "branch": state dict with block.*, norm.*, head.weight [lmax, d] and
-head.bias [lmax]}. The Section 4.3 heads and the Java head C (Section 5, LLaDA-1.5) share this format.
+head.bias [lmax]}. The Section 4.3 heads and the Java predictor (head C; Section 5, LLaDA-1.5) share this format.
 
 Sampling learned allocations (lpx_alloc.py)
 -------------------------------------------
@@ -69,7 +69,7 @@ import hashlib
 import numpy as np
 import torch
 
-L_MAX = 256  # lengths are 1..L_MAX: the head's categorical support (Appendix B, Length Allocation)
+L_MAX = 256  # lengths are 1..L_MAX: the head's categorical support (Appendix B.4, Length Allocation)
 
 MODES = ("oracle", "offset", "learned")
 
@@ -175,7 +175,7 @@ def section43_seed(bank, backbone, episode_id, J):
 
 
 # ---------------------------------------------------------------------------------------------
-# How good a length distribution is (Section 4.3, Appendix B, Length Allocation)
+# How good a length distribution is (Section 4.3, Appendix B.4, Length Allocation)
 # ---------------------------------------------------------------------------------------------
 
 
@@ -197,7 +197,7 @@ def site_metrics(probs, lengths, lmax=L_MAX):
     probs [S, lmax] probabilities over 1..lmax; lengths [S] reference lengths (may exceed lmax: out of support).
     Returns the site means of P_0, P_1, P_2 (mass within 0, 1, 2 tokens), the NLL of the reference (in-support sites),
     the expected absolute error E|L - L*|, how often the mode is exact, and the calibration error of the mode (ECE over
-    10 confidence bins). The trainer's development evaluation (experiments/fig6_lengths/train_head.py) reports these.
+    10 confidence bins). The trainer's development evaluation (experiments/length_allocation/train_head.py) reports these.
     """
     S = len(lengths)
     support = np.arange(1, lmax + 1)
@@ -484,7 +484,7 @@ class Branch(torch.nn.Module):
 
     The copies are fp32 and separate from the frozen backbone. The head is Linear(d, lmax) over the lengths
     1..lmax, initialised from N(0, head_std^2) with a generator seeded by `seed` and a zero bias (the training
-    start of Appendix B, Length Allocation; a loaded checkpoint overwrites every weight).
+    start of Appendix B.4, Length Allocation; a loaded checkpoint overwrites every weight).
     """
 
     def __init__(self, last_block, final_norm, width, lmax=L_MAX, seed=0, head_std=1e-3):
@@ -504,7 +504,7 @@ class Branch(torch.nn.Module):
             parameter.requires_grad_(True)
 
     def param_groups(self, lr_block, lr_head, weight_decay):
-        """AdamW groups of Appendix B, Length Allocation: block and norm at lr_block, head at lr_head; no decay on
+        """AdamW groups of Appendix B.4, Length Allocation: block and norm at lr_block, head at lr_head; no decay on
         vectors."""
         block_parameters = list(self.block.parameters()) + list(self.norm.parameters())
         return [
@@ -516,7 +516,7 @@ class Branch(torch.nn.Module):
 
 
 class LengthHead:
-    """A frozen DLM with a trained length branch: per-site length distributions for a canvas (Appendix B, Length
+    """A frozen DLM with a trained length branch: per-site length distributions for a canvas (Appendix B.4, Length
     Allocation)."""
 
     def __init__(self, adapter, backbone, trunk, branch, config):
@@ -634,8 +634,8 @@ class LengthHead:
         """K independent learned allocations for a canvas: K lists of J lengths in 1..lmax.
 
         The head is evaluated once; its probabilities are rounded to float32 and back to float64, the precision in
-        which the paper's runs stored them before drawing (as experiments/fig6_lengths/run.py and
-        experiments/fig7_java/run.py do), and the draws are sample_allocations(those probabilities, K, seed). With
+        which the paper's runs stored them before drawing (as experiments/length_allocation/run.py and
+        experiments/java_refactoring/run.py do), and the draws are sample_allocations(those probabilities, K, seed). With
         seed = section43_seed("report", head.backbone, episode_id, J) they are the paper's Section 4.3 draws.
         """
         probs = self.predict(canvas).astype(np.float32).astype(np.float64)
@@ -643,10 +643,10 @@ class LengthHead:
 
 
 def fresh_head(adapter, lmax=L_MAX, seed=0):
-    """A LengthHead on a loaded adapter with an untrained branch: the training start of Appendix B, Length Allocation.
+    """A LengthHead on a loaded adapter with an untrained branch: the training start of Appendix B.4, Length Allocation.
 
     The branch copies the adapter's last block and final norm and draws its head weights with standard deviation 1e-3
-    from a generator seeded by `seed` (Branch). The adapter's own weights are frozen here; experiments/fig6_lengths/train_head.py trains
+    from a generator seeded by `seed` (Branch). The adapter's own weights are frozen here; experiments/length_allocation/train_head.py trains
     the branch.
     """
     if adapter.name not in BACKBONE_OF_ADAPTER:

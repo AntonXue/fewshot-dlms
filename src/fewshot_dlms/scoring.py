@@ -3,22 +3,22 @@
 
 ell1[k] = log P1(infill_k): log-likelihood with demonstration outputs visible.
 ell0[k] = log P0(infill_k): the same with demonstration-output tokens masked.
-R = ell1 - ell0 is the example reward. Pool weights are softmax(beta * R) over the K proposals,
-so beta = 0 is ordinary sampling and beta = 0.5 gives Q_0.5 ∝ P1^{3/2} P0^{-1/2}.
+R = ell1 - ell0 is the example reward. Pool weights are softmax(beta * R) over the K samples,
+so beta = 0 is unguided sampling and beta = 0.5 gives Q_0.5 ∝ P1^{3/2} P0^{-1/2}.
 The sharpening control keeps the same total exponent on P1 without P0: weights softmax((1/tau - 1) ell1), tau = 2/3.
 """
 import numpy as np
 
 
 def example_reward(ell1, ell0):
-    """Example reward R = ell1 - ell0 for each of the K proposals."""
+    """Example reward R = ell1 - ell0 for each of the K samples."""
     return np.asarray(ell1, float) - np.asarray(ell0, float)
 
 
 def pool_weights(ell1, ell0, beta, tau=1.0):
-    """Self-normalised importance weights over the K proposals of one pool.
+    """Self-normalised importance weights over the K samples of one pool.
 
-    The proposals were sampled from P1, so reweighting them by exp(beta * R) targets
+    The samples were drawn from P1, so reweighting them by exp(beta * R) targets
     P1 * exp(beta * R) = P1^(1 + beta) P0^(-beta). The optional temperature tau adds the
     pure sharpening term (1/tau - 1) * ell1, giving
 

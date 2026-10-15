@@ -28,7 +28,7 @@ support, by default `adapter.support("ordinary")` (every real token except the m
 and chat markers). The model files (llada.py, nemotron.py, dqwen.py) load a pinned checkpoint and
 supply `Adapter.logits` and the chat framing; the loop itself is model-independent.
 
-Causal models (Figure 4 only; Appendix B, Experimental Setup): Nemotron's causal suffix and Qwen3-8B continue a prompt
+Causal models (Figure 5 only; Appendix B.1, Experimental Setup): Nemotron's causal suffix and Qwen3-8B continue a prompt
 (canvas.ar_prompt_ids) left to right, one token per step, with the same fp32 log-softmax over a support
 (`decode_ar`, `sample_ar`, `logprob_ar`). The suffix has the fixed oracle length; Qwen3's free-length
 continuation stops at its first stop token. Their P0 prompt deletes the demonstration outputs rather than
@@ -138,7 +138,7 @@ def reveal(adapter, contexts, orders, which, allowed, generator=None, forced=Non
     """Fixed-order decoding of n = len(which) candidates at once (sampling or scoring).
 
     Candidate k is revealed on the token sequence contexts[ctx], ctx = which[k], in the order
-    orders[ctx]. There is one context in Figures 4, 5 and 7; Section 4.3 gives each target-length
+    orders[ctx]. There is one context in Figures 5, 6 and 8; Section 4.3 gives each target-length
     allocation its own. At step s, candidate k's factor is the log-softmax over `allowed` (a boolean
     mask over the vocabulary, or None for all tokens) at position orders[ctx][s] of contexts[ctx]
     with the candidate's first s tokens written at orders[ctx][:s].
@@ -226,7 +226,7 @@ def _fill(ids, positions, tokens):
 
 
 # ---------------------------------------------------------------------------------------------
-# Causal models: left-to-right decoding of a prompt's continuation (Figure 4)
+# Causal models: left-to-right decoding of a prompt's continuation (Figure 5)
 # ---------------------------------------------------------------------------------------------
 
 
@@ -456,7 +456,7 @@ class Adapter:
 
     # Left-to-right decoding only (sample_ar, logprob_ar, decode_ar), when the call names no support or chunk: the
     # support kind of every step, and the sequences per forward pass while sampling (P1 is replayed in the same
-    # batches) and while scoring P0. The causal adapters set the values their Figure 4 pools were made with.
+    # batches) and while scoring P0. The causal adapters set the values their Figure 5 pools were made with.
     default_support = "ordinary"
     sample_chunk = 16
     p0_chunk = 16
