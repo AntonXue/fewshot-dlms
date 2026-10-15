@@ -15,7 +15,7 @@ unguided sampling (β = 0) and `tilting` example guidance (β = 0.5); the Java p
 | Appendix C.2 | length fidelity over all 80 sites, the Java predictor and two comparator predictors | | `length_fidelity.csv` |
 | Appendix C.2 | zero-demonstration ablation (D = 0 vs D = 1) | | `zero_demo_main_table.csv` |
 | Appendix C.3 | pool classes: estimates on pools with both outcomes | | `pool_taxonomy_estimates.csv` |
-| Section 5.2; Appendix C.3, Figure 13 | the Checkstyle pool where guidance moves weight to a wrong draw | | `checkstyle_case.json` |
+| Section 5.2; Appendix C.3 | the Checkstyle pool where guidance moves weight to a wrong draw | | `checkstyle_case.json` |
 | not in arXiv v1 | guidance strength β ∈ {0, 0.1, 0.25, 0.5, 1} | | `beta_sensitivity.csv` |
 
 `metrics_by_commit.csv` holds the commit means behind every interval.

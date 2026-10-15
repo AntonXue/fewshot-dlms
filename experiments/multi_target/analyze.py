@@ -345,7 +345,7 @@ def diagnostics_row(model, M, J, K, F, ordinary_A_all):
     """Pool-level facts of one cell (diagnostics.csv).
 
     Coverage: fraction of families with at least one all-correct infill (the ceiling of any reweighting)
-    and headroom = coverage - ordinary A_all. Pool classes all / none / mixed. Reward R = ell1 - ell0 over
+    and headroom = coverage - unguided A_all. Pool classes all / none / mixed. Reward R = ell1 - ell0 over
     all candidates, and on mixed pools its covariance with correctness (the slope of A at beta = 0).
     """
     classes = collections.Counter(pool_class(f["correct"].all(1)) for f in F)

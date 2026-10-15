@@ -157,7 +157,7 @@ def file_sha256(path):
 
 
 def head_probs(adapter, head_path, episodes, device):
-    """Head C's distributions for the target sites of `episodes`, computed on the GPU (lengths.LengthHead).
+    """The Java predictor's (head C) distributions for the target sites of `episodes`, computed on the GPU (lengths.LengthHead).
 
     The head reads each episode's compact prompt (one mask per target). The probabilities are rounded to float32
     and back, the precision in which the paper's run stored them before drawing.
@@ -473,7 +473,7 @@ def int_list(text):
 
 
 def head_sha_of(args):
-    """The SHA-256 of length head C that a learned main run uses (the stored predictions' ckpt_sha with --head-probs,
+    """The SHA-256 of the Java predictor (head C) that a learned main run uses (the stored predictions' ckpt_sha with --head-probs,
     else the checkpoint file's), or "" for the oracle regime and the ablation. Read before the model is loaded."""
     if args.study != "main" or args.regime != "learned":
         return ""

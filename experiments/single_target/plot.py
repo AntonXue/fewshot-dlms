@@ -296,7 +296,7 @@ def guidance_strength_figure(sweep, path):
             ax.set_yticklabels(["0", ".25", ".5", ".75", "1"])
     axes[1].tick_params(labelleft=False)
     axes[3].tick_params(labelleft=False)
-    axes[0].set_ylabel("guidance gain (pp)")  # the right half has no y label: its panel titles name e^H/K
+    axes[0].set_ylabel("guidance gain (pp)")  # the right half has no y label, as in Figure 11 of arXiv v1 (the authors' script lost it); kept for pixel parity
     items = []
     for model, name in SWEEP_MODELS:
         style = F.MODEL_STYLE[model]

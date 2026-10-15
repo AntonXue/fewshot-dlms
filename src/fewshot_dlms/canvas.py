@@ -29,7 +29,7 @@ master layout (`master_layout`, placement "interleaved"); the one-target canvas 
 demonstrations first and the target last (placement "demos_first", J = 1).
 
 `build_ar_prompt` and `ar_prompt_ids` build the prompt of the two causal interfaces of Figure 5 (Appendix
-B, Experimental Setup): Nemotron's fixed-length causal suffix and Qwen3-8B's free-length continuation. The
+B.1, Experimental Setup): Nemotron's fixed-length causal suffix and Qwen3-8B's free-length continuation. The
 same records as the canvas, demonstrations first, end at the target's "Output:"; the model continues from
 there. P0 deletes the demonstration outputs from the prompt instead of masking them.
 

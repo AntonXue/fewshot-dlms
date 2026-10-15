@@ -108,7 +108,7 @@ def success_panel(fig, ax, summary):
     commits = {cell: next(r["n_commits"] for r in summary if r["cell"] == cell and r["regime"] == "oracle" and r["rule"] == "ordinary") for cell in CELLS}
     ax.set_xticks(range(len(CELLS)))
     ax.set_xticklabels([f"({cell[1]},{cell[3]})\n{commits[cell]} commits" for cell in CELLS])
-    ax.set_xlabel(r"($D$ demonstrations, $J$ targets)")  # no y label: the panel title and the caption name the measure
+    ax.set_xlabel(r"($D$ demonstrations, $J$ targets)")  # no y label, as in Figure 8 of arXiv v1 (the authors' script lost it); kept for pixel parity
     ax.set_ylim(*RIGHT_LIMITS)
     ax.set_yticks([0, 25, 50, 75, 100])
     ax.set_xlim(-0.5, len(CELLS) - 0.5)
