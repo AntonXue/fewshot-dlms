@@ -5,8 +5,8 @@ question is whether the frozen mean lies inside the rerun's 95 % family-bootstra
 experiments/multi_target/analyze.py two synthetic reruns of the LLaDA-1.5 cell M = 4, J = 2 (64 report
 families, K = 16) and checks the verdict it prints against data/tables/multi_target/cells.csv:
 
-  - a pool whose ordinary A_all matches the frozen one (0.516) must be reported "inside";
-  - a pool whose ordinary A_all is far above it must be reported "outside".
+  - a pool whose unguided A_all matches the frozen one (0.516) must be reported "inside";
+  - a pool whose unguided A_all is far above it must be reported "outside".
 
 Every candidate of a synthetic family is either all-correct (both targets equal the reference answers) or
 all-wrong, so a family's A_all is 0 or 1 at every beta and the cell mean is the share of all-correct families. The

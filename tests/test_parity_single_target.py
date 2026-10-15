@@ -1,17 +1,17 @@
-"""Analysis parity (fidelity level 2 of README.md) for Figure 4, its development-bank beta selection and the
-appendix tables that share its pools (cross-benchmark and guidance-strength sweep figures).
+"""Analysis parity (fidelity level 2 of README.md) for Figure 5, its development-bank beta selection and the
+appendix tables that share its pools (Figures 10 and 11).
 
 experiments/single_target/analyze.py recomputes the paper's tables from the frozen pools and must
 reproduce them to 1e-9 in every numeric column (and exactly in every other column):
 
-  sec41_accuracy.csv     Figure 4 and Section 4.1: accuracy and paired gains per (model, benchmark, M, beta)
-  gold_reward_cells.csv  gold example reward per target token per (model, benchmark, M) (Figure 4's gold row)
+  sec41_accuracy.csv     Figure 5 and Section 4.1: accuracy and paired gains per (model, benchmark, M, beta)
+  gold_reward_cells.csv  reference-answer example reward per target token per (model, benchmark, M) (Appendix B.2)
   dev_sec41.csv          the same cells on the development bank (beta selection)
   dev_sec42.csv          the cross-benchmark cells on the development bank (beta selection)
   sec44_power.csv        sharpening residuals: guidance against the matched-exponent power control (LLaDA-1.5)
-  cells_crossbench.csv   cross-benchmark figure (Fig. 9, both builds), in data/tables/multi_target/: the cross-benchmark
+  cells_crossbench.csv   cross-benchmark figure (Fig. 10), in data/tables/multi_target/: the cross-benchmark
                          study, M = 4, K = 64
-  beta_sweep.csv         guidance-strength sweep figure (Fig. 10, arXiv version only): the guidance-strength sweep
+  beta_sweep.csv         guidance-strength sweep figure (Fig. 11): the guidance-strength sweep
                          on List Functions-Easy
   beta_locks.json        the development-only beta of each model, recomputed from the development bank
 
@@ -48,7 +48,7 @@ LOCK_FIELDS = ["beta", "n_cells", "cells", "cell_set", "best_positive_below_ordi
 COMPARE_LINE = re.compile(
     r"^(\S+) (\S+) M=(\d+): frozen accuracy ([0-9.]+), rerun CI \[([0-9.]+), ([0-9.]+)\] -> frozen mean (inside|outside)"
 )
-# The verdict of the same cell under guidance at beta = 0.5 (Figure 4's strength), printed after the ordinary one.
+# The verdict of the same cell under guidance at beta = 0.5 (Figure 5's strength), printed after the unguided one.
 COMPARE_LINE_GUIDED = re.compile(
     r"^(\S+) (\S+) M=(\d+) beta=0\.5: frozen accuracy ([0-9.]+), rerun CI \[([0-9.]+), ([0-9.]+)\] -> frozen mean (inside|outside)"
 )
@@ -71,7 +71,7 @@ def analysis(root, artifacts, tmp_path_factory):
     """Run analyze.py once on the frozen pools with every option; returns (output directory, stdout)."""
     pools = artifacts / "pools" / "single_target"
     if not pools.exists():
-        pytest.skip("Figure 4 pools not fetched: run `python -m fewshot_dlms.fetch pools java`")
+        pytest.skip("Figure 5 pools not fetched: run `python -m fewshot_dlms.fetch pools java`")
     out = tmp_path_factory.mktemp("single_target")
     reference = root / "data" / "tables" / "single_target"
     result = run_analyze(root, pools, out, "--crossbench", "--beta-sweep", "--compare", str(reference))
@@ -155,7 +155,7 @@ def test_compare_reports_inside_ci(root, tmp_path):
     """A resampled cell is judged by whether the frozen mean lies inside the rerun's 95 % CI.
 
     The two-family fixture pool of Qwen3-8B (SST-2, M = 4, K = 64) plays the rerun of that cell; --compare prints one
-    verdict for ordinary sampling (beta = 0) and one for guidance at beta = 0.5.
+    verdict for unguided sampling (beta = 0) and one for guidance at beta = 0.5.
     """
     pools = tmp_path / "pools" / "report" / "qwen"
     pools.mkdir(parents=True)
@@ -180,7 +180,7 @@ def test_compare_reports_inside_ci(root, tmp_path):
         inside = rerun_cell.ci_lo <= paper_cell.accuracy <= rerun_cell.ci_hi
         assert verdict == ("inside" if inside else "outside")
     guided = next(index for index, line in enumerate(lines) if COMPARE_LINE_GUIDED.match(line))
-    assert COMPARE_LINE.match(lines[guided - 1])  # each cell's guided verdict follows its ordinary one
+    assert COMPARE_LINE.match(lines[guided - 1])  # each cell's guided verdict follows its unguided one
 
 
 def test_missing_pools_name_the_fetch_command(root, tmp_path):
@@ -204,7 +204,7 @@ def test_missing_optional_pools_name_the_input_and_the_fetch_command(root, tmp_p
 
 
 def test_plot_writes_the_figures(root, tmp_path):
-    """plot.py draws Figure 4, its gold-reward row and the guidance-strength sweep figure from the committed tables
+    """plot.py draws Figure 5, the reference-reward row and Figure 11 from the committed tables
     alone (no pools, no GPU)."""
     command = [sys.executable, str(root / "experiments/single_target/plot.py"), "--out", str(tmp_path)]
     result = subprocess.run(command, capture_output=True, text=True, cwd=root)
@@ -214,7 +214,7 @@ def test_plot_writes_the_figures(root, tmp_path):
 
 
 def test_run_seed_rule_is_the_replayed_one(root):
-    """run.py's proposal seed of a single-target record is the seed with which tests/test_gpu_replay.py redraws the
+    """run.py's sampling seed (proposal_seed) of a single-target record is the seed with which tests/test_gpu_replay.py redraws the
     frozen continuations token for token; the cross-benchmark cells add the placement to the key."""
     run = load_module(root, "experiments/single_target/run.py", "single_target_run")
     replay = load_module(root, "tests/test_gpu_replay.py", "gpu_replay")

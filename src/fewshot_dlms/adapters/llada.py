@@ -1,5 +1,5 @@
 # ported from editdiff/experiments/multimodel/mm_adapters.py::LLaDA15, experiments/llada_pilot/adapters.py::LLaDA15, experiments/sec42_mj/mj_worker.py (transformers 5 loader shims) and experiments/length_pilot/lp_common.py::MASK_ID @ d276fa6
-"""LLaDA-1.5, a masked diffusion language model that infills the whole canvas (Appendix B, Experimental Setup).
+"""LLaDA-1.5, a masked diffusion language model that infills the whole canvas (Appendix B.1, Experimental Setup).
 
 Interface: the canvas is one sequence under the chat template, and the model attends over all of it in
 both directions (its own forward pass, no attention mask). The logits at a position are the model's

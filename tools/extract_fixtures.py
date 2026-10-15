@@ -3,7 +3,7 @@
 One-off script, kept for the record; the repository works without it. The fixtures let the CPU tests
 reproduce a frozen result with this repository's own code, without downloading any artifacts.
 
-Figure 5 (multi-target, M = 4 demonstrations, J = 2 targets) writes, for each of the three models
+Figure 6 (multi-target, M = 4 demonstrations, J = 2 targets) writes, for each of the three models
 (llada = LLaDA-1.5, nemotron_pt = Nemotron prefix/tail, dqwen = dQwen3.5),
 
   multi_target/<model>_M4_J2.jsonl            the first two complete pool records of the report families
@@ -18,7 +18,7 @@ tests/test_fixture_multi_target.py recomputes those numbers from the pool record
 scoring.py and grading.py and requires agreement to 1e-12. tests/test_gpu_replay.py rebuilds the canvas of every
 record with the real tokenizer and re-scores the stored tokens of each model on a GPU.
 
-Figure 4 (single target, SST-2, M = 4 demonstrations) writes, for the two causal interfaces (nemotron_ar =
+Figure 5 (single target, SST-2, M = 4 demonstrations) writes, for the two causal interfaces (nemotron_ar =
 Nemotron's causal suffix, qwen = Qwen3-8B's free-length continuation),
 
   single_target/<model>_sst2_M4.jsonl         the first two complete pool records of the report families (K = 64
@@ -40,7 +40,7 @@ Usage:
 The Section 4.2 run directory holds pools/<model>/list_easy_fam_M4_J2.jsonl and analysis/families.csv; the
 single-target one holds pools/report/<model>/sst2_fam_M4_J1.jsonl.
 
-Figure 6 (target lengths, Section 4.3) writes
+Figure 7 (target lengths, Section 4.3) writes
 
   length_allocation/head_predictions_llada.json
                                               for the first ten report families of List Functions-Easy at M = 4
@@ -87,7 +87,7 @@ N_FAMILIES = 2  # families per fixture
 K = 16  # candidates per complete pool record
 M = 4
 J = 2
-BETAS = ("0.0", "0.5")  # as written in families.csv: ordinary sampling and the common strength
+BETAS = ("0.0", "0.5")  # as written in families.csv: unguided sampling and the common strength
 METRICS = ("A_target", "A_all", "ess", "max_w")
 # Keys of a pool record that describe the machine and the moment of the run, not the result.
 RUN_METADATA = ("host", "gpu_env", "wall_time")
@@ -120,7 +120,7 @@ def first_complete_records(pool_path: Path, n: int, k: int = K) -> list[dict]:
     return [{key: value for key, value in record.items() if key not in RUN_METADATA} for record in records]
 
 
-# Figure 4: one entry per fixture, as for Figure 5; K = 64 continuations per complete record.
+# Figure 5: one entry per fixture, as for Figure 6; K = 64 continuations per complete record.
 SINGLE_TARGET_K = 64
 SINGLE_TARGET_FIXTURES = [
     {"stem": "nemotron_ar_sst2_M4", "pool": "pools/report/nemotron_ar/sst2_fam_M4_J1.jsonl"},
@@ -181,7 +181,7 @@ def authors_numbers(families_csv: Path, model: str, episode_ids: list[str]) -> d
 
 
 def extract_multi_target(src: Path, dest: Path) -> None:
-    """Write the Figure 5 pool fixture and its expected numbers for every model in MULTI_TARGET_FIXTURES."""
+    """Write the Figure 6 pool fixture and its expected numbers for every model in MULTI_TARGET_FIXTURES."""
     out_dir = dest / "multi_target"
     out_dir.mkdir(parents=True, exist_ok=True)
     for fixture in MULTI_TARGET_FIXTURES:
@@ -204,7 +204,7 @@ def extract_multi_target(src: Path, dest: Path) -> None:
         print(f"multi_target/{fixture['stem']}: {len(records)} families {episode_ids}")
 
 
-# The Figure 6 head fixture: the frozen LLaDA-1.5 head of Section 4.3 on the first report families.
+# The Figure 7 head fixture: the frozen LLaDA-1.5 head of Section 4.3 on the first report families.
 LENGTH_ALLOCATION_HEAD = {
     "stem": "head_predictions_llada",
     "run": "fin_llada_m70_100k",
@@ -292,7 +292,7 @@ def extract_length_allocation_head(src: Path, dest: Path) -> None:
 
 
 def extract_single_target(src: Path, dest: Path) -> None:
-    """Write the Figure 4 pool fixture of every causal interface in SINGLE_TARGET_FIXTURES."""
+    """Write the Figure 5 pool fixture of every causal interface in SINGLE_TARGET_FIXTURES."""
     out_dir = dest / "single_target"
     out_dir.mkdir(parents=True, exist_ok=True)
     for fixture in SINGLE_TARGET_FIXTURES:
@@ -314,7 +314,7 @@ def main() -> None:
         type=Path,
         help="run directory of the Section 4.2 grid (multi_target) or of the Section 4.3 length project (length_allocation_head)",
     )
-    parser.add_argument("--single-target-src", type=Path, help="run directory of the single-target sweep (Figure 4 fixtures)")
+    parser.add_argument("--single-target-src", type=Path, help="run directory of the single-target sweep (Figure 5 fixtures)")
     parser.add_argument("--dest", type=Path, default=DEFAULT_DEST, help="default: data/fixtures of this repository")
     parser.add_argument("--fixture", choices=["multi_target", "length_allocation_head"], default="multi_target", help="which fixture to write (default: multi_target)")
     args = parser.parse_args()

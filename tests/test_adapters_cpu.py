@@ -168,7 +168,7 @@ def test_qwen_free_generation_support_and_stop_tokens(monkeypatch):
 
 
 def test_causal_adapters_carry_the_frozen_decoding_defaults(monkeypatch):
-    # Figure 4's pools: Qwen3 sampled and scored over the free support, 32 sequences per pass; Nemotron's causal
+    # Figure 5's pools: Qwen3 sampled and scored over the free support, 32 sequences per pass; Nemotron's causal
     # suffix over the ordinary support, sampling 32 and scoring P0 16 per pass.
     monkeypatch.setattr(qwen_ar.AutoTokenizer, "from_pretrained", lambda *args, **kwargs: FakeTokenizer())
     monkeypatch.setattr(qwen_ar.AutoModelForCausalLM, "from_pretrained", lambda *args, **kwargs: FakeQwenModel())

@@ -1,7 +1,7 @@
 # ported from editdiff/experiments/sec42_mj/mj_worker.py @ d276fa6
-"""Sample and score the pools of Figure 5 (Section 4.2) on a GPU: one process, one model, one GPU.
+"""Sample and score the pools of Figure 6 (Section 4.2) on a GPU: one process, one model, one GPU.
 
-For every family and cell (M demonstrations, J targets) of List Functions-Easy, the canvas has the oracle
+For every family and cell (M demonstrations, the paper's D; J targets) of List Functions-Easy, the canvas has the oracle
 length of every target (the token count of " <answer>" under the model's tokenizer). Then, as in the paper:
 
   1. Sample K infills from P1 by fixed-order decoding (Lemma 3.1), all K in one reveal: one torch
@@ -62,7 +62,7 @@ J_GRID = [1, 2, 4, 8]
 K = 16
 CHUNK = 16  # most canvases per forward pass, as in the authors' run
 
-# How each model attends over the canvas (the `attention` field of the authors' records; Appendix B, Experimental
+# How each model attends over the canvas (the `attention` field of the authors' records; Appendix B.1, Experimental
 # Setup).
 ATTENTION = {
     "llada": "full bidirectional (LLaDA architecture; no attention mask)",
@@ -79,7 +79,7 @@ ATTENTION = {
 
 
 def proposal_seed(model, episode_id, M, J):
-    """The seed of a cell's K proposals: SHA-256 of "sec42_mj|proposal|<model>|<episode>|<M>|<J>|master24",
+    """The seed of a cell's K samples: SHA-256 of "sec42_mj|proposal|<model>|<episode>|<M>|<J>|master24",
     first 16 hex digits, mod 2**31. The same seed gives the same draws for the same logits."""
     text = "|".join(str(part) for part in ("sec42_mj", "proposal", model, episode_id, M, J, "master24"))
     return int(hashlib.sha256(text.encode()).hexdigest()[:16], 16) % (2 ** 31)
@@ -401,7 +401,7 @@ def main():
                 f"[{args.model}] M={M} J={J} {family['episode_id']} tokens={body['n_tokens']} L={body['oracle_L']}"
                 f" distinct={body['n_unique']} gen {body['seconds_gen']:.1f}s score {body['seconds_score']:.1f}s"
                 + (f" replay {body['checks']['replay_P1_max_abs_seq']:.1e}" if body["checks"] else "")
-                + f" | gold R {body['gold_ell1'] - body['gold_ell0']:+.1f}",
+                + f" | reference R {body['gold_ell1'] - body['gold_ell0']:+.1f}",
                 flush=True,
             )
         print(f"CELL_DONE {args.model} M={M} J={J} new={written} {time.time() - job_start:.0f}s", flush=True)

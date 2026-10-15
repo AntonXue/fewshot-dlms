@@ -1,14 +1,14 @@
 # ported from editdiff/<the authors' Section 5 run package>: analyze.py, length_metrics.py, zd_analyze.py (zero-demonstration ablation) and s5_pool_audit.py (pool taxonomy) @ d276fa6
-"""Figure 7 (Section 5) and its Appendix C tables, from the frozen Java pools and judge verdicts (CPU only).
+"""Figure 8 (Section 5) and its Appendix C tables, from the frozen Java pools and judge verdicts (CPU only).
 
 Section 5: LLaDA-1.5 propagates a developer's helper refactoring. Each of the 127 episodes of data/java shows the
-helper, M accepted edits (the demonstrations) and J target sites; cells (M, J) in {1, 2} x {1, 2}; 50 commits.
-For every episode and length regime (oracle: the reference token counts; learned: lengths drawn from head C) the
-run sampled K = 16 infills from P1. Draw k has its example reward R_k = logp1 - logp0 and a verdict of the judge
+helper, M accepted edits (the demonstrations; the paper's D) and J target sites; cells (M, J) in {1, 2} x {1, 2};
+50 commits. For every episode and length regime (oracle: the reference token counts; learned: lengths drawn from the
+Java predictor, head C) the run sampled K = 16 infills from P1. Draw k has its example reward R_k = logp1 - logp0 and a verdict of the judge
 (rubric r1, judge.py): y_k = 1 when every target is judged correct; "incorrect" and "uncertain" count 0 (the
 upper bound counts "uncertain" as 1). With w = softmax(beta * R) (scoring.pool_weights),
 
-    U_beta(episode, regime) = sum_k w_k y_k        beta = 0 ordinary sampling, beta = 0.5 example guidance
+    U_beta(episode, regime) = sum_k w_k y_k        beta = 0 unguided sampling, beta = 0.5 example guidance
 
 A cell's estimate is the mean over commits of the mean of each commit's episodes. Intervals resample commits:
 10,000 resamples, random.Random(0), one randrange per commit in the order the commits first appear, percentiles
@@ -19,21 +19,23 @@ Inputs (python -m fewshot_dlms.fetch pools java), with defaults next to --pools:
     <pools>/pools_*.jsonl                one record per (episode, regime): K candidates with toks, text_by_target,
                                          logp1, logp0, R and allocation (run.py)
     <judging>/verdicts.jsonl             one verdict per judge packet, keyed by the packet key (judge.py)
-    <length>/<head>_s5final_G4.npz       length-head predictions for the target sites (Figure 7, left)
+    <length>/<head>_s5final_G4.npz       length-head predictions for the target sites (Figure 8, left)
     <length>/prior_s5h_train.json        the training-label length prior
     <zero_demo>/pools/pools_*.jsonl and <zero_demo>/judging/verdicts.jsonl     the zero-demonstration ablation
 
 Outputs in --out:
     metrics_by_episode.csv     one row per (episode, regime): U at every beta, coverage, pool class, AUC of R
-    summary_by_cell.csv        Figure 7 (right) and Table 1 of Appendix C: U per cell, regime and rule
-    paired_intervals.csv       guidance minus ordinary and learned minus oracle, per stratum and cell
+    summary_by_cell.csv        Figure 8 (right) and Table 1 (Appendix C.3): U per cell, regime and rule
+                               (rule `ordinary` = unguided, beta = 0; `tilting` = example guidance, beta = 0.5)
+    paired_intervals.csv       guidance minus unguided and learned minus oracle, per stratum and cell
     metrics_by_commit.csv      commit means per cell and regime
-    strata.csv                 summary_by_cell.csv in the strata of Appendix C
-    beta_sensitivity.csv       U and its gain over ordinary at beta in {0, 0.1, 0.25, 0.5, 1}
+    strata.csv                 summary_by_cell.csv in the strata of Appendix C.3
+    beta_sensitivity.csv       U and its gain over unguided at beta in {0, 0.1, 0.25, 0.5, 1}
     length_fidelity.csv        length mass within +-2 tokens (F2), exact mass (F0), NLL per head over the 80 unique sites
-    length_fidelity_by_bin.csv Figure 7 (left): the same by reference length bin, head C and two comparators vs the prior
-    zero_demo_main_table.csv   Appendix C: ordinary success with M = 0 vs M = 1 demonstrations
-    pool_taxonomy_estimates.csv  Appendix C: estimates on all pools and on the pools with both outcomes
+    length_fidelity_by_bin.csv Figure 8 (left): the same by reference length bin, the Java predictor (head C) and two
+                               comparators vs the prior
+    zero_demo_main_table.csv   Appendix C.2: unguided success with M = 0 vs M = 1 demonstrations
+    pool_taxonomy_estimates.csv  Appendix C.3: estimates on all pools and on the pools with both outcomes
     checkstyle_case.json       Section 5: the Checkstyle pool where guidance moves weight to a wrong draw
 
 --compare DIR prints the largest |difference| per numeric column against the tables in DIR and, per cell, whether
@@ -66,14 +68,14 @@ FETCH_HINT = "run: python -m fewshot_dlms.fetch pools java"
 # The run's design, fixed before any output (the protocol lock of Section 5).
 CELLS = ["M1J1", "M1J2", "M2J1", "M2J2"]
 REGIMES = ["oracle", "learned"]
-BETAS = [0.0, 0.1, 0.25, 0.5, 1.0]  # beta = 0 ordinary; 0.5 the paper's guidance; the rest are the Appendix C grid
+BETAS = [0.0, 0.1, 0.25, 0.5, 1.0]  # beta = 0 unguided; 0.5 the paper's guidance; the rest a sensitivity grid
 BETA = 0.5
 RULES = [(0.0, "ordinary"), (0.5, "tilting")]  # "tilting" is the run's name for example guidance at beta = 0.5
 NBOOT = 10000
 BOOTSTRAP_SEED = 0  # random.Random(0) for every commit bootstrap of Section 5
 COMMENT = re.compile(r"^\s*(//|/\*|\*)")  # a Java comment line (padding a candidate with comments)
 
-# Appendix C strata of the main run: (name, predicate on a metrics_by_episode row).
+# Appendix C.3 strata of the main run: (name, predicate on a metrics_by_episode row).
 STRATA = [
     ("not_llada_dev", lambda row: not row["llada_dev"]),
     ("llada_dev", lambda row: row["llada_dev"]),
@@ -87,8 +89,8 @@ STRATA = [
     ("mixed_pools_diagnostic", lambda row: row["class"] == "mixed"),
 ]
 
-# Figure 7 (left): the length heads evaluated on the target sites, and the population of the paper.
-LENGTH_HEADS = ["s5hc_C", "s5g_B", "fin_llada_m70_100k"]  # head C (used by the run) and two comparators
+# Figure 8 (left): the length heads evaluated on the target sites, and the population of the paper.
+LENGTH_HEADS = ["s5hc_C", "s5g_B", "fin_llada_m70_100k"]  # head C (the Java predictor, used by the run) and two comparators
 LENGTH_PRIOR = "prior_s5h_train.json"
 LENGTH_BINS = [(1, 8), (9, 16), (17, 32), (33, 80)]
 POPULATION = "B"  # the 127 episodes of data/java
@@ -321,7 +323,7 @@ def stratum_tables(rows, label, K, nboot, out):
     """The summary rows (U per cell, regime and rule) and paired contrasts of one stratum, appended to `out`.
 
     out["summary"] gets the primary stratum, out["strata"] every other one; out["paired"] gets, per cell and
-    regime, guidance minus ordinary, and per cell and rule, learned minus oracle (paired by episode, then commit).
+    regime, guidance minus unguided, and per cell and rule, learned minus oracle (paired by episode, then commit).
     """
     for cell in CELLS + ["all"]:
         cell_rows = [row for row in rows if cell == "all" or row["cell"] == cell]
@@ -401,7 +403,7 @@ def stratum_tables(rows, label, K, nboot, out):
 
 
 def beta_rows(rows, nboot):
-    """beta_sensitivity.csv: U over commits at each beta and its paired gain over ordinary sampling."""
+    """beta_sensitivity.csv: U over commits at each beta and its paired gain over unguided sampling."""
     out = []
     for beta in BETAS:
         for regime in REGIMES:
@@ -474,7 +476,7 @@ def main_run(pools, verdicts, episodes, nboot):
 
 
 # ---------------------------------------------------------------------------------------------
-# Pool taxonomy and the Checkstyle case (Appendix C, Section 5)
+# Pool taxonomy and the Checkstyle case (Appendix C.3, Section 5.2)
 # ---------------------------------------------------------------------------------------------
 
 
@@ -641,7 +643,7 @@ def checkstyle_case(pools, verdicts, episodes):
 
 
 # ---------------------------------------------------------------------------------------------
-# Figure 7 (left): length fidelity of the heads (length_metrics.py)
+# Figure 8 (left): length fidelity of the heads (length_metrics.py)
 # ---------------------------------------------------------------------------------------------
 
 
@@ -760,7 +762,7 @@ def length_tables(length_dir, episodes, nboot):
 
 
 # ---------------------------------------------------------------------------------------------
-# Zero-demonstration ablation (Appendix C, zd_analyze.py)
+# Zero-demonstration ablation (Appendix C.2, zd_analyze.py)
 # ---------------------------------------------------------------------------------------------
 
 
@@ -796,7 +798,7 @@ def zero_demo_pools(zero_demo):
 
 
 def zero_demo_table(zero_demo, episodes, nboot):
-    """zero_demo_main_table.csv: ordinary success (beta = 0, oracle lengths) with M = 0 vs M = 1 demonstrations.
+    """zero_demo_main_table.csv: unguided success (beta = 0, oracle lengths) with M = 0 vs M = 1 demonstrations.
 
     Each anchor (an M = 1 episode) was run without its demonstration (M = 0) and with it (M = 1), under one
     neutral instruction. Every draw was judged with the anchor's first demonstration as the packet's example set.
@@ -956,7 +958,7 @@ def main():
 
     pools_dir = Path(args.pools)
     if not pools_dir.is_dir() or not any(pools_dir.glob("pools_*.jsonl")):
-        print(f"no Figure 7 pools in {pools_dir}; {FETCH_HINT}", file=sys.stderr)
+        print(f"no Figure 8 pools in {pools_dir}; {FETCH_HINT}", file=sys.stderr)
         sys.exit(2)
     root = pools_dir.parent
     verdicts_path = Path(args.verdicts) if args.verdicts else root / "judging" / "verdicts.jsonl"
@@ -995,7 +997,7 @@ def main():
             f" U={row['U_commit']:.3f} [{row['ci_lo']:.3f}, {row['ci_hi']:.3f}] classes all/none/mixed"
             f" {row['all_correct']}/{row['none_correct']}/{row['mixed']} uncertain={row['uncertain_draws']} unjudged={row['unjudged_draws']}"
         )
-    print(f"wrote the Figure 7 tables to {out}")
+    print(f"wrote the Figure 8 tables to {out}")
     if args.compare:
         compare(out, args.compare)
 

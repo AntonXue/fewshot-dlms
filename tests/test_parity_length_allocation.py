@@ -1,4 +1,5 @@
-"""Analysis parity (fidelity level 2 of README.md) for Figure 6 (Section 4.3) and its appendix fidelity row.
+"""Analysis parity (fidelity level 2 of README.md) for Figure 7 (Section 4.3) and the length-fidelity row
+(Appendix B.4).
 
 experiments/length_allocation/analyze.py recomputes the paper's Section 4.3 tables from the frozen pools and the frozen
 head's distributions, and must reproduce data/tables/length_allocation/ to 1e-9 in every numeric column (and exactly in every
@@ -6,9 +7,9 @@ other column):
 
   sec43_length_metrics.csv       per backbone and J: the learned head's mass at |L - L*| <= 0, 1, 2 (P0, P1, P2)
                                  with family-bootstrap intervals, NLL, E|L - L*|, mode exact, ECE; and the
-                                 visible-demonstration length prior (appendix fidelity row)
-  sec43_downstream.csv           Figure 6, top row: A_avg (A_target) with oracle vs sampled learned lengths against J
-  sec43_length_perturbation.csv  Figure 6, bottom row: A_avg with L = L* + delta at every target, J = 1, 2
+                                 visible-demonstration length prior (length-fidelity row)
+  sec43_downstream.csv           Figure 7, top row: A_avg (A_target) with oracle vs sampled learned lengths against J
+  sec43_length_perturbation.csv  Figure 7, bottom row: A_avg with L = L* + delta at every target, J = 1, 2
 
 The parity tests need the fetched pools (`python -m fewshot_dlms.fetch pools java`). The other tests run on every
 `make test`: analyze.py on a small synthetic pool, the message for missing pools, plot.py on the committed tables,
@@ -62,7 +63,7 @@ def analysis(root, artifacts, tmp_path_factory):
     """Run analyze.py once on the frozen pools; returns (output directory, stdout of --compare)."""
     pools = artifacts / "pools" / "length_allocation"
     if not pools.exists():
-        pytest.skip("Figure 6 pools not fetched: run `python -m fewshot_dlms.fetch pools java`")
+        pytest.skip("Figure 7 pools not fetched: run `python -m fewshot_dlms.fetch pools java`")
     out = tmp_path_factory.mktemp("length_allocation")
     result = run_analyze(root, pools, out, "--compare", str(root / "data" / "tables" / "length_allocation"))
     assert result.returncode == 0, result.stderr
@@ -118,7 +119,7 @@ def test_offset_pools_hold_exactly_the_families_run_keeps(root, artifacts, model
     run = load_module(root, "run")
     pools = artifacts / "pools" / "length_allocation" / model
     if not (pools / "length_head_report.jsonl").exists():
-        pytest.skip(f"Figure 6 pools of {model} not fetched: run `python -m fewshot_dlms.fetch pools java`")
+        pytest.skip(f"Figure 7 pools of {model} not fetched: run `python -m fewshot_dlms.fetch pools java`")
     oracle = {(row["episode_id"], row["J"]): row["oracle"] for row in read_jsonl(pools / "length_head_report.jsonl")}
     family_ids = [family["episode_id"] for family in load_families("list_easy_fam", "report")]
     for J in (1, 2):
@@ -201,7 +202,7 @@ def test_missing_pools_name_the_fetch_command(root, tmp_path):
 
 
 def test_plot_writes_the_figures(root, tmp_path):
-    """plot.py draws Figure 6 and the appendix fidelity row from the committed tables alone (no pools, no GPU)."""
+    """plot.py draws Figure 7 and the length-fidelity row from the committed tables alone (no pools, no GPU)."""
     command = [sys.executable, str(root / "experiments/length_allocation/plot.py"), "--out", str(tmp_path)]
     result = subprocess.run(command, capture_output=True, text=True, cwd=root)
     assert result.returncode == 0, result.stderr

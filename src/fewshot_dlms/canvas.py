@@ -24,11 +24,11 @@ Three things on a Canvas carry the paper's quantities:
 
 `build_canvas` builds the canvas of all four benchmarks ("layout A" of the authors' code, one chat turn,
 J >= 1 targets): List Functions-Easy, SALT, MIT Movie and SST-2, whose outputs are opaque code letters.
-Where the records sit: the Figure 5 grid, the cross-benchmark study and Section 4.3 use the family's
-master layout (`master_layout`, placement "interleaved"); the one-target canvas of Figure 4 puts the M
+Where the records sit: the Figure 6 grid, the cross-benchmark study and Section 4.3 use the family's
+master layout (`master_layout`, placement "interleaved"); the one-target canvas of Figure 5 puts the M
 demonstrations first and the target last (placement "demos_first", J = 1).
 
-`build_ar_prompt` and `ar_prompt_ids` build the prompt of the two causal interfaces of Figure 4 (Appendix
+`build_ar_prompt` and `ar_prompt_ids` build the prompt of the two causal interfaces of Figure 5 (Appendix
 B, Experimental Setup): Nemotron's fixed-length causal suffix and Qwen3-8B's free-length continuation. The
 same records as the canvas, demonstrations first, end at the target's "Output:"; the model continues from
 there. P0 deletes the demonstration outputs from the prompt instead of masking them.
@@ -42,7 +42,7 @@ import hashlib
 import random
 
 # A family has 16 demonstrations and 8 targets. The published layout (meta.master_placement) places only
-# D1..D4 and T1..T8 on 12 slots; the M x J grid extends it to all 16 demonstrations on 24 slots.
+# D1..D4 and T1..T8 on 12 slots; the D x J grid extends it to all 16 demonstrations on 24 slots.
 N_DEMOS = 16
 N_TARGETS = 8
 BASE_DEMOS = 4
@@ -50,7 +50,7 @@ BASE_SLOTS = BASE_DEMOS + N_TARGETS  # 12
 N_NEW_DEMOS = N_DEMOS - BASE_DEMOS  # 12: D5..D16
 N_SLOTS = N_DEMOS + N_TARGETS  # 24
 
-# Seed of the extension to 16 demonstrations that the M x J grid (Figure 5) uses.
+# Seed of the extension to 16 demonstrations that the D x J grid (Figure 6) uses.
 GRID_PLACEMENT_SEED = "mtfsp-20261011-mj-placement-v1"
 
 # "interleaved": records in the order of the master layout (the paper's setting).
@@ -87,7 +87,7 @@ def _is_published_layout(layout):
 
 
 def extend_layout(base_layout, function_id):
-    """The 24-slot master layout of the M x J grid, from the published 12-slot layout.
+    """The 24-slot master layout of the D x J grid, from the published 12-slot layout.
 
     The published layout (D1..D4 and T1..T8 on 12 slots, first slot D1) is extended by the demonstrations
     D5..D16. They take 12 of the slots 1..23, drawn with a generator seeded from the function id; the
@@ -116,7 +116,7 @@ def master_layout(family, M):
     """The slot labels ('D1', 'T1', ...) of a family in prompt order, before removing unused records.
 
     With M <= 4 this is the published 12-slot layout stored in the family (meta.master_placement). With
-    M > 4 it is the 24-slot extension of the M x J grid, which exists for List Functions-Easy only. The
+    M > 4 it is the 24-slot extension of the D x J grid, which exists for List Functions-Easy only. The
     two agree on D1..D4 and T1..T8, so every cell with M <= 4 is the same prompt in either layout.
     """
     base_layout = family["meta"]["master_placement"]
@@ -246,7 +246,7 @@ def build_canvas(adapter, family, M, J, lengths, placement="interleaved"):
 
 
 # ---------------------------------------------------------------------------------------------
-# The single-target prompt of a causal model (Figure 4)
+# The single-target prompt of a causal model (Figure 5)
 # ---------------------------------------------------------------------------------------------
 
 # The per-hole instruction note (placeholder_note=True), with the hole number filled in twice.
@@ -289,7 +289,7 @@ def _ar_pieces(adapter, family, M, j, placeholder_note):
 def build_ar_prompt(adapter, family, M, j, placeholder_note=False):
     """The prompt text a causal model continues for target j of a family, and the reference answer.
 
-    The prompt holds the first M demonstrations and then target Tj (j = 1 in Figure 4), as the canvas holds
+    The prompt holds the first M demonstrations and then target Tj (j = 1 in Figure 5), as the canvas holds
     them, and stops where the target's answer would start:
 
       chat header + instruction
@@ -320,7 +320,7 @@ def ar_prompt_ids(adapter, family, M, j, placeholder_note=False, hide_E=False):
 
     Every piece of text is tokenized on its own and the token lists are concatenated, as for the canvas.
     hide_E=True deletes each demonstration's " <output>" tokens and keeps everything else, the "Output:"
-    labels and the blank lines included: P0 of a causal model (Appendix B, Experimental Setup).
+    labels and the blank lines included: P0 of a causal model (Appendix B.1, Experimental Setup).
     """
     ids = []
     for piece, is_demonstration_output in _ar_pieces(adapter, family, M, j, placeholder_note):

@@ -4,11 +4,11 @@ PYTEST_ARGS ?=
 # The figures from the paper's tables in data/tables/ (no download needed).
 figures: ; $(PY) experiments/single_target/plot.py && $(PY) experiments/multi_target/plot.py && $(PY) experiments/length_allocation/plot.py && $(PY) experiments/java_refactoring/plot.py
 # The same figures from the download (python -m fewshot_dlms.fetch pools java): every analyze.py recomputes its tables
-# from artifacts/ into $(REPRO)/tables/<fig>/ and prints its difference to data/tables/, then every plot.py draws from
-# those tables into $(REPRO)/figures/. The cross-benchmark figure (multi_target's plot.py) reads the table that single_target's
-# analyze.py --crossbench writes. The "inside the CI" verdicts that --compare prints here are trivially true: the pools
-# analysed are the ones that produced data/tables/, so every frozen mean meets its own interval. They test a rerun's
-# pools (make rerun-*); here the column differences are the check.
+# from artifacts/ into $(REPRO)/tables/<experiment>/ and prints its difference to data/tables/, then every plot.py draws
+# from those tables into $(REPRO)/figures/. The cross-benchmark figure (Figure 10, multi_target's plot.py) reads the
+# table that single_target's analyze.py --crossbench writes. The "inside the CI" verdicts that --compare prints here are
+# trivially true: the pools analysed are the ones that produced data/tables/, so every frozen mean meets its own
+# interval. They test a rerun's pools (make rerun-*); here the column differences are the check.
 REPRO ?= artifacts/reproduce
 reproduce:
 	$(PY) experiments/single_target/analyze.py --pools artifacts/pools/single_target --crossbench --beta-sweep --out $(REPRO)/tables/single_target --compare data/tables/single_target data/tables/multi_target

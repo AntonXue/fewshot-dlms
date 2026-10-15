@@ -1,15 +1,17 @@
 # ported from editdiff/experiments/paper_integration/figure_redesign/fig_finalize.py::fig7 (the production Figure 7, no error bars) @ d276fa6
-"""Figure 7 (Section 5) from the tables in data/tables/java_refactoring (CPU only).
+"""Figure 8 (Section 5) from the tables in data/tables/java_refactoring (CPU only). Figure numbers are those of the
+arXiv version (v1); the code writes M for the paper's D.
 
-    java_refactoring.pdf   left: length allocation on the 80 unique target sites of the Java episodes, by the length of the
-               reference replacement: the mass that length head C puts within +-2 tokens of the reference length,
-               next to the training-label prior (length_fidelity_by_bin.csv, head s5hc_C);
-               right: joint LLM-judged success per cell (M, J) with oracle and learned target lengths, ordinary
-               sampling (beta = 0) and example guidance (beta = 0.5), commit-level means
-               (summary_by_cell.csv, primary stratum). Means only, as in the paper; the 95 % commit-bootstrap
-               intervals are in the tables.
+    java_refactoring.pdf   left: length allocation on the 80 unique target sites of the Java episodes, by the length
+                           of the reference replacement: the mass that the Java predictor (head s5hc_C) puts within
+                           +-2 tokens of the reference length, next to the training-label prior
+                           (length_fidelity_by_bin.csv); right: joint LLM-judged success per cell (D, J) with oracle
+                           and learned target lengths, unguided sampling (beta = 0) and example guidance
+                           (beta = 0.5), commit-level means (summary_by_cell.csv, primary stratum). Means only, as in
+                           the paper; the 95 % commit-bootstrap intervals are in the tables.
 
-Rendered at 150 dpi, the PDF is pixel-identical to the paper's figure when TeX Gyre Pagella is used.
+The tables name the two rules `ordinary` (unguided, beta = 0) and `tilting` (example guidance, beta = 0.5). Rendered
+at 150 dpi, the PDF is pixel-identical to the arXiv figure when TeX Gyre Pagella is used.
 
     python experiments/java_refactoring/plot.py [--tables data/tables/java_refactoring] [--out experiments/java_refactoring/out]
 """
@@ -26,7 +28,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 
 PRIOR_COLOR = "#CBD5E1"  # the training-label prior (slate-300)
-HEAD = "s5hc_C"  # length head C
+HEAD = "s5hc_C"  # the Java predictor (length head C)
 CELLS = ["M1J1", "M2J1", "M1J2", "M2J2"]  # left to right: J = 1, then J = 2
 # (regime, rule, colour, marker, filled): oracle lengths are circles, learned lengths diamonds; guidance is filled.
 CONDITIONS = [
@@ -48,7 +50,8 @@ def read_rows(path):
 
 
 def length_panel(fig, ax, bins):
-    """Left panel: % of head C's length mass within +-2 tokens of the reference length, and the prior's, per bin."""
+    """Left panel: % of the Java predictor's length mass within +-2 tokens of the reference length, and the prior's,
+    per bin."""
     for i, row in enumerate(bins):
         head = 100 * float(row["F2"])
         prior = 100 * float(row["prior_F2"])
@@ -125,7 +128,7 @@ def success_panel(fig, ax, summary):
 
 
 def java_refactoring_figure(bins, summary, path):
-    """Figure 7 of Section 5 (two panels, full text width)."""
+    """Figure 8 of Section 5 (two panels, full text width)."""
     fig, (left, right) = plt.subplots(1, 2, figsize=(F.FIGW, HEIGHT), layout="constrained", gridspec_kw={"width_ratios": [1.0, 1.32]})
     fig.get_layout_engine().set(w_pad=0.03, h_pad=0.02, wspace=0.06)
     length_panel(fig, left, bins)

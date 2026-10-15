@@ -1,7 +1,7 @@
 # ported from the paper repository's scripts/figstyle.py and scripts/figgrid.py @ fd2a8a9
 """One shared style for the paper's figures.
 
-Width is an input, not an output: every figure is authored at ACL's full text width (FIGW) with a fixed
+Width is an input, not an output: every figure is authored at the paper's full text width (FIGW) with a fixed
 figsize and constrained layout, never bbox_inches="tight", so the point sizes below are the sizes on the
 page. The figures are set in TeX Gyre Pagella (a Palatino), which ships with this package (fonts/, under
 the GUST Font License); `use_font` registers it with matplotlib. If the font files are missing it falls
@@ -18,7 +18,7 @@ matplotlib.use("Agg")
 import matplotlib.font_manager as font_manager  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 
-FIGW_PT = 455.24411  # ACL \textwidth in points: the authoring width
+FIGW_PT = 455.24411  # the paper's \textwidth in points (two-column layout): the authoring width
 FIGW = FIGW_PT / 72.0  # in inches
 
 FONT_DIR = Path(__file__).resolve().parent / "fonts"
@@ -40,7 +40,7 @@ NEUTRAL = "0.45"  # zero lines and reference lines
 TEAL = "#0F766E"
 SLATE = "#94A3B8"
 DIFFADD = "#1D4ED8"  # example guidance
-EPMUTED = "#64748B"  # ordinary sampling
+EPMUTED = "#64748B"  # unguided sampling
 MODEL_STYLE = {
     "llada": {"color": "#2563EB", "marker": "o"},
     "nemotron_ar": {"color": "#0F9D8A", "marker": "D"},

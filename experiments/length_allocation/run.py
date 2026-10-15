@@ -1,12 +1,12 @@
 # ported from editdiff/experiments/algo_investigation/dr_worker.py::{seed_of, run_canvas_pc} and experiments/length_project/lpx_alloc.py (alloc) @ d276fa6
-"""Sample the pools of Figure 6 (Section 4.3) on a GPU: one process, one model, one GPU.
+"""Sample the pools of Figure 7 (Section 4.3) on a GPU: one process, one model, one GPU.
 
-Every family of List Functions-Easy (report bank) gets a canvas with M = 4 demonstrations and J targets in the
+Every family of List Functions-Easy (report bank) gets a canvas with M = 4 demonstrations (the paper's D) and J targets in the
 published 12-slot layout. Each of the K candidates gets its own target lengths L^(k) = (L_1, ..., L_J), the
 *allocation*, from one of three modes (lengths.allocate):
 
     oracle   L_j = L*_j, the token count of " <answer>" under the model's tokenizer
-    learned  L^(k) drawn from the frozen length head (Appendix B, Length Allocation): the head reads the compact
+    learned  L^(k) drawn from the frozen length head, the paper's length predictor (Appendix B.4): the head reads the compact
              prompt once (lengths.compact_prompt) and candidate k, target j draws L = F_j^{-1}(u_kj) with the hashed
              uniform u_kj of lengths.sample_allocations under the seed (bank, backbone, family, J)
              (lengths.section43_seed)

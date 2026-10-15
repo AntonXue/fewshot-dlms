@@ -8,7 +8,7 @@ exactly that layout:
   pools/single_target/{report,dev}/<model>/<task>_M{M}_J1.jsonl            Section 4.1 pools (llada, nemotron_ar, dqwen, qwen)
   pools/single_target/{report,dev}/<model>/<task>_M4_J{J}_il.jsonl         cross-benchmark pools (llada, nemotron_pt, dqwen)
   pools/single_target/gold/<model>/<task>_M{M}_J1.jsonl                    reference answers scored under P1 and P0
-  pools/multi_target/<model>/list_easy_fam_M{M}_J{J}.jsonl                 the M x J grid
+  pools/multi_target/<model>/list_easy_fam_M{M}_J{J}.jsonl                 the D x J grid
   pools/multi_target/crossbench_gold/<model>/<task>_M4_J8_il.jsonl         reference answers of the J = 8 cross-benchmark cells
   pools/length_allocation/<model>/list_easy_fam_M4_J{J}_<condition>.jsonl  oracle, learned and offset lengths;
                                                                            length_head_report.*
@@ -72,7 +72,7 @@ SOURCES_FILE = Path(__file__).resolve().parent / "sources.local.json"
 SOURCE_KEYS = (
     "final_sweeps",  # the Section 4.1 and cross-benchmark pools: <bank>/<model>/<task>_M{M}_J{J}[_il].jsonl
     "gold_probe",  # the reference answers scored under P1 and P0: <model>/<task>_M{M}_J{J}[_il].jsonl
-    "mj_grid",  # the M x J grid: <model>/list_easy_fam_M{M}_J{J}.jsonl
+    "mj_grid",  # the D x J grid: <model>/list_easy_fam_M{M}_J{J}.jsonl
     "length_project",  # Section 4.3: ds_run/, eval/, data/, runs/<head run>/
     "java_length",  # head C of Section 5: eval/, data/, runs/s5hc_C/, corpus_audit.json
     "java_run",  # the Section 5 run: generation/report/, judging/, length/
@@ -86,7 +86,7 @@ LINK_DIR = ROOT / "artifacts_upload"
 
 TASKS = ("sst2_fam", "list_easy_fam", "salt_rep_fam", "movie_dir_fam")
 SECTION41_MODELS = ("llada", "nemotron_ar", "dqwen", "qwen")  # Section 4.1: one target, M = 1..16
-CANVAS_MODELS = ("llada", "nemotron_pt", "dqwen")  # the three DLM canvases (cross-benchmark, M x J grid, lengths)
+CANVAS_MODELS = ("llada", "nemotron_pt", "dqwen")  # the three DLM canvases (cross-benchmark, D x J grid, lengths)
 DEMO_COUNTS = (1, 2, 4, 8, 16)
 TARGET_COUNTS = (1, 2, 4, 8)
 GRID_DEMO_COUNTS = (2, 4, 8, 16)
@@ -457,7 +457,7 @@ def write_sums(dest, text):
 def sampled_matches(data):
     """The sampled candidate texts of a JSONL file that hold private text, or None if any match lies elsewhere.
 
-    A model's sample can contain a path it made up (a Nemotron pool of Figure 6 holds a made-up home-directory path);
+    A model's sample can contain a path it made up (a Nemotron pool of Figure 7 holds a made-up home-directory path);
     such text is model output, which the analysis grades, and stays. Any match outside candidates' texts fails.
     """
     samples = []

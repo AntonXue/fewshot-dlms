@@ -1,15 +1,15 @@
-"""Analysis parity (fidelity level 2 of README.md) for Figure 5 and its appendix mechanism and M x J
-sharpening figures.
+"""Analysis parity (fidelity level 2 of README.md) for Figure 6 and its appendix Figures 9
+and 12.
 
 experiments/multi_target/analyze.py recomputes the paper's tables from the frozen pools and must
 reproduce data/tables/multi_target/ to 1e-9 in every numeric column (and exactly in every other column):
 
-  cells.csv        Figure 5 and Section 4.2: A_all, A_target and the paired gains per (model, M, J, beta)
-  gold.csv         gold-answer support per (model, M, J)
+  cells.csv        Figure 6 and Section 4.2: A_all, A_target and the paired gains per (model, M, J, beta)
+  gold.csv         reference-answer support per (model, M, J)
   diagnostics.csv  pool coverage, reward spread, ESS per (model, M, J)
-  sharpening.csv   M x J sharpening figure (Fig. 10 ACL / Fig. 11 arXiv): sharpening control vs example guidance
+  sharpening.csv   D x J sharpening figure (Fig. 12): sharpening control vs example guidance
                    per (model, M, J)
-  mechanism.csv    mechanism figure (Fig. 8, both builds): gold NLL by reveal position, cross-benchmark study, J = 8
+  mechanism.csv    mechanism figure (Fig. 9): reference NLL by reveal position, cross-benchmark study, J = 8
 
 The parity tests need the fetched pools (`python -m fewshot_dlms.fetch pools java`). The other tests run
 on every `make test`: the --compare report of a resampled cell (fidelity level 3) on the two-family
@@ -43,7 +43,7 @@ KEYS = {
 COMPARE_LINE = re.compile(
     r"^(\S+) M=(\d+) J=(\d+): frozen A_all ([0-9.]+), rerun CI \[([0-9.]+), ([0-9.]+)\] -> frozen mean (inside|outside)"
 )
-# The verdict of the same cell under guidance at beta = 0.5, printed after the ordinary one.
+# The verdict of the same cell under guidance at beta = 0.5, printed after the unguided one.
 COMPARE_LINE_GUIDED = re.compile(
     r"^(\S+) M=(\d+) J=(\d+) beta=0\.5: frozen A_all ([0-9.]+), rerun CI \[([0-9.]+), ([0-9.]+)\] -> frozen mean (inside|outside)"
 )
@@ -59,7 +59,7 @@ def analysis(root, artifacts, tmp_path_factory):
     """Run analyze.py once on the frozen pools; returns (output directory, stdout of --compare)."""
     pools = artifacts / "pools" / "multi_target"
     if not pools.exists():
-        pytest.skip("Figure 5 pools not fetched: run `python -m fewshot_dlms.fetch pools java`")
+        pytest.skip("Figure 6 pools not fetched: run `python -m fewshot_dlms.fetch pools java`")
     out = tmp_path_factory.mktemp("multi_target")
     result = run_analyze(root, pools, out, "--compare", str(root / "data" / "tables" / "multi_target"))
     assert result.returncode == 0, result.stderr
@@ -114,7 +114,7 @@ def test_compare_reports_inside_ci(root, tmp_path):
     """A resampled cell is judged by whether the frozen mean lies inside the rerun's 95 % CI.
 
     The two-family fixture pool plays the rerun of the LLaDA-1.5 cell M = 4, J = 2; --compare prints one verdict
-    for ordinary sampling (beta = 0) and one for guidance at beta = 0.5.
+    for unguided sampling (beta = 0) and one for guidance at beta = 0.5.
     """
     pools = tmp_path / "pools"
     (pools / "llada").mkdir(parents=True)
@@ -139,7 +139,7 @@ def test_compare_reports_inside_ci(root, tmp_path):
         inside = rerun_cell.A_all_lo <= paper_cell.A_all <= rerun_cell.A_all_hi
         assert verdict == ("inside" if inside else "outside")
     guided = next(index for index, line in enumerate(lines) if COMPARE_LINE_GUIDED.match(line))
-    assert COMPARE_LINE.match(lines[guided - 1])  # each cell's guided verdict follows its ordinary one
+    assert COMPARE_LINE.match(lines[guided - 1])  # each cell's guided verdict follows its unguided one
 
 
 def test_missing_pools_name_the_fetch_command(root, tmp_path):
@@ -149,7 +149,7 @@ def test_missing_pools_name_the_fetch_command(root, tmp_path):
 
 
 def test_plot_writes_the_four_figures(root, tmp_path):
-    """plot.py draws Figure 5 and the three appendix figures from the committed tables alone (no pools, no GPU)."""
+    """plot.py draws Figure 6 and the three appendix figures from the committed tables alone (no pools, no GPU)."""
     command = [sys.executable, str(root / "experiments/multi_target/plot.py"), "--out", str(tmp_path)]
     result = subprocess.run(command, capture_output=True, text=True, cwd=root)
     assert result.returncode == 0, result.stderr
@@ -166,7 +166,7 @@ def load_run(root):
 
 
 def test_run_seed_rule_matches_the_frozen_records(root):
-    """run.py's proposal seed of every fixture record is the seed the authors' run stored."""
+    """run.py's sampling seed (proposal_seed) of every fixture record is the seed the authors' run stored."""
     run = load_run(root)
     for model in ("llada", "nemotron_pt", "dqwen"):
         for record in read_jsonl(root / "data" / "fixtures" / "multi_target" / f"{model}_M4_J2.jsonl"):

@@ -1,14 +1,14 @@
 """Model adapters. `base.py` holds the fixed-reveal-order loop (Lemma 3.1) and the `Adapter` interface;
 each model file only loads its pinned checkpoint and supplies `Adapter.logits` and the chat framing.
 
-The model interfaces of Appendix B, Experimental Setup:
+The model interfaces of Appendix B.1, Experimental Setup:
 
     name         model                              interface                                   file
     llada        GSAI-ML/LLaDA-1.5                  bidirectional canvas                        llada.py
     nemotron_pt  nvidia/Nemotron-Labs-Diffusion-8B  causal prefix + bidirectional tail          nemotron.py
-    nemotron_ar  nvidia/Nemotron-Labs-Diffusion-8B  causal suffix (Figure 4)                    nemotron.py
+    nemotron_ar  nvidia/Nemotron-Labs-Diffusion-8B  causal suffix (Figure 5)                    nemotron.py
     dqwen        UT-IFML/dQwen3.5-9B-Base           bidirectional canvas                        dqwen.py
-    qwen         Qwen/Qwen3-8B                      free-length causal continuation (Figure 4)  qwen_ar.py
+    qwen         Qwen/Qwen3-8B                      free-length causal continuation (Figure 5)  qwen_ar.py
 
 The canvas interfaces fill masked canvases (base.sample_fixed_order); the two causal ones continue a
 prompt left to right (base.sample_ar).

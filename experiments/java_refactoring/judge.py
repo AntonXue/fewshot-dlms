@@ -28,7 +28,7 @@ SHA-256("<rubric sha16>|<episode_id>|<demo sites joined by '|'>|<candidate texts
 once is never judged again, also across regimes. The target order uses random.Random(key12("s5final-judge", key)).
 
     python experiments/java_refactoring/judge.py --pools artifacts/reruns/java_refactoring/pools --out artifacts/reruns/java_refactoring/judging/verdicts.jsonl
-    python experiments/java_refactoring/judge.py --calibrate --limit 5      # the calibration controls of Appendix C (costs API calls)
+    python experiments/java_refactoring/judge.py --calibrate --limit 5      # the calibration controls of Appendix C.1 (costs API calls)
 """
 import argparse
 import csv
@@ -359,7 +359,7 @@ def judge_report(args, episodes):
 
 
 def judge_calibration(args, episodes):
-    """The calibration controls of Appendix C: reference, no-op, partial edit, argument swap, polarity flip,
+    """The calibration controls of Appendix C.1: reference, no-op, partial edit, argument swap, polarity flip,
     wrong receiver (expected incorrect) and an equivalent reordering or a harmless comment (expected correct).
 
     Prints, per control, the verdict, the expected verdict and the paper judge's verdict (calibration.csv).

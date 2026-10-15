@@ -1,10 +1,10 @@
 # ported from editdiff/experiments/algo_investigation/dr_worker.py::{seed_of, run_canvas, run_ar_oracle, free_steps, run_qwen} and experiments/gold_reward/gr_worker.py::{gold_canvas, gold_ar, gold_qwen, stop_ids} @ d276fa6
-"""Sample and score the pools of Figure 4 (Section 4.1) and of the cross-benchmark study (Fig. 9, both builds) on a
+"""Sample and score the pools of Figure 5 (Section 4.1) and of the cross-benchmark study (Fig. 10) on a
 GPU: one process, one model, one GPU.
 
 For every family and cell, K answers are sampled from P1 and scored under P0, as in the paper:
 
-  Section 4.1 (default): the first M demonstrations, then the target T1 (J = 1), M in {1, 2, 4, 8, 16}.
+  Section 4.1 (default): the first M demonstrations (the paper's D), then the target T1 (J = 1), M in {1, 2, 4, 8, 16}.
     llada, dqwen   canvas: the target gets its oracle length (token count of " <answer>"); the K infills are drawn by
                    fixed-order decoding (Lemma 3.1), all K in one reveal, 32 canvases per forward pass; P0 masks the
                    demonstration outputs in place and scores the distinct infills together.
@@ -22,7 +22,7 @@ The seed of a family's K answers is the first 16 hex digits of SHA-256("algo_inv
 with this seed serves all K draws. The batches above are the authors': bf16 logits depend on the batch they are computed
 in (tests/gpu_util.py), so these are what reproduce the stored values.
 
---score-gold also scores the reference answer under P1 and P0 (Figure 4's gold row): canvases teacher-force it in the
+--score-gold also scores the reference answer under P1 and P0 (the reference-reward row, Appendix B.2): canvases teacher-force it in the
 same reveal order; the causal suffix scores its oracle-length tokens; Qwen3-8B scores its tokens and then the probability
 of stopping right after them (any pure terminator: <|im_end|> or a whitespace token with a newline), so its T counts the
 stop. On the first --audit-n families the reference is scored together with the first two distinct sampled answers,
@@ -69,7 +69,7 @@ from fewshot_dlms.canvas import build_canvas
 from fewshot_dlms.data import BENCHMARKS
 from fewshot_dlms.data import load_families
 
-# How each model is run (Appendix B, Experimental Setup), and which adapter it loads.
+# How each model is run (Appendix B.1, Experimental Setup), and which adapter it loads.
 INTERFACE = {
     "llada": "canvas",
     "dqwen": "canvas",
@@ -637,7 +637,7 @@ def main():
             }
             append_record(path, record)
             written += 1
-            gold_note = f" | gold R {body['gold_ell1'] - body['gold_ell0']:+.2f}" if "gold_ell1" in body else ""
+            gold_note = f" | reference R {body['gold_ell1'] - body['gold_ell0']:+.2f}" if "gold_ell1" in body else ""
             replay_note = f" replay {body['checks']['replay_P1_max_abs_seq']:.1e}" if body["checks"] else ""
             print(
                 f"[{args.model}] {name} {family['episode_id']} tokens={body['n_tokens']} L={body['oracle_L']} distinct={body['n_unique']}"

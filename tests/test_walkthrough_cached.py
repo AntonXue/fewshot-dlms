@@ -1,5 +1,5 @@
 """examples/walkthrough.py --cached prints the stored pool without a GPU and without importing torch; the stored pool's
-hash and seed are Figure 5's, and the live run's option checks and order of output hold without a model."""
+hash and seed are Figure 6's, and the live run's option checks and order of output hold without a model."""
 import importlib.util
 import json
 import os
@@ -67,7 +67,7 @@ def fixture_record(root):
 
 
 def test_fixture_hash_and_seed_are_figure_5s(root):
-    """The fixture's protocol_hash and seed are those of Figure 5's run.py for the cell (M, J) = (2, 2) at K = 8."""
+    """The fixture's protocol_hash and seed are those of Figure 6's run.py for the cell (M, J) = (2, 2) at K = 8."""
     run = load_script(root, "experiments/multi_target/run.py", "multi_target_run_walkthrough")
     walkthrough = load_script(root, SCRIPT, "walkthrough")
     record = fixture_record(root)

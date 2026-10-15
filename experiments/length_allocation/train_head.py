@@ -1,6 +1,6 @@
 # ported from editdiff/experiments/length_project/lpx_train.py, experiments/length_project/lpx_common.py::{h64, render_fsp, ans_len, MAX_CONTEXT} and experiments/length_project/lpx_fsp.py (rendering of the logical episodes) @ d276fa6
-"""Train a length head on a frozen diffusion model (Section 4.3, Appendix B, Length Allocation). Optional: the paper's
-heads ship frozen.
+"""Train a length head (the paper's length predictor) on a frozen diffusion model (Section 4.3, Appendix B.4, Length
+Allocation). Optional: the paper's heads ship frozen.
 
 The head (lengths.Branch on lengths.LengthHead's trunk) is a trainable copy of the backbone's last transformer block and
 final norm plus a linear categorical head over the lengths 1..lmax, read at one placeholder mask per target of a compact

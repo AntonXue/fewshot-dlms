@@ -1,9 +1,9 @@
 # ported from editdiff/experiments/multimodel/mm_adapters.py::Nemotron (modes "block" and "ar") @ d276fa6
-"""Nemotron-Labs-Diffusion-8B: a causal prefix with a bidirectional tail, or a causal suffix (Appendix B,
+"""Nemotron-Labs-Diffusion-8B: a causal prefix with a bidirectional tail, or a causal suffix (Appendix B.1,
 Experimental Setup).
 
 Nemotron was trained as a block diffusion model: noisy tokens attend bidirectionally within their block
-and causally to the clean prefix before it. Both target-count studies of the paper (Figure 5 and the
+and causally to the clean prefix before it. Both target-count studies of the paper (Figure 6 and the
 cross-benchmark sweep) use it through one "prefix/tail" interface, which follows that pattern with a
 single tail block. Let b be the first target position of the canvas. Then
 
@@ -16,7 +16,7 @@ b is fixed for a whole reveal, under P1 and P0 alike: the reveal loop announces 
 32-token blocks. There is no KV cache: every forward pass recomputes the prefix. The model's diffusion
 head reads the hidden state at the masked position itself (no shift). The mask token is id 100.
 
-The single-target study (Figure 4) uses Nemotron through a second interface, the causal suffix
+The single-target study (Figure 5) uses Nemotron through a second interface, the causal suffix
 ("nemotron_ar", mode="causal"). Every layer is switched to the model's autoregressive mode
 (diffusion_lm=False: causal SDPA over the whole sequence, no explicit mask, no KV cache), and the model
 continues a prompt left to right (canvas.ar_prompt_ids; adapters.base.sample_ar): the next token after a
@@ -44,10 +44,10 @@ MASK_ID = 100  # <SPECIAL_100>, the config's mask_token_id
 CONTROL_MAX = 999  # ids 0..999 are the control block: every registered special token and the mask
 EOS_ID = 11  # <|im_end|>
 
-# Interfaces of this model (Appendix B, Experimental Setup) and their names in records and file names.
+# Interfaces of this model (Appendix B.1, Experimental Setup) and their names in records and file names.
 MODES = {"prefix_tail": "nemotron_pt", "causal": "nemotron_ar"}
 
-# How the Figure 4 pools of the causal suffix were decoded: over the ordinary support, sampling 32 sequences per
+# How the Figure 5 pools of the causal suffix were decoded: over the ordinary support, sampling 32 sequences per
 # forward pass and scoring P0 16 per pass (read by adapters.base.sample_ar / logprob_ar / decode_ar).
 CAUSAL_SUPPORT = "ordinary"
 CAUSAL_SAMPLE_CHUNK = 32
@@ -89,9 +89,9 @@ def _register_mask_attention(attention_layers, explicit_mask):
 class Nemotron(Adapter):
     """Nemotron-Labs-Diffusion-8B.
 
-    mode="prefix_tail" ("nemotron_pt") is the interface of the target-count studies (Figure 5 and the
+    mode="prefix_tail" ("nemotron_pt") is the interface of the target-count studies (Figure 6 and the
     cross-benchmark sweep); mode="causal" ("nemotron_ar") is the causal suffix of the single-target study
-    (Figure 4).
+    (Figure 5).
     """
 
     model_id = "nvidia/Nemotron-Labs-Diffusion-8B"

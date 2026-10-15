@@ -1,4 +1,4 @@
-"""Reproduce two frozen Figure 5 families with this repository's own code.
+"""Reproduce two frozen Figure 6 families with this repository's own code.
 
 data/fixtures/multi_target/llada_M4_J2.jsonl holds the first two report families of the authors' LLaDA-1.5 run
 at M = 4 demonstrations and J = 2 targets: K = 16 candidate infills each, with token ids, texts, and

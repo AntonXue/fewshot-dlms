@@ -1,17 +1,19 @@
 # ported from editdiff/experiments/paper_integration/figure_redesign/fig_finalize.py::{fig6, fig6_fidelity_row} (the production Figure 6) and experiments/length_project/lpx_figs43d.py @ d276fa6
-"""Figure 6 (Section 4.3) and the appendix fidelity row (Appendix B, Length Allocation) from the tables in
-data/tables/length_allocation (CPU only).
+"""Figure 7 (Section 4.3) and the length-fidelity row (Appendix B.4, Length Allocation) from the tables in
+data/tables/length_allocation (CPU only). Figure and appendix numbers are those of the arXiv version (v1).
 
-    length_allocation.pdf  Figure 6. Three panels per row, one per diffusion model, M = 4, beta = 0, List Functions-Easy.
-                      Top row: per-target accuracy A_avg (A_target) with sampled learned lengths vs oracle lengths,
-                      against the number of targets J (sec43_downstream.csv; oracle K = 64, learned K = 64 / J).
-                      Bottom row: A_avg with forced offsets L = L* + Delta at every target, J = 1 and 2, on the
-                      families valid at every Delta (sec43_length_perturbation.csv, "common to all deltas").
-                      Means only, as in the paper.
-    length_fidelity.pdf    Appendix: the learned head's probability mass on the exact length and within 1 and 2 tokens,
-                      against J, with 95 % family-bootstrap bands (sec43_length_metrics.csv).
+    length_allocation.pdf  Figure 7. Three panels per row, one per diffusion model, D = 4, beta = 0, List
+                           Functions–Easy. Top row: per-target accuracy A_avg (A_target) with sampled learned lengths
+                           vs oracle lengths, against the number of targets J (sec43_downstream.csv; oracle K = 64,
+                           learned K = 64 / J). Bottom row: A_avg with forced offsets L_j = L_j* + Delta at every
+                           target, J = 1 and 2, on the families valid at every Delta (sec43_length_perturbation.csv,
+                           "common to all deltas"). Means only, as in the paper.
+    length_fidelity.pdf    The length predictor's probability mass on the exact length and within 1 and 2 tokens
+                           (F_0, F_1, F_2 of Appendix B.4, which reports them in its text), against J, with 95 %
+                           family-bootstrap bands (sec43_length_metrics.csv).
 
-Rendered at 150 dpi, each PDF is pixel-identical to the paper's figure when TeX Gyre Pagella is used.
+Rendered at 150 dpi, each PDF is pixel-identical to the authors' figure (Figure 7 of arXiv v1; the fidelity row of
+their final figure set) when TeX Gyre Pagella is used.
 
     python experiments/length_allocation/plot.py [--tables data/tables/length_allocation] [--out experiments/length_allocation/out]
 """
@@ -142,7 +144,7 @@ def save(fig, path):
 
 
 def length_allocation_figure(downstream, perturbation, path):
-    """Figure 6 of Section 4.3: downstream accuracy with learned vs oracle lengths (top), forced offsets (bottom)."""
+    """Figure 7 of Section 4.3: downstream accuracy with learned vs oracle lengths (top), forced offsets (bottom)."""
     common = perturbation[perturbation.family_set == "common to all deltas"]
     fig, axes = F.grid(2, len(BACKBONES), height=2 * PANEL_HEIGHT + ALLOCATION_FURNITURE)
     for j, (backbone, name) in enumerate(BACKBONES):
@@ -171,7 +173,7 @@ def length_allocation_figure(downstream, perturbation, path):
 
 
 def length_fidelity_row(metrics, path):
-    """The appendix fidelity row: the learned head's mass within 0, 1 and 2 tokens of L*, with family-bootstrap bands."""
+    """The length-fidelity row: the predictor's mass within 0, 1 and 2 tokens of L*, with family-bootstrap bands."""
     fig, axes = F.grid(1, len(BACKBONES), height=PANEL_HEIGHT + FIDELITY_FURNITURE)
     for j, (backbone, name) in enumerate(BACKBONES):
         ax = axes[0, j]

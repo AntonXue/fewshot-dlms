@@ -1,8 +1,8 @@
 # ported from editdiff/experiments/sec42_mj/mj_analyze.py, experiments/paper_integration/agent_c/c_mj_diagnostics.py (sharpening) and experiments/gold_reward/gr_position.py (mechanism) @ d276fa6
-"""Figure 5 (Section 4.2) and its appendix tables, from the frozen pools (CPU only, no model).
+"""Figure 6 (Section 4.2) and its appendix tables, from the frozen pools (CPU only, no model).
 
-The M x J grid of Section 4.2: List Functions-Easy, 64 report families, three diffusion models,
-M in {2, 4, 8, 16} demonstrations, J in {1, 2, 4, 8} targets, oracle target lengths, K = 16 infills per
+The D x J grid of Section 4.2: List Functions-Easy, 64 report families, three diffusion models,
+M in {2, 4, 8, 16} demonstrations (the paper's D; the code and the records write M), J in {1, 2, 4, 8} targets, oracle target lengths, K = 16 infills per
 family sampled from P1. A pool file holds one record per family (see run.py):
 
     <pools>/<model>/list_easy_fam_M{M}_J{J}.jsonl
@@ -13,20 +13,20 @@ ell0 = log P0. Per family, with weights w = softmax(beta * (ell1 - ell0)) (scori
     A_target = sum_k w_k mean_j c_kj      per-target accuracy (A_avg in the paper)
     A_all    = sum_k w_k prod_j c_kj      every target correct
 
-where c_kj is 1 if target j of infill k is correct (grading.py). beta = 0 is ordinary sampling, beta = 0.5
+where c_kj is 1 if target j of infill k is correct (grading.py). beta = 0 is unguided sampling, beta = 0.5
 the paper's common strength. Every cell is resampled over families (bootstrap.py): one index matrix per
 cell, shared by all of its quantities, so the gains at beta > 0 are paired with beta = 0.
 
 Outputs in --out:
     families.csv     one row per (model, M, J, family, beta)
-    cells.csv        one row per (model, M, J, beta): Figure 5 (A_all, A_target and the gain in A_all at beta = 0.5)
-    gold.csv         per (model, M, J): the reference answers scored under P1 and P0 (gold reward per token)
+    cells.csv        one row per (model, M, J, beta): Figure 6 (A_all, A_target and the gain in A_all at beta = 0.5)
+    gold.csv         per (model, M, J): the reference answers scored under P1 and P0 (their reward per token)
     diagnostics.csv  per (model, M, J): pool coverage, reward spread, ESS, prompt sizes
     candidates.csv.gz, coverage.json
-    sharpening.csv   M x J sharpening figure (Fig. 10 ACL / Fig. 11 arXiv; Appendix B, Likelihood Sharpening):
+    sharpening.csv   D x J sharpening figure (Fig. 12; Appendix B.6, Likelihood Sharpening):
                      the sharpening control w = softmax(0.5 * ell1), i.e. the target P1^{3/2} (temperature 2/3),
                      against example guidance at beta = 0.5
-    mechanism.csv    mechanism figure (Fig. 8, both builds; Appendix B, Multi-Target Prompting): gold NLL per
+    mechanism.csv    mechanism figure (Fig. 9; Appendix B.3, Multi-Target Experiments): reference NLL per
                      token by reveal position under P1 and P0 in the cross-benchmark study (M = 4, J = 8); read
                      from --gold-pools when present
 
@@ -64,18 +64,18 @@ TASK = "list_easy_fam"
 MODELS = ["llada", "dqwen", "nemotron_pt"]
 M_GRID = [2, 4, 8, 16]
 J_GRID = [1, 2, 4, 8]
-BETAS = [0.0, 0.1, 0.25, 0.5, 1.0]  # beta = 0 is ordinary sampling; 0.1, 0.25 and 1 are sensitivity values
+BETAS = [0.0, 0.1, 0.25, 0.5, 1.0]  # beta = 0 is unguided sampling; 0.1, 0.25 and 1 are sensitivity values
 BETA = 0.5  # the paper's common guidance strength
 NBOOT = 10000
 BOOTSTRAP_SEED = "mtfsp-20261011-mj-bootstrap-v1"  # cell key f"{model}|{M}|{J}"
 
-# Appendix B, Likelihood Sharpening: the sharpening control has the same total exponent 3/2 on P1 as
+# Appendix B.6, Likelihood Sharpening: the sharpening control has the same total exponent 3/2 on P1 as
 # Q_0.5 ∝ P1^{3/2} P0^{-1/2}, but no P0: target P1^{3/2}, i.e. temperature 2/3, pool weights ∝ P1^{1/2}. Its
 # intervals use their own family resamples, seeded from SHARPENING_SEED (see sharpening_indices).
 SHARPENING_TAU = 2 / 3
 SHARPENING_SEED = "agentC-appA-20261011-mj-v1"
 
-# Appendix B, Multi-Target Prompting, mechanism figure (Fig. 8, both builds): the cross-benchmark study (M = 4, J = 8,
+# Appendix B.3, Multi-Target Experiments, mechanism figure (Fig. 9): the cross-benchmark study (M = 4, J = 8,
 # K = 64) with its reference answers scored under P1 and P0, one record per family in
 # <gold-pools>/<model>/<task>_M4_J8_il.jsonl.
 MECHANISM_MODELS = ["llada", "nemotron_pt", "dqwen"]
@@ -309,9 +309,9 @@ def cell_rows(model, M, J, F, idx):
 def gold_row(model, M, J, F, idx):
     """The reference answers of one cell scored under P1 and P0 (gold.csv).
 
-    Per family, with T the number of target tokens: gold reward per token (ell1 - ell0) / T and the gold
-    NLL per token under P1 and P0, with bootstrap intervals; the rank of the gold reward among the pool's
-    rewards (1 = highest) and how often the gold infill was sampled.
+    Per family, with T the number of target tokens: the reference answers' reward per token (ell1 - ell0) / T
+    and their NLL per token under P1 and P0, with bootstrap intervals; the rank of their reward among the pool's
+    rewards (1 = highest) and how often the reference infill was sampled.
     """
     reward = np.array([(f["gold_ell1"] - f["gold_ell0"]) / f["gold_T"] for f in F])
     nll1 = np.array([-f["gold_ell1"] / f["gold_T"] for f in F])
@@ -389,7 +389,7 @@ def diagnostics_row(model, M, J, K, F, ordinary_A_all):
 
 
 def sharpening_indices(model, M, J, n, nboot):
-    """Family resamples of the sharpening table (Appendix B, Likelihood Sharpening).
+    """Family resamples of the sharpening table (Appendix B.6, Likelihood Sharpening).
 
     Seed = the first 16 hex digits of SHA-256(f"{SHARPENING_SEED}|{model}|{M}|{J}"), mod 2**32, for
     numpy's default_rng; one rng.integers(0, n, size=(nboot, n)) draw, as in bootstrap.cell_indices.
@@ -400,11 +400,11 @@ def sharpening_indices(model, M, J, n, nboot):
 
 
 def sharpening_row(model, M, J, K, F, nboot):
-    """Sharpening control vs example guidance in one cell (sharpening.csv, the M x J sharpening figure).
+    """Sharpening control vs example guidance in one cell (sharpening.csv, Figure 12).
 
-    Per family: A at beta = 0 (ordinary), at beta = 0.5 (guidance, Q ∝ P1^{3/2} P0^{-1/2}) and under the
+    Per family: A at beta = 0 (unguided), at beta = 0.5 (guidance, Q ∝ P1^{3/2} P0^{-1/2}) and under the
     sharpening control (Q ∝ P1^{3/2}, pool weights pool_weights(ell1, ell0, 0, tau=2/3) ∝ P1^{1/2}).
-    gain_*_power_matched = control minus ordinary; tilt_minus_power_* = guidance minus control.
+    gain_*_power_matched = control minus unguided; tilt_minus_power_* = guidance minus control.
     """
     idx = sharpening_indices(model, M, J, len(F), nboot)
     values = collections.defaultdict(list)
@@ -435,12 +435,13 @@ def sharpening_row(model, M, J, K, F, nboot):
 
 
 def mechanism_rows(gold_pools, nboot):
-    """Gold NLL per token by reveal position (mechanism.csv, the mechanism figure).
+    """Reference NLL per token by reveal position (mechanism.csv, Figure 9).
 
     In the cross-benchmark study (M = 4, J = 8) the reference answers were scored target by target in the
-    fixed reveal order, so gold_ell1_t[k] (ell1_t in the gold records) is the log P1 of target k given the
-    gold answers of targets 1..k-1, and the same for P0. Per position k, over families: the gold reward per
-    token (ell1_t[k] - ell0_t[k]) / L_k with a bootstrap interval, and the gold NLL per token under P1 and P0.
+    fixed reveal order, so gold_ell1_t[k] (ell1_t in the reference records) is the log P1 of target k given the
+    reference answers of targets 1..k-1, and the same for P0. Per position k, over families: the reference reward
+    per token (ell1_t[k] - ell0_t[k]) / L_k with a bootstrap interval, and the reference NLL per token under P1 and
+    P0.
     """
     rows = []
     for model in MECHANISM_MODELS:
@@ -480,7 +481,7 @@ def mechanism_rows(gold_pools, nboot):
 
 
 def analyse(pools, models, nboot):
-    """All per-family, per-cell and per-candidate tables of the M x J grid, as lists of rows."""
+    """All per-family, per-cell and per-candidate tables of the D x J grid, as lists of rows."""
     family_ids = [family["episode_id"] for family in load_families(TASK, "report")]
     tables = {name: [] for name in ("families", "cells", "gold", "diagnostics", "candidates", "sharpening")}
     coverage = {}
@@ -557,7 +558,7 @@ def max_abs_diff(a, b):
 
 def compare(frames, reference):
     """Print the largest |difference| per numeric column against the tables in `reference`, then the
-    resampling verdicts of every cell: is the frozen A_all inside the 95 % CI computed here, for ordinary
+    resampling verdicts of every cell: is the frozen A_all inside the 95 % CI computed here, for unguided
     sampling (beta = 0) and for guidance at BETA? One line each; the guided line names its beta.
 
     CSVs are parsed with float_precision="round_trip", so a value written by pandas reads back exactly.
@@ -605,14 +606,14 @@ def main():
     parser.add_argument("--out", default=str(HERE / "out"))
     parser.add_argument("--models", default=",".join(MODELS))
     parser.add_argument("--nboot", type=int, default=NBOOT)
-    parser.add_argument("--gold-pools", default=None, help="cross-benchmark gold records (default: <pools>/crossbench_gold)")
+    parser.add_argument("--gold-pools", default=None, help="cross-benchmark reference-answer records (default: <pools>/crossbench_gold)")
     parser.add_argument("--compare", default=None, help="directory of reference tables, e.g. data/tables/multi_target")
     args = parser.parse_args()
 
     pools = Path(args.pools)
     models = args.models.split(",")
     if not pools.is_dir() or not any((pools / model).is_dir() for model in models):
-        print(f"no Figure 5 pools in {pools}; {FETCH_HINT}", file=sys.stderr)
+        print(f"no Figure 6 pools in {pools}; {FETCH_HINT}", file=sys.stderr)
         sys.exit(2)
 
     tables, coverage, family_ids = analyse(pools, models, args.nboot)
@@ -620,7 +621,7 @@ def main():
     if gold_pools.is_dir():
         tables["mechanism"] = mechanism_rows(gold_pools, args.nboot)
     else:
-        print(f"no cross-benchmark gold records in {gold_pools}: mechanism.csv not written")
+        print(f"no cross-benchmark reference-answer records in {gold_pools}: mechanism.csv not written")
     frames = write_tables(Path(args.out), tables, coverage, family_ids, models)
     if args.compare:
         compare(frames, args.compare)
