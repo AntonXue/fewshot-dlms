@@ -26,7 +26,7 @@ refused login or an unreachable Hub ends the fetch with one line naming the caus
 | | |
 |---|---|
 | dataset | `UT-IFML/fewshot-dlms` (repo type `dataset`) |
-| pinned revision | `f65650d34e80892b94a69083371fd939ed64edcc` (also in `data/artifacts_revision.txt`) |
+| pinned revision | `bbea43135098534b92cad7c44014f9c0fac94ba7` (also in `data/artifacts_revision.txt`) |
 | file list | [`SHA256SUMS`](SHA256SUMS): `<sha256>  <path>` for each of the 500 files, the format of `sha256sum` |
 | SHA-256 of `SHA256SUMS` | `2fe80a4bc7887064976881bfdb9b285e1c4d75d99991caab2ffe28483c6c1304` |
 | built by | `tools/assemble_artifacts.py` (data card: `artifacts_upload/README.md`) |
@@ -95,4 +95,7 @@ The adapters in `src/fewshot_dlms/adapters/` load exactly these revisions.
 - LLaDA-1.5 length heads: flash-attn 2.8.3.
 - The upload used huggingface_hub 1.23.0 (`upload_large_folder`; the re-saved heads, configs, card and
   `SHA256SUMS` were then replaced with `upload_folder`, later the four structured few-shot files, card and
-  `SHA256SUMS` once more). The dataset's history was then squashed into the single pinned commit.
+  `SHA256SUMS` once more). The pool groups were later renamed on the Hub by content (`pools/fig4`, `fig5`, `fig6`
+  to `pools/single_target`, `multi_target`, `length_allocation`; `create_commit` with a copy and a delete per file,
+  the bytes unchanged) and the card and `SHA256SUMS` replaced in the same commit. The dataset's history was then
+  squashed into the single pinned commit.

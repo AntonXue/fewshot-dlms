@@ -42,7 +42,7 @@ REPO_ID = "UT-IFML/fewshot-dlms"
 REPO_TYPE = "dataset"
 # The dataset commit of the frozen artifacts. tests/test_fetch.py checks it against data/artifacts_revision.txt
 # and ARTIFACTS.md, so a stale pin fails make test.
-PINNED_REVISION = "f65650d34e80892b94a69083371fd939ed64edcc"
+PINNED_REVISION = "bbea43135098534b92cad7c44014f9c0fac94ba7"
 # SHA-256 of SHA256SUMS at PINNED_REVISION (ARTIFACTS.md), checked against the downloaded copy.
 SUMS_SHA256 = "2fe80a4bc7887064976881bfdb9b285e1c4d75d99991caab2ffe28483c6c1304"
 SUMS_NAME = "SHA256SUMS"
