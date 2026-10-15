@@ -52,7 +52,7 @@ def length_panel(fig, ax, bins):
     for i, row in enumerate(bins):
         head = 100 * float(row["F2"])
         prior = 100 * float(row["prior_F2"])
-        ax.bar(i - BAR_WIDTH / 2, head, BAR_WIDTH, color=F.TEAL, zorder=2, label="length head C" if i == 0 else None)
+        ax.bar(i - BAR_WIDTH / 2, head, BAR_WIDTH, color=F.TEAL, zorder=2, label="Java predictor" if i == 0 else None)
         ax.bar(i + BAR_WIDTH / 2, prior, BAR_WIDTH, color=PRIOR_COLOR, zorder=2, label="training-label prior" if i == 0 else None)
         ax.text(i, max(head, prior) + 2.5, f"n={row['unique_sites']}", ha="center", va="bottom", fontsize=F.PT["annot"])
     ax.set_xticks(range(len(bins)))
@@ -105,15 +105,14 @@ def success_panel(fig, ax, summary):
     commits = {cell: next(r["n_commits"] for r in summary if r["cell"] == cell and r["regime"] == "oracle" and r["rule"] == "ordinary") for cell in CELLS}
     ax.set_xticks(range(len(CELLS)))
     ax.set_xticklabels([f"({cell[1]},{cell[3]})\n{commits[cell]} commits" for cell in CELLS])
-    ax.set_xlabel(r"($M$ demonstrations, $J$ targets)")
-    ax.set_ylabel("% joint LLM-judged success")
+    ax.set_xlabel(r"($D$ demonstrations, $J$ targets)")  # no y label: the panel title and the caption name the measure
     ax.set_ylim(*RIGHT_LIMITS)
     ax.set_yticks([0, 25, 50, 75, 100])
     ax.set_xlim(-0.5, len(CELLS) - 0.5)
     ax.grid(axis="x", visible=False)
     handles = [
-        Line2D([], [], ls="", marker="o", color=F.EPMUTED, mfc="white", mec=F.EPMUTED, ms=4.0, label=r"ordinary ($\beta=0$)"),
-        Line2D([], [], ls="", marker="o", color=F.DIFFADD, mfc=F.DIFFADD, mec=F.DIFFADD, ms=4.0, label=r"example guidance ($\beta=0.5$)"),
+        Line2D([], [], ls="", marker="o", color=F.EPMUTED, mfc="white", mec=F.EPMUTED, ms=4.0, label="unguided"),
+        Line2D([], [], ls="", marker="o", color=F.DIFFADD, mfc=F.DIFFADD, mec=F.DIFFADD, ms=4.0, label="guided"),
         Line2D([], [], ls="", marker="o", color=F.INK, mfc="white", mec=F.INK, ms=4.0, label="oracle lengths"),
         Line2D([], [], ls="", marker="D", color=F.INK, mfc="white", mec=F.INK, ms=3.6, label="learned lengths"),
     ]

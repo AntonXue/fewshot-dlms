@@ -118,9 +118,9 @@ def save(fig, path):
 
 MULTI_ROWS = [
     # (cells.csv column, beta, y limits, y ticks, row tag, tag corner, y label)
-    ("A_all", 0.0, (0, 100), [0, 25, 50, 75, 100], "All targets correct", "top", "ordinary\n$A_{\\mathrm{all}}$ (%)"),
-    ("A_target", 0.0, (0, 100), [0, 25, 50, 75, 100], "Per-target accuracy", "bottom", "ordinary\n$A_{\\mathrm{avg}}$ (%)"),
-    ("gain_all", 0.5, (-10, 25), [-10, 0, 10, 20], r"Guidance gain, $\beta = 0.5$", "bottom", "$\\Delta A_{\\mathrm{all}}$ over\nordinary (pp)"),
+    ("A_all", 0.0, (0, 100), [0, 25, 50, 75, 100], "All targets correct", "top", "unguided\n$A_{\\mathrm{all}}$ (%)"),
+    ("A_target", 0.0, (0, 100), [0, 25, 50, 75, 100], "Per-target accuracy", "bottom", "unguided\n$A_{\\mathrm{avg}}$ (%)"),
+    ("gain_all", 0.5, (-10, 25), [-10, 0, 10, 20], r"Guidance gain, $\beta = 0.5$", "bottom", "$\\Delta A_{\\mathrm{all}}$ over\nunguided (pp)"),
 ]
 MULTI_OFFSET = {"llada": -0.08, "nemotron_pt": 0.0, "dqwen": 0.08}
 MULTI_PANEL_H = 0.88  # inches per row
@@ -187,7 +187,7 @@ def multi_target_figure(cells, path):
                 ax.set_ylabel(ylabel)
     items = [model_key(model, label) for model, label in MODELS] + [(Line2D([], [], color=F.NEUTRAL, lw=1.0), "no gain (0 pp)")]
     shared_legend(fig, items, ncol=len(items), rows=1, base=0.08)
-    F.row_xlabel(fig, axes[-1], "demonstrations $M$ (List Functions–Easy, $K = 16$)")
+    F.row_xlabel(fig, axes[-1], "demonstrations $D$ (List Functions–Easy, $K = 16$)")
     for r, (_, _, _, _, text, where, _) in enumerate(MULTI_ROWS):
         place_row_tag(fig, axes[r, 0], text, where, boxes[(r, 0)])
     save(fig, path)
@@ -197,7 +197,7 @@ def multi_target_figure(cells, path):
 # Mechanism figure (Fig. 8, both builds): gold NLL by reveal position (cross-benchmark study, J = 8)
 # ---------------------------------------------------------------------------------------------
 
-TASKS = [("sst2_fam", "SST-2"), ("list_easy_fam", "List Functions"), ("salt_rep_fam", "SALT"), ("movie_dir_fam", "Movie Director")]
+TASKS = [("sst2_fam", "SST-2"), ("list_easy_fam", "List Functions–Easy"), ("salt_rep_fam", "SALT"), ("movie_dir_fam", "Movie Director")]
 MECHANISM_OFFSET = {"llada": -0.12, "nemotron_pt": -0.04, "dqwen": 0.04}
 
 
@@ -218,13 +218,13 @@ def mechanism_figure(mechanism, path):
             curve(ax, positions, e.gold_nll0_per_token.values, style, MECHANISM_OFFSET[model], dashed=True, hollow=True)
             curve(ax, positions, e.gold_nll1_per_token.values, style, MECHANISM_OFFSET[model])
         tidy(ax, label, [str(k) for k in range(1, 9)], (0, top), list(np.arange(0, top + 1, 2)), j == 0, True)
-    axes[0, 0].set_ylabel("gold NLL / target token")
+    axes[0, 0].set_ylabel("reference NLL / target token")
     p1 = Line2D([], [], color="0.3", marker="o", markersize=3.2, lw=1.1)
     p0 = Line2D([], [], color="0.3", marker="o", markerfacecolor="white", markersize=3.2, lw=1.1, ls="--")
     items = [model_key(model, label) for model, label in MODELS]
     items += [(p1, "$P_1$ (demonstrations visible)"), (p0, "$P_0$ (demonstration outputs masked)")]
     shared_legend(fig, items, ncol=3, rows=2)
-    F.row_xlabel(fig, axes[0], "target position in the reveal order ($J = 8$, $M = 4$; earlier targets revealed with their gold answers)")
+    F.row_xlabel(fig, axes[0], "target position in the reveal order ($J = 8$, $D = 4$; earlier targets revealed with their reference answers)")
     save(fig, path)
 
 
@@ -265,12 +265,12 @@ def crossbench_figure(crossbench, path):
             else:
                 yticks = [v for v in range(int(gain_ylim[0]), int(gain_ylim[1]) + 1, 10)]
                 tidy(ax, None, [str(J) for J in J_GRID], gain_ylim, yticks, j == 0, True)
-    axes[0, 0].set_ylabel("ordinary $A_{\\mathrm{all}}$ (%)")
+    axes[0, 0].set_ylabel("unguided $A_{\\mathrm{all}}$ (%)")
     axes[1, 0].set_ylabel("$A_{\\mathrm{all}}$ gain at\n$\\beta=0.5$ (pp)")
     items = [model_key(model, label) for model, label in MODELS]
     items += [(Line2D([], [], color=F.NEUTRAL, lw=1.0), "no gain (0 pp)"), (BAND, "95 % family bootstrap")]
     shared_legend(fig, items, ncol=3, rows=2)
-    F.row_xlabel(fig, axes[-1], "unresolved targets $J$ (original study: $M=4$, $K=64$, seeded 12-slot interleaving)")
+    F.row_xlabel(fig, axes[-1], "unresolved targets $J$ (original study: $D=4$, $K=64$, seeded 12-slot interleaving)")
     save(fig, path)
 
 
@@ -306,7 +306,7 @@ def sharpening_figure(sharpening, path):
     items = [model_key(model, label) for model, label in MODELS]
     items += [(Line2D([], [], color=F.NEUTRAL, lw=1.0), "zero"), (BAND, "95 % family bootstrap")]
     shared_legend(fig, items, ncol=3, rows=2)
-    F.row_xlabel(fig, axes[-1], "demonstrations $M$ (List Functions–Easy, $K=16$, 64 families per cell)")
+    F.row_xlabel(fig, axes[-1], "demonstrations $D$ (List Functions–Easy, $K=16$, 64 families per cell)")
     save(fig, path)
 
 

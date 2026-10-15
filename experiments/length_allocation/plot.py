@@ -164,7 +164,7 @@ def length_allocation_figure(downstream, perturbation, path):
         fig,
         axes,
         1,
-        "length offset $\\Delta$ in $L = L^\\star + \\Delta$ ($\\Delta = 0$: oracle allocation)",
+        "length offset $\\Delta$ in $L_j = L_j^\\star + \\Delta$ ($\\Delta = 0$: oracle allocation)",
         [(handle(TARGETS[1]), "$J = 1$"), (handle(TARGETS[2]), "$J = 2$")],
     )
     save(fig, path)

@@ -31,7 +31,7 @@ from fewshot_dlms import figstyle as F
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 
-TASKS = [("sst2_fam", "SST-2"), ("list_easy_fam", "List Functions"), ("salt_rep_fam", "SALT"), ("movie_dir_fam", "Movie Director")]
+TASKS = [("sst2_fam", "SST-2"), ("list_easy_fam", "List Functions–Easy"), ("salt_rep_fam", "SALT"), ("movie_dir_fam", "Movie Director")]
 MODELS = [("llada", "LLaDA-1.5"), ("nemotron_ar", "Nemotron causal"), ("dqwen", "dQwen3.5"), ("qwen", "Qwen3-8B")]
 OFFSET = {"llada": -0.12, "nemotron_ar": -0.04, "dqwen": 0.04, "qwen": 0.12}  # x shift of each model, so markers do not overlap
 M_GRID = [1, 2, 4, 8, 16]
@@ -192,18 +192,18 @@ def single_target_figure(accuracy, path):
             if r == 1:
                 ax.axhline(0, color=F.NEUTRAL, lw=1.0, zorder=2)
             tidy(ax, label if r == 0 else None, [str(M) for M in M_GRID], ylim, yticks, j == 0, r == 1)
-    axes[0, 0].set_ylabel("ordinary\naccuracy (%)")
-    axes[1, 0].set_ylabel("gain over\nordinary (pp)")
+    axes[0, 0].set_ylabel("unguided\naccuracy (%)")
+    axes[1, 0].set_ylabel("gain over\nunguided (pp)")
     items = [(model_key(model), name) for model, name in MODELS] + [(Line2D([], [], color=F.NEUTRAL, lw=1.0), "no gain (0 pp)")]
     legend = shared_legend(fig, items, len(items), 1)
-    F.row_xlabel(fig, axes[1], "demonstrations $M$ (single target, $K = 64$)")
+    F.row_xlabel(fig, axes[1], "demonstrations $D$ (single target, $K = 64$)")
     if not legend_fits(fig, legend):  # fall back to the four models (the zero line explains itself)
         legend.remove()
         shared_legend(fig, items[:4], 4, 1)
     fig.canvas.draw()
     # The row tags sit in the SST-2 panels, both at the top left (at this height a bottom box would cover the near-zero
     # SST-2 gains).
-    for r, text in enumerate(["Ordinary accuracy", r"Guidance gain, $\beta = 0.5$"]):
+    for r, text in enumerate(["Unguided accuracy", r"Guidance gain, $\beta = 0.5$"]):
         place_row_tag(fig, axes[r, 0], text, boxes[(r, 0)])
     save(fig, path)
 
@@ -219,11 +219,11 @@ def reference_reward_row(gold, path):
             curve(ax, range(len(M_GRID)), e.gold_reward_per_token.values, F.MODEL_STYLE[model], OFFSET[model], lo=e.gold_rpt_lo.values, hi=e.gold_rpt_hi.values)
         tidy(ax, label, [str(M) for M in M_GRID], (0, top), list(np.arange(0, top + 1, 4)), j == 0, True)
         if j == 0:
-            corner_tag(ax, "Gold example reward", 0.93, 0.6)
-    axes[0, 0].set_ylabel("gold example reward\n/ token (nats)")
+            corner_tag(ax, "Reference example reward", 0.93, 0.6)
+    axes[0, 0].set_ylabel("reference example reward\n/ token (nats)")
     items = [(model_key(model), name) for model, name in MODELS] + [(BAND, "95 % family bootstrap")]
     shared_legend(fig, items, 3, 2)
-    F.row_xlabel(fig, axes[0], "demonstrations $M$ (single target, $K = 64$)")
+    F.row_xlabel(fig, axes[0], "demonstrations $D$ (single target, $K = 64$)")
     save(fig, path)
 
 
@@ -276,7 +276,7 @@ def guidance_strength_figure(sweep, path):
                 sweep_curve(ax, model, e.gain_pp.values, e.gain_lo_pp.values, e.gain_hi_pp.values)
             else:
                 sweep_curve(ax, model, e.D_eff.values, e.D_eff_lo.values, e.D_eff_hi.values)
-        title = f"$A_{{\\mathrm{{all}}}}$ gain, $J={J}$" if kind == "gain" else f"support $e^{{H}}/K$, $J={J}$"
+        title = f"$A_{{\\mathrm{{all}}}}$ gain, $J={J}$" if kind == "gain" else f"$e^{{H}}/K$, $J={J}$"
         F.panel(ax, title)
         ax.set_xticks(np.arange(len(SWEEP_BETAS)))
         ax.set_xticklabels(SWEEP_TICKS)
@@ -294,8 +294,7 @@ def guidance_strength_figure(sweep, path):
             ax.set_yticklabels(["0", ".25", ".5", ".75", "1"])
     axes[1].tick_params(labelleft=False)
     axes[3].tick_params(labelleft=False)
-    axes[0].set_ylabel("paired gain (pp)")
-    axes[2].set_ylabel("$\\exp(H)/K$")
+    axes[0].set_ylabel("guidance gain (pp)")  # the right half has no y label: its panel titles name e^H/K
     items = []
     for model, name in SWEEP_MODELS:
         style = F.MODEL_STYLE[model]
