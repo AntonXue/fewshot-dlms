@@ -6,20 +6,24 @@ Code for "Multi-Target Few-Shot Prompting with Diffusion Language Models". READM
 
 - `src/fewshot_dlms/`: `scoring.py` (the equations), `bootstrap.py` (intervals), `grading.py` (answers, graders),
   `canvas.py` (target sites, `E`), `adapters/` (the only code that touches a model), `lengths.py` (allocation,
-  length head), `data.py` (families, Java episodes), `fetch.py` (artifacts).
-- `experiments/fig{4_single_target,5_multi_target,6_lengths,7_java}/`: one pipeline per figure, `run.py` (GPU),
-  `analyze.py` and `plot.py` (CPU); each README maps paper sections, tables and commands.
+  length head = the paper's length predictor), `data.py` (families, Java episodes), `fetch.py` (artifacts).
+- `experiments/{single_target,multi_target,length_allocation,java_refactoring}/`: one pipeline per study, `run.py`
+  (GPU), `analyze.py` and `plot.py` (CPU); each README maps paper sections, figures, tables and commands.
 - `data/`: `benchmarks/` and `java/` (inputs), `tables/` (the paper's tables, parity targets), `fixtures/` (CPU tests).
 - A *family* is one frozen episode (`data.load_families(task, bank)`); cell (M, J) uses its first M demos, J targets.
+  The code and the stored records write `M` for the paper's D (demonstrations); keep `M` in code, flags and records.
 - A ported file's first line, `# ported from editdiff/<path> @ <commit>`, names its source in the authors' research
   repository at a fixed commit. Keep it when editing the file.
 
 ## Conventions
 
 - Pool weights are `softmax(β · (ℓ1 − ℓ0))`, ℓ1 = log P1 (demonstration outputs visible), ℓ0 = log P0 (outputs
-  masked at `E`). β = 0 is ordinary sampling; β = 0.5 is the paper's common strength, Q ∝ P1^{3/2} P0^{−1/2}. The
+  masked at `E`). β = 0 is unguided sampling; β = 0.5 is the paper's common strength, Q ∝ P1^{3/2} P0^{−1/2}. The
   sharpening control is `pool_weights(ell1, ell0, 0.0, tau=2/3)`, target P1^{3/2}.
-- Cite appendix material by title ("Appendix B, Likelihood Sharpening"), never by number: the paper's builds differ.
+- Figure, section and appendix numbers are those of the paper's arXiv version (v1), e.g. Figure 12 (Appendix B.6,
+  Likelihood Sharpening). Name files, directories and tests by content, never by figure number.
+- Prose follows the paper: unguided (β = 0), example guidance, samples, reference answer, Java predictor, D. Tables,
+  records, flags and hashes keep the authors' names (`ordinary`, `tilting`, `gold`, `proposal`, `--score-gold`, `M`).
 - Code is plain on purpose: one statement per line, docstrings naming the paper quantity; follow `scoring.py`.
 
 ## Artifacts and tests
@@ -55,7 +59,8 @@ only if attention depends on where the targets start (Nemotron prefix/tail). A l
 returns next-token logits and runs in `sample_ar` / `logprob_ar` / `decode_ar` on `canvas.ar_prompt_ids`; set
 `default_support`, `sample_chunk`, `p0_chunk` and, for free-length stopping, `stop_ids()` (see `qwen_ar.py`). Then
 register it in `adapters/__init__.py` (`NAMES`, `adapter_class`), add it to the pipelines' model lists
-(`INTERFACE` and `MODELS41`/`MODELS42` in `single_target/run.py`, `MODELS` in the multi_target and length_allocation `run.py`), give
-it entries in `TOLERANCES` and `BATCHED_TOLERANCES` of `tests/gpu_util.py`, and add a replay test like
-`tests/test_gpu_replay.py`. CPU tests need no checkpoint: `tests/fakes.py` (`FakeAdapter`, a byte-level stand-in) and
-`tests/test_adapters_cpu.py` (fake tokenizer and model classes with `monkeypatch`) are the harness to copy.
+(`INTERFACE` and `MODELS41`/`MODELS42` in `single_target/run.py`, `MODELS` in the `multi_target` and
+`length_allocation` `run.py`), give it entries in `TOLERANCES` and `BATCHED_TOLERANCES` of `tests/gpu_util.py`, and add
+a replay test like `tests/test_gpu_replay.py`. CPU tests need no checkpoint: `tests/fakes.py` (`FakeAdapter`, a
+byte-level stand-in) and `tests/test_adapters_cpu.py` (fake tokenizer and model classes with `monkeypatch`) are the
+harness to copy.
