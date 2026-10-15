@@ -1,7 +1,7 @@
 # ported from editdiff/experiments/paper_integration/figure_redesign/fig_finalize.py::fig7 (the production Figure 7, no error bars) @ d276fa6
-"""Figure 7 (Section 5) from the tables in data/tables/fig7 (CPU only).
+"""Figure 7 (Section 5) from the tables in data/tables/java_refactoring (CPU only).
 
-    fig7.pdf   left: length allocation on the 80 unique target sites of the Java episodes, by the length of the
+    java_refactoring.pdf   left: length allocation on the 80 unique target sites of the Java episodes, by the length of the
                reference replacement: the mass that length head C puts within +-2 tokens of the reference length,
                next to the training-label prior (length_fidelity_by_bin.csv, head s5hc_C);
                right: joint LLM-judged success per cell (M, J) with oracle and learned target lengths, ordinary
@@ -11,7 +11,7 @@
 
 Rendered at 150 dpi, the PDF is pixel-identical to the paper's figure when TeX Gyre Pagella is used.
 
-    python experiments/fig7_java/plot.py [--tables data/tables/fig7] [--out experiments/fig7_java/out]
+    python experiments/java_refactoring/plot.py [--tables data/tables/java_refactoring] [--out experiments/java_refactoring/out]
 """
 import argparse
 import csv
@@ -125,7 +125,7 @@ def success_panel(fig, ax, summary):
     fig.canvas.draw()
 
 
-def figure7(bins, summary, path):
+def java_refactoring_figure(bins, summary, path):
     """Figure 7 of Section 5 (two panels, full text width)."""
     fig, (left, right) = plt.subplots(1, 2, figsize=(F.FIGW, HEIGHT), layout="constrained", gridspec_kw={"width_ratios": [1.0, 1.32]})
     fig.get_layout_engine().set(w_pad=0.03, h_pad=0.02, wspace=0.06)
@@ -138,7 +138,7 @@ def figure7(bins, summary, path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--tables", default=str(ROOT / "data" / "tables" / "fig7"))
+    parser.add_argument("--tables", default=str(ROOT / "data" / "tables" / "java_refactoring"))
     parser.add_argument("--out", default=str(HERE / "out"))
     args = parser.parse_args()
     tables = Path(args.tables)
@@ -147,7 +147,7 @@ def main():
     F.use_font()
     bins = [row for row in read_rows(tables / "length_fidelity_by_bin.csv") if row["population"] == "B" and row["head"] == HEAD]
     summary = [row for row in read_rows(tables / "summary_by_cell.csv") if row["stratum"] == "primary" and row["cell"] != "all"]
-    figure7(bins, summary, out / "fig7.pdf")
+    java_refactoring_figure(bins, summary, out / "java_refactoring.pdf")
 
 
 if __name__ == "__main__":

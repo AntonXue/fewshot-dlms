@@ -1,21 +1,21 @@
 # ported from editdiff/experiments/paper_integration/figure_redesign/fig_finalize.py::{fig4, fig4_gold_row} @ 51db142 and experiments/beta_sweep/bs_figure.py @ 1aeba87
 """Figure 4 (Section 4.1), its gold-reward row and the guidance-strength sweep figure (Fig. 10, arXiv version only;
-Appendix B, Guidance-Strength Sensitivity) from the tables in data/tables/fig4 (CPU only).
+Appendix B, Guidance-Strength Sensitivity) from the tables in data/tables/single_target (CPU only).
 
-    fig4.pdf              Figure 4. Columns: SST-2, List Functions-Easy, SALT, Movie Director; x = M in {1, 2, 4, 8, 16}
+    single_target.pdf     Figure 4. Columns: SST-2, List Functions-Easy, SALT, Movie Director; x = M in {1, 2, 4, 8, 16}
                           demonstrations, one target, K = 64; four model interfaces. Top row: ordinary accuracy (beta = 0);
                           bottom row: the paired accuracy gain of example guidance at beta = 0.5 (sec41_accuracy.csv).
                           Means only, as in the paper.
-    gold_reward_row.pdf   The gold example reward per target token, (log P1 - log P0) / T of the reference answer, per cell
+    reference_reward_row.pdf  The gold example reward per target token, (log P1 - log P0) / T of the reference answer, per cell
                           with 95 % family-bootstrap bands (gold_reward_cells.csv); a row of the appendix.
-    fig11_beta_sweep.pdf  Guidance-strength sweep figure (Fig. 10, arXiv version only). List Functions-Easy, M = 4,
+    guidance_strength.pdf Guidance-strength sweep figure (Fig. 10, arXiv version only). List Functions-Easy, M = 4,
                           K = 64: the paired gain in A_all over beta = 0 at J = 1 and J = 4, and the effective
                           support exp(H) / K of the weights, against beta in {0, .25, .5, 1, 2} on categorical
                           spacing, three diffusion models, 95 % bands (beta_sweep.csv).
 
 Rendered at 150 dpi, each PDF is pixel-identical to the paper's figure when TeX Gyre Pagella is used.
 
-    python experiments/fig4_single_target/plot.py [--tables data/tables/fig4] [--out experiments/fig4_single_target/out]
+    python experiments/single_target/plot.py [--tables data/tables/single_target] [--out experiments/single_target/out]
 """
 import argparse
 from pathlib import Path
@@ -156,12 +156,12 @@ def save(fig, path, **kwargs):
 # Figure 4: two rows, no bands, one-row legend
 # ---------------------------------------------------------------------------------------------
 
-FIG4_PANEL_H = 0.85  # inches per row
-FIG4_FURNITURE = 0.99  # titles, x label and the one-row legend, inches
+SINGLE_PANEL_H = 0.85  # inches per row
+SINGLE_FURNITURE = 0.99  # titles, x label and the one-row legend, inches
 MARKER_HALF_WIDTH = 0.06  # x extent of a marker in data units, for the tag placement
 
 
-def figure4(accuracy, path):
+def single_target_figure(accuracy, path):
     """Figure 4 of Section 4.1 from sec41_accuracy.csv (report bank, 64 families per cell, K = 64).
 
     Top row: ordinary accuracy (beta = 0), y up to 105 when a mean exceeds 97 % (whitespace only; ticks stop at 100).
@@ -175,7 +175,7 @@ def figure4(accuracy, path):
         (ordinary, "accuracy", top, [0, 25, 50, 75, 100]),
         (guided, "paired_gain", (-10, 30), [-10, 0, 10, 20, 30]),
     ]
-    fig, axes = F.grid(2, len(TASKS), height=2 * FIG4_PANEL_H + FIG4_FURNITURE)
+    fig, axes = F.grid(2, len(TASKS), height=2 * SINGLE_PANEL_H + SINGLE_FURNITURE)
     boxes = {}
     for j, (task, label) in enumerate(TASKS):
         for r, (cells, column, ylim, yticks) in enumerate(rows):
@@ -208,7 +208,7 @@ def figure4(accuracy, path):
     save(fig, path)
 
 
-def gold_reward_row(gold, path):
+def reference_reward_row(gold, path):
     """The gold example reward per target token of every Section 4.1 cell (gold_reward_cells.csv), with 95 % bands."""
     top = float(np.ceil(gold.gold_rpt_hi.max() / 2) * 2)
     fig, axes = F.grid(1, len(TASKS), height=1.0 + 1.15)
@@ -260,7 +260,7 @@ def sweep_curve(ax, model, ys, lo, hi):
     )
 
 
-def figure11(sweep, path):
+def guidance_strength_figure(sweep, path):
     """The guidance-strength sweep figure (Fig. 10, arXiv version only) from beta_sweep.csv: gain in A_all over
     beta = 0 (pp) at J = 1 and J = 4, then the effective support exp(H) / K at J = 1 and J = 4. beta on categorical
     spacing (0, .25 and .5 would collide on a linear axis)."""
@@ -320,16 +320,16 @@ def figure11(sweep, path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--tables", default=str(ROOT / "data" / "tables" / "fig4"))
+    parser.add_argument("--tables", default=str(ROOT / "data" / "tables" / "single_target"))
     parser.add_argument("--out", default=str(HERE / "out"))
     args = parser.parse_args()
     tables = Path(args.tables)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     F.use_font()
-    figure4(pd.read_csv(tables / "sec41_accuracy.csv"), out / "fig4.pdf")
-    gold_reward_row(pd.read_csv(tables / "gold_reward_cells.csv"), out / "gold_reward_row.pdf")
-    figure11(pd.read_csv(tables / "beta_sweep.csv"), out / "fig11_beta_sweep.pdf")
+    single_target_figure(pd.read_csv(tables / "sec41_accuracy.csv"), out / "single_target.pdf")
+    reference_reward_row(pd.read_csv(tables / "gold_reward_cells.csv"), out / "reference_reward_row.pdf")
+    guidance_strength_figure(pd.read_csv(tables / "beta_sweep.csv"), out / "guidance_strength.pdf")
 
 
 if __name__ == "__main__":

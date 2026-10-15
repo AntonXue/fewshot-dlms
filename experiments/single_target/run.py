@@ -37,8 +37,8 @@ status 2, naming the file, before the model is loaded, so that analyze.py never 
 resumed run appends its own), the library versions and the command. A family that fails is reported and counted; the run exits with status 1 if any did. analyze.py reads the
 pools.
 
-    CUDA_VISIBLE_DEVICES=0 python experiments/fig4_single_target/run.py --model llada --tasks list_easy_fam --M 4 \\
-        --K 64 --families 8 --score-gold --out artifacts/reruns/fig4
+    CUDA_VISIBLE_DEVICES=0 python experiments/single_target/run.py --model llada --tasks list_easy_fam --M 4 \\
+        --K 64 --families 8 --score-gold --out artifacts/reruns/single_target
 """
 import argparse
 import hashlib
@@ -544,7 +544,7 @@ def main():
     parser.add_argument("--families", type=int, default=None, help="only the first N families of the bank")
     parser.add_argument("--crossbench", action="store_true", help="the cross-benchmark study (M = 4, master layout, J targets)")
     parser.add_argument("--score-gold", action="store_true", help="also score the reference answers under P1 and P0")
-    parser.add_argument("--out", default="artifacts/reruns/fig4")
+    parser.add_argument("--out", default="artifacts/reruns/single_target")
     parser.add_argument("--chunk", type=int, default=CHUNK, help="canvases per forward pass (canvas models)")
     parser.add_argument("--audit-n", type=int, default=2, help="first families of the bank that also run the audit checks")
     parser.add_argument("--device", default="cuda")
@@ -582,10 +582,10 @@ def main():
 
     started = time.time()
     adapter = load(args.model, args.device)
-    print(f"[fig4] {args.model} {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
+    print(f"[single_target] {args.model} {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
     out.mkdir(parents=True, exist_ok=True)
     manifest = write_manifest(out, cells, plan, args.model)
-    print(f"[fig4] manifest {manifest}", flush=True)
+    print(f"[single_target] manifest {manifest}", flush=True)
 
     failures = []
     for task, families, M, J, name in plan:

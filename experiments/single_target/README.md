@@ -5,15 +5,15 @@ selection"), and the studies that reuse its pools:
 
 | Paper | Content | Output of `plot.py` | Table in `data/tables/` |
 |---|---|---|---|
-| Figure 4 (Section 4.1) | ordinary accuracy and its paired gain at β = 0.5 against M, four benchmarks, four model interfaces | `fig4.pdf` | `fig4/sec41_accuracy.csv` |
-| Appendix B, Single-Target Prompting (gold row) | gold example reward per target token, (log P1 − log P0) / T of the reference answer | `gold_reward_row.pdf` | `fig4/gold_reward_cells.csv` |
-| Guidance-strength sweep figure (Fig. 10, arXiv version only; Appendix B, Guidance-Strength Sensitivity) | guidance-strength sweep: A_all gain and effective support exp(H)/K against β | `fig11_beta_sweep.pdf` | `fig4/beta_sweep.csv` |
-| Cross-benchmark figure (Fig. 9, both builds; Appendix B, Multi-Target Prompting) | cross-benchmark study, M = 4, J ∈ {1, 2, 4, 8}: drawn by `experiments/fig5_multi_target/plot.py` | — | `fig5/cells_crossbench.csv` |
-| Appendix B, Experimental Setup (Guidance selection) | the development-only β of every model | — | `fig4/beta_locks.json`, `fig4/dev_sec41.csv`, `fig4/dev_sec42.csv` |
-| Appendix B, Likelihood Sharpening | sharpening residuals: guidance against power sampling at the matched exponent (LLaDA-1.5) | — | `fig4/sec44_power.csv` |
+| Figure 4 (Section 4.1) | ordinary accuracy and its paired gain at β = 0.5 against M, four benchmarks, four model interfaces | `single_target.pdf` | `single_target/sec41_accuracy.csv` |
+| Appendix B, Single-Target Prompting (gold row) | gold example reward per target token, (log P1 − log P0) / T of the reference answer | `reference_reward_row.pdf` | `single_target/gold_reward_cells.csv` |
+| Guidance-strength sweep figure (Fig. 10, arXiv version only; Appendix B, Guidance-Strength Sensitivity) | guidance-strength sweep: A_all gain and effective support exp(H)/K against β | `guidance_strength.pdf` | `single_target/beta_sweep.csv` |
+| Cross-benchmark figure (Fig. 9, both builds; Appendix B, Multi-Target Prompting) | cross-benchmark study, M = 4, J ∈ {1, 2, 4, 8}: drawn by `experiments/multi_target/plot.py` | — | `multi_target/cells_crossbench.csv` |
+| Appendix B, Experimental Setup (Guidance selection) | the development-only β of every model | — | `single_target/beta_locks.json`, `single_target/dev_sec41.csv`, `single_target/dev_sec42.csv` |
+| Appendix B, Likelihood Sharpening | sharpening residuals: guidance against power sampling at the matched exponent (LLaDA-1.5) | — | `single_target/sec44_power.csv` |
 
 `analyze.py --crossbench` writes `cells_crossbench.csv` (the paper's `sec42_all.csv`), which the cross-benchmark figure
-(Fig. 9, both builds) reads from `data/tables/fig5/`.
+(Fig. 9, both builds) reads from `data/tables/multi_target/`.
 
 ## Protocol
 
@@ -61,28 +61,28 @@ selection"), and the studies that reuse its pools:
 
 ## Commands
 
-    python experiments/fig4_single_target/analyze.py --pools artifacts/pools/fig4 --crossbench --beta-sweep \
-        --compare data/tables/fig4 data/tables/fig5
-    python experiments/fig4_single_target/plot.py                     # PDFs in experiments/fig4_single_target/out/
+    python experiments/single_target/analyze.py --pools artifacts/pools/single_target --crossbench --beta-sweep \
+        --compare data/tables/single_target data/tables/multi_target
+    python experiments/single_target/plot.py                     # PDFs in experiments/single_target/out/
 
 `analyze.py` needs the frozen pools (`python -m fewshot_dlms.fetch pools java`):
 
-    artifacts/pools/fig4/{dev,report}/<model>/<task>_M{M}_J1.jsonl        Section 4.1: llada, nemotron_ar, dqwen, qwen; M in 1,2,4,8,16
-    artifacts/pools/fig4/{dev,report}/<model>/<task>_M4_J{J}_il.jsonl     cross-benchmark: llada, nemotron_pt, dqwen; J in 1,2,4,8
-    artifacts/pools/fig4/gold/<model>/<task>_M{M}_J1.jsonl                reference answers scored (report bank, Section 4.1)
+    artifacts/pools/single_target/{dev,report}/<model>/<task>_M{M}_J1.jsonl        Section 4.1: llada, nemotron_ar, dqwen, qwen; M in 1,2,4,8,16
+    artifacts/pools/single_target/{dev,report}/<model>/<task>_M4_J{J}_il.jsonl     cross-benchmark: llada, nemotron_pt, dqwen; J in 1,2,4,8
+    artifacts/pools/single_target/gold/<model>/<task>_M{M}_J1.jsonl                reference answers scored (report bank, Section 4.1)
 
 It writes `sec41_accuracy.csv`, `gold_reward_cells.csv`, `gold_families.csv`, `dev_sec41.csv`, `dev_sec42.csv`,
 `beta_locks.json`, `sec44_power.csv`, `diagnostics.csv` and, with the flags, `cells_crossbench.csv` and `beta_sweep.csv`,
 in about 25 s on a CPU. With `--compare` it prints the largest difference per table against the paper's tables and, per
 Section 4.1 cell, whether the paper's accuracy lies inside the 95 % CI of the pools analysed, at β = 0 and at β = 0.5.
-`plot.py` needs only `data/tables/fig4/`.
+`plot.py` needs only `data/tables/single_target/`.
 
 GPU, one model per process (`CUDA_VISIBLE_DEVICES` picks the GPU):
 
-    python experiments/fig4_single_target/run.py --model llada --tasks sst2_fam,list_easy_fam,salt_rep_fam,movie_dir_fam \
-        --M 1,2,4,8,16 --K 64 --bank report --score-gold --out artifacts/reruns/fig4
-    python experiments/fig4_single_target/run.py --model nemotron_pt --crossbench --J 1,2,4,8 --out artifacts/reruns/fig4
-    make rerun-fig4        # LLaDA-1.5, SALT, M = 4, first 8 families, then analyze.py --compare
+    python experiments/single_target/run.py --model llada --tasks sst2_fam,list_easy_fam,salt_rep_fam,movie_dir_fam \
+        --M 1,2,4,8,16 --K 64 --bank report --score-gold --out artifacts/reruns/single_target
+    python experiments/single_target/run.py --model nemotron_pt --crossbench --J 1,2,4,8 --out artifacts/reruns/single_target
+    make rerun-single-target        # LLaDA-1.5, SALT, M = 4, first 8 families, then analyze.py --compare
 
 `--families N` keeps the first N families. Records are appended to `<out>/<bank>/<model>/<task>_M{M}_J{J}[_il].jsonl` as
 families finish. Each carries its cell's `protocol_hash`, which depends on that cell alone; an interrupted run resumes
@@ -118,14 +118,14 @@ Sampling and scoring 64 report families at K = 64 took, on one H100 NVL in the a
 GPU sampling is statistical in general, so a rerun is judged by whether the frozen mean lies inside the rerun's
 95 % CI, not by equality. One full Section 4.1 cell was rerun on a GPU and analysed with `--compare`:
 
-    CUDA_VISIBLE_DEVICES=2 python experiments/fig4_single_target/run.py --model llada --tasks sst2_fam --M 4 --K 64 --families 64 --bank report --out artifacts/reruns/fig4
-    python experiments/fig4_single_target/analyze.py --pools artifacts/reruns/fig4 --out artifacts/reruns/fig4/analysis --compare data/tables/fig4
+    CUDA_VISIBLE_DEVICES=2 python experiments/single_target/run.py --model llada --tasks sst2_fam --M 4 --K 64 --families 64 --bank report --out artifacts/reruns/single_target
+    python experiments/single_target/analyze.py --pools artifacts/reruns/single_target --out artifacts/reruns/single_target/analysis --compare data/tables/single_target
 
 - **Cell.** LLaDA-1.5 (`GSAI-ML/LLaDA-1.5` at revision `84346fd91ba60252d260022201ad6fc5a3468fb2`), SST-2 with
   opaque codes (text rebuilt with `data/benchmarks/build.py`), M = 4, all 64 report families, K = 64.
 - **Platform and time.** One H100 NVL 96 GB, torch 2.7.1+cu128: 64 s wall-clock (57 s load the model, 5 s sample
   and score the cell).
-- **Numbers.** Frozen mean (`data/tables/fig4/sec41_accuracy.csv`) against the rerun's mean and 95 % CI
+- **Numbers.** Frozen mean (`data/tables/single_target/sec41_accuracy.csv`) against the rerun's mean and 95 % CI
   (`sec41_accuracy.csv` of the rerun). `--compare` prints the β = 0 and β = 0.5 accuracy verdicts, one line each;
   the paired-gain row is read from the rerun's `paired_gain` CI columns.
 

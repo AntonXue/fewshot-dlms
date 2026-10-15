@@ -43,7 +43,7 @@ Code for "Multi-Target Few-Shot Prompting with Diffusion Language Models". READM
   Qwen3-8B at the paper's K reproduce the frozen records bit for bit. Across GPUs, torch builds or K, and for
   dQwen3.5, judge a rerun by `analyze.py --compare` (paper's mean inside the rerun's 95 % CI), never by equality.
 - The paper's Java verdicts came from Claude Sonnet 5.5 running as Claude Code sub-agents (rubric
-  `experiments/fig7_java/rubric_r1.md`) and ship with the artifacts. `judge.py` re-implements the judge with the
+  `experiments/java_refactoring/rubric_r1.md`) and ship with the artifacts. `judge.py` re-implements the judge with the
   Anthropic API; re-judging is approximate and costs credits, so never call it in tests or loops.
 
 ## Adding a model adapter
@@ -55,7 +55,7 @@ only if attention depends on where the targets start (Nemotron prefix/tail). A l
 returns next-token logits and runs in `sample_ar` / `logprob_ar` / `decode_ar` on `canvas.ar_prompt_ids`; set
 `default_support`, `sample_chunk`, `p0_chunk` and, for free-length stopping, `stop_ids()` (see `qwen_ar.py`). Then
 register it in `adapters/__init__.py` (`NAMES`, `adapter_class`), add it to the pipelines' model lists
-(`INTERFACE` and `MODELS41`/`MODELS42` in `fig4_single_target/run.py`, `MODELS` in the fig5 and fig6 `run.py`), give
+(`INTERFACE` and `MODELS41`/`MODELS42` in `single_target/run.py`, `MODELS` in the multi_target and length_allocation `run.py`), give
 it entries in `TOLERANCES` and `BATCHED_TOLERANCES` of `tests/gpu_util.py`, and add a replay test like
 `tests/test_gpu_replay.py`. CPU tests need no checkpoint: `tests/fakes.py` (`FakeAdapter`, a byte-level stand-in) and
 `tests/test_adapters_cpu.py` (fake tokenizer and model classes with `monkeypatch`) are the harness to copy.

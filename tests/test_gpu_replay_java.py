@@ -44,9 +44,9 @@ HEAD_TOLERANCE = 1e-4  # largest |p_live - p_stored| per length; the stored pred
 
 
 def load_script(root, name):
-    path = root / "experiments" / "fig7_java" / f"{name}.py"
+    path = root / "experiments" / "java_refactoring" / f"{name}.py"
     sys.path.insert(0, str(path.parent))
-    spec = importlib.util.spec_from_file_location(f"fig7_{name}", path)
+    spec = importlib.util.spec_from_file_location(f"java_refactoring_{name}", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

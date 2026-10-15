@@ -197,7 +197,7 @@ def site_metrics(probs, lengths, lmax=L_MAX):
     probs [S, lmax] probabilities over 1..lmax; lengths [S] reference lengths (may exceed lmax: out of support).
     Returns the site means of P_0, P_1, P_2 (mass within 0, 1, 2 tokens), the NLL of the reference (in-support sites),
     the expected absolute error E|L - L*|, how often the mode is exact, and the calibration error of the mode (ECE over
-    10 confidence bins). The trainer's development evaluation (experiments/fig6_lengths/train_head.py) reports these.
+    10 confidence bins). The trainer's development evaluation (experiments/length_allocation/train_head.py) reports these.
     """
     S = len(lengths)
     support = np.arange(1, lmax + 1)
@@ -634,8 +634,8 @@ class LengthHead:
         """K independent learned allocations for a canvas: K lists of J lengths in 1..lmax.
 
         The head is evaluated once; its probabilities are rounded to float32 and back to float64, the precision in
-        which the paper's runs stored them before drawing (as experiments/fig6_lengths/run.py and
-        experiments/fig7_java/run.py do), and the draws are sample_allocations(those probabilities, K, seed). With
+        which the paper's runs stored them before drawing (as experiments/length_allocation/run.py and
+        experiments/java_refactoring/run.py do), and the draws are sample_allocations(those probabilities, K, seed). With
         seed = section43_seed("report", head.backbone, episode_id, J) they are the paper's Section 4.3 draws.
         """
         probs = self.predict(canvas).astype(np.float32).astype(np.float64)
@@ -646,7 +646,7 @@ def fresh_head(adapter, lmax=L_MAX, seed=0):
     """A LengthHead on a loaded adapter with an untrained branch: the training start of Appendix B, Length Allocation.
 
     The branch copies the adapter's last block and final norm and draws its head weights with standard deviation 1e-3
-    from a generator seeded by `seed` (Branch). The adapter's own weights are frozen here; experiments/fig6_lengths/train_head.py trains
+    from a generator seeded by `seed` (Branch). The adapter's own weights are frozen here; experiments/length_allocation/train_head.py trains
     the branch.
     """
     if adapter.name not in BACKBONE_OF_ADAPTER:

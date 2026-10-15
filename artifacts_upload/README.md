@@ -32,9 +32,9 @@ and its license.
 
 | group | content | files | size |
 |---|---|---|---|
-| `pools/fig4` | Section 4.1 and cross-benchmark pools (K = 64), development and report banks, and the scored reference answers | 336 | 260 MB |
-| `pools/fig5` | Section 4.2 M × J grid (K = 16) and the reference answers of the J = 8 cross-benchmark cells | 60 | 42 MB |
-| `pools/fig6` | Section 4.3 pools (oracle, learned and offset lengths) and the frozen heads' predictions | 56 | 74 MB |
+| `pools/single_target` | Section 4.1 and cross-benchmark pools (K = 64), development and report banks, and the scored reference answers | 336 | 260 MB |
+| `pools/multi_target` | Section 4.2 M × J grid (K = 16) and the reference answers of the J = 8 cross-benchmark cells | 60 | 42 MB |
+| `pools/length_allocation` | Section 4.3 pools (oracle, learned and offset lengths) and the frozen heads' predictions | 56 | 74 MB |
 | `java` | Section 5 pools, judge verdicts and packet index, calibration controls, length predictions, zero-demonstration ablation | 21 | 10 MB |
 | `heads` | the four length heads: LLaDA-1.5, Nemotron and dQwen3.5 benchmark heads, Java head C | 4 | 3.47 GB |
 | `head_training` | rendered training prompts of the three benchmark heads (structured few-shot prompts without MIT Movie and ATIS), the four heads' training configs, head C's corpus manifests | 22 | 1.03 GB |
@@ -42,15 +42,15 @@ and its license.
 `SHA256SUMS` lists every file (except itself) as `<sha256>  <path>`, the format of `sha256sum`.
 
 ```
-pools/fig4/{report,dev}/<model>/<task>_M{M}_J1.jsonl        Section 4.1: llada, nemotron_ar, dqwen, qwen; M = 1, 2, 4, 8, 16
-pools/fig4/{report,dev}/<model>/<task>_M4_J{J}_il.jsonl     cross-benchmark: llada, nemotron_pt, dqwen; J = 1, 2, 4, 8
-pools/fig4/gold/<model>/<task>_M{M}_J1.jsonl                reference answers scored under P1 and P0 (report bank)
-pools/fig5/<model>/list_easy_fam_M{M}_J{J}.jsonl            M = 2, 4, 8, 16; J = 1, 2, 4, 8; llada, nemotron_pt, dqwen
-pools/fig5/crossbench_gold/<model>/<task>_M4_J8_il.jsonl    reference answers of the J = 8 cross-benchmark cells, per target
-pools/fig6/<model>/list_easy_fam_M4_J{J}_oracle.jsonl       oracle lengths, J = 1, 2, 4, 8
-pools/fig6/<model>/list_easy_fam_M4_J{J}_learned.jsonl      lengths sampled from the frozen head, K = 64 / J
-pools/fig6/<model>/list_easy_fam_M4_J{J}_delta{Δ}.jsonl     oracle length + Δ, Δ = -2, -1, +1, +2 (and 0 for dqwen), J = 1, 2
-pools/fig6/<model>/length_head_report.{npz,jsonl}           the frozen head's distributions at every report target, its prompts
+pools/single_target/{report,dev}/<model>/<task>_M{M}_J1.jsonl        Section 4.1: llada, nemotron_ar, dqwen, qwen; M = 1, 2, 4, 8, 16
+pools/single_target/{report,dev}/<model>/<task>_M4_J{J}_il.jsonl     cross-benchmark: llada, nemotron_pt, dqwen; J = 1, 2, 4, 8
+pools/single_target/gold/<model>/<task>_M{M}_J1.jsonl                reference answers scored under P1 and P0 (report bank)
+pools/multi_target/<model>/list_easy_fam_M{M}_J{J}.jsonl            M = 2, 4, 8, 16; J = 1, 2, 4, 8; llada, nemotron_pt, dqwen
+pools/multi_target/crossbench_gold/<model>/<task>_M4_J8_il.jsonl    reference answers of the J = 8 cross-benchmark cells, per target
+pools/length_allocation/<model>/list_easy_fam_M4_J{J}_oracle.jsonl       oracle lengths, J = 1, 2, 4, 8
+pools/length_allocation/<model>/list_easy_fam_M4_J{J}_learned.jsonl      lengths sampled from the frozen head, K = 64 / J
+pools/length_allocation/<model>/list_easy_fam_M4_J{J}_delta{Δ}.jsonl     oracle length + Δ, Δ = -2, -1, +1, +2 (and 0 for dqwen), J = 1, 2
+pools/length_allocation/<model>/length_head_report.{npz,jsonl}           the frozen head's distributions at every report target, its prompts
 java/pools/pools_*.jsonl                                    main run: one record per (episode, regime), K = 16
 java/judging/{verdicts,packet_index}.jsonl, calibration.csv, calibration/controls.jsonl
 java/length/<head>_s5final_G4.npz, prior_s5h_train.json    head C (s5hc_C) and two comparator heads; the label prior
@@ -85,7 +85,7 @@ models at the revisions below. Section numbers refer to the paper; Appendix B is
 | dQwen3.5 | `UT-IFML/dQwen3.5-9B-Base` | `f193fa20e341504f8d9e2b4b8342048c466e6590` |
 | Qwen3-8B | `Qwen/Qwen3-8B` | `b968826d9c46dd6066d109eabc6255188de91218` |
 
-- **`pools/fig4`** (Section 4.1; Appendix B, Single-Target Prompting and Likelihood Sharpening). The four-benchmark oracle-length sweep: development bank (32 / 21 /
+- **`pools/single_target`** (Section 4.1; Appendix B, Single-Target Prompting and Likelihood Sharpening). The four-benchmark oracle-length sweep: development bank (32 / 21 /
   32 / 32 families for SST-2 / List / SALT / Movie) and report bank (64 per benchmark), 16 ordered demonstrations and 8
   ordered targets per family, nested prefixes. Families and placements were frozen before any inference with the seed
   strings `mtfsp-20261003-final-v1` (source partitions), `mtfsp-20261003-dev-v1`, `mtfsp-20261003-report-v1` and
@@ -93,35 +93,35 @@ models at the revisions below. Section numbers refer to the paper; Appendix B is
   family share one torch generator seeded with the first 16 hex digits of SHA-256(`algo_investigation|proposal|<model>|
   <episode>|<M>|<J>`) mod 2^31; cross-benchmark cells append `|('placement', 'master')`. `gold/` holds the reference
   answers of the Section 4.1 report cells, teacher-forced and scored under P1 and P0 (the gold row of Appendix B, Single-Target Prompting).
-  The development bank fixed each model's β before any report table was computed (`data/tables/fig4/beta_locks.json`
+  The development bank fixed each model's β before any report table was computed (`data/tables/single_target/beta_locks.json`
   in the code repository).
-- **`pools/fig5`** (Section 4.2; Appendix B, Multi-Target Prompting). List Functions–Easy, the 64 report families, M ∈ {2, 4, 8, 16} × J ∈
+- **`pools/multi_target`** (Section 4.2; Appendix B, Multi-Target Prompting). List Functions–Easy, the 64 report families, M ∈ {2, 4, 8, 16} × J ∈
   {1, 2, 4, 8}, K = 16, three DLMs. Protocol hash `98fe06a36f6b6503` (every record's `protocol_hash`); proposal seed =
   first 16 hex digits of SHA-256(`sec42_mj|proposal|<model>|<episode>|<M>|<J>|master24`) mod 2^31; bootstrap seed
   string `mtfsp-20261011-mj-bootstrap-v1`. Two files hold one family twice (LLaDA-1.5 M = 16, J = 8; dQwen3.5 M = 16,
   J = 4); the analysis keeps the first complete record. `crossbench_gold/` holds the reference answers of the J = 8
-  cross-benchmark cells of `pools/fig4`, scored target by target (the mechanism figure, Figure 8 in both builds; Appendix B, Multi-Target Prompting).
-- **`pools/fig6`** (Section 4.3; Appendix B, Length Allocation). The oracle pools are the List Functions–Easy cross-benchmark report pools
-  of `pools/fig4` (`pools/fig4/report/<model>/list_easy_fam_M4_J{J}_il.jsonl`): the same bytes, shipped twice so that
+  cross-benchmark cells of `pools/single_target`, scored target by target (the mechanism figure, Figure 8 in both builds; Appendix B, Multi-Target Prompting).
+- **`pools/length_allocation`** (Section 4.3; Appendix B, Length Allocation). The oracle pools are the List Functions–Easy cross-benchmark report pools
+  of `pools/single_target` (`pools/single_target/report/<model>/list_easy_fam_M4_J{J}_il.jsonl`): the same bytes, shipped twice so that
   each figure's directory is complete. The learned and offset pools sample K = 64 / J candidates per family, each on
   its own canvas with the lengths drawn from the frozen head (seed of the allocations: (bank, backbone, family, J),
   `lengths.section43_seed`) or the oracle lengths shifted by Δ; content draws use the cross-benchmark seed above.
   Families with an oracle length + Δ below 1 are skipped. dQwen3.5's `delta0` is a same-session rerun of the oracle
   arm (its kernels are not reproducible across processes). The heads were frozen by a two-stage record (SHA-256
   `ec7b4ebd950a4a3dc0af8f8b898fe9d204b2818f40371ce7929cde453622597d`, published without machine paths as
-  `experiments/fig6_lengths/frozen_config.json` in the code repository).
+  `experiments/length_allocation/frozen_config.json` in the code repository).
 - **`java`** (Section 5, Appendix C). 127 helper-propagation episodes from 14 public Java repositories (the code
   repository's `data/java/`), LLaDA-1.5, K = 16, oracle and learned (head C) length regimes. Protocol hash
   `0e1d3c9040b09598`; the ablation's `c2a07e4a701f0a41`. The candidates sharing one allocation are drawn with the seed
   key12(`0e1d3c9040b09598`, `s5final`, regime, episode, allocation) mod 2^31, an ablation arm with
   key12(`c2a07e4a701f0a41`, `demo_ablation`, anchor, target sites, M) mod 2^31, where key12 is the first 12 hex digits
-  of SHA-256 of the parts joined by `|` (`experiments/fig7_java/run.py`). The 8 pool files are the run's worker files as written; 23
+  of SHA-256 of the parts joined by `|` (`experiments/java_refactoring/run.py`). The 8 pool files are the run's worker files as written; 23
   units appear in two of them with identical bytes. The verdicts were produced by Claude Sonnet 5.5 (`claude-sonnet-5-5`)
   running as Claude Code (version 2.1.288) general-purpose sub-agents with the Read and Write tools, up to five packets
   per call, extended thinking enabled (content not retained), no temperature or max-token settings, with rubric r1
-  (`experiments/fig7_java/rubric_r1.md`, SHA-256 `7a893ac4a9d60950a050c16d16b3fa21e5af15c7982efeb9a87ec3f91e59f327`): 2,089 report
+  (`experiments/java_refactoring/rubric_r1.md`, SHA-256 `7a893ac4a9d60950a050c16d16b3fa21e5af15c7982efeb9a87ec3f91e59f327`): 2,089 report
   packets, 46 calibration controls (`calibration/controls.jsonl`, the judge's verdicts on them in `calibration.csv`) and
-  698 ablation packets. For the main run the code repository's own records (`experiments/fig7_java/README.md`) count
+  698 ablation packets. For the main run the code repository's own records (`experiments/java_refactoring/README.md`) count
   272 batched calls (329 in total); an audit of the session transcripts counts 420 batched calls of at most five
   packets (477 in total); the verdicts are unaffected. The packet texts are not shipped; `judge.py` rebuilds them byte for byte. The three `npz` files
   hold the predicted length distributions (float32, `P [214, 256]`) of head C and of two comparator heads at the 214
@@ -170,7 +170,7 @@ Everything is copied byte for byte except:
 - Pool records lose the keys `host`, `hostname`, `gpu_env`, `gpu`, `device`, `pid`, `cwd`, `root`, `wall_time`,
   `pool_file` and `lengths_file` (the machine, the moment and the file locations of a run; no analysis reads them). A
   line without such a key is kept byte for byte.
-- SST-2 and MIT Movie records of `pools/fig4` lose the benchmark text, as in the code repository's test fixtures:
+- SST-2 and MIT Movie records of `pools/single_target` lose the benchmark text, as in the code repository's test fixtures:
   `target_inputs` and the decoded prompts `checks.p1_prompt_text` / `checks.p0_prompt_text` are replaced by their
   SHA-256 digests under the same key + `_sha256`. The reference answers and the sampled candidates stay. The code
   repository rebuilds the text from the original sources (`data/benchmarks/build.py`).

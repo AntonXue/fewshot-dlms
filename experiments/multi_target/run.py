@@ -25,7 +25,7 @@ are written, and the run ends with RUN_FAILED and exit status 1; the next run sa
 <out>/<model>/manifest_<hash>.json records the run's
 configuration and hash, the hash of every pool, the seeds and the library versions. analyze.py reads the pools.
 
-    python experiments/fig5_multi_target/run.py --model llada --M 4 --J 2 --K 16 --families 8 --out artifacts/reruns/fig5
+    python experiments/multi_target/run.py --model llada --M 4 --J 2 --K 16 --families 8 --out artifacts/reruns/multi_target
 """
 import argparse
 import hashlib
@@ -326,7 +326,7 @@ def main():
     parser.add_argument("--K", type=int, default=K, help="infills sampled per family")
     parser.add_argument("--families", type=int, default=None, help="only the first N families of the bank")
     parser.add_argument("--bank", default="report", choices=["dev", "report"])
-    parser.add_argument("--out", default="artifacts/reruns/fig5")
+    parser.add_argument("--out", default="artifacts/reruns/multi_target")
     parser.add_argument("--chunk", type=int, default=CHUNK)
     parser.add_argument("--audit-n", type=int, default=2, help="families per cell that also run the audit checks")
     parser.add_argument("--device", default="cuda")
@@ -353,7 +353,7 @@ def main():
 
     started = time.time()
     adapter = load(args.model, args.device)
-    print(f"[fig5] {args.model} {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
+    print(f"[multi_target] {args.model} {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
     out.mkdir(parents=True, exist_ok=True)
     pool_hashes = {path.name: pool_digest for _, _, path, pool_digest, _ in pools}
     write_manifest(out / f"manifest_{digest}.json", config, digest, pool_hashes, families, args)

@@ -6,25 +6,25 @@ reproduce a frozen result with this repository's own code, without downloading a
 Figure 5 (multi-target, M = 4 demonstrations, J = 2 targets) writes, for each of the three models
 (llada = LLaDA-1.5, nemotron_pt = Nemotron prefix/tail, dqwen = dQwen3.5),
 
-  fig5/<model>_M4_J2.jsonl           the first two complete pool records of the report families
-                                     (K = 16 candidates each, with token ids and both
-                                     log-likelihoods ell1 and ell0), copied with the run metadata
-                                     (host, gpu_env, wall_time) removed and nothing else changed
-  fig5/expected_<model>_M4_J2.json   the authors' own per-family numbers (A_target, A_all, ess,
-                                     max_w at beta = 0 and beta = 0.5), copied from the families.csv
-                                     of the same run
+  multi_target/<model>_M4_J2.jsonl            the first two complete pool records of the report families
+                                              (K = 16 candidates each, with token ids and both
+                                              log-likelihoods ell1 and ell0), copied with the run metadata
+                                              (host, gpu_env, wall_time) removed and nothing else changed
+  multi_target/expected_<model>_M4_J2.json    the authors' own per-family numbers (A_target, A_all, ess,
+                                              max_w at beta = 0 and beta = 0.5), copied from the families.csv
+                                              of the same run
 
-tests/test_fixture_fig5.py recomputes those numbers from the pool records of each model with scoring.py
-and grading.py and requires agreement to 1e-12. tests/test_gpu_replay.py rebuilds the canvas of every
+tests/test_fixture_multi_target.py recomputes those numbers from the pool records of each model with
+scoring.py and grading.py and requires agreement to 1e-12. tests/test_gpu_replay.py rebuilds the canvas of every
 record with the real tokenizer and re-scores the stored tokens of each model on a GPU.
 
 Figure 4 (single target, SST-2, M = 4 demonstrations) writes, for the two causal interfaces (nemotron_ar =
 Nemotron's causal suffix, qwen = Qwen3-8B's free-length continuation),
 
-  fig4/<model>_sst2_M4.jsonl         the first two complete pool records of the report families (K = 64
-                                     continuations each, with token ids, ell1 and ell0), run metadata removed
-                                     as above. These two records carry the frozen run's prompt checks (the
-                                     decoded P1 and P0 prompts).
+  single_target/<model>_sst2_M4.jsonl         the first two complete pool records of the report families (K = 64
+                                              continuations each, with token ids, ell1 and ell0), run metadata
+                                              removed as above. These two records carry the frozen run's prompt
+                                              checks (the decoded P1 and P0 prompts).
 
 The text of SST-2 and MIT Movie is not redistributed (data/benchmarks/README.md). In records of those
 benchmarks every field that holds their text (the target inputs and the decoded prompts) is replaced by its
@@ -35,18 +35,19 @@ tests/test_fixture_leaks.py checks that no benchmark sentence is left.
 
 Usage:
     python tools/extract_fixtures.py --src <run directory of the Section 4.2 grid>
-    python tools/extract_fixtures.py --fig4-src <run directory of the single-target sweep>
+    python tools/extract_fixtures.py --single-target-src <run directory of the single-target sweep>
 
 The Section 4.2 run directory holds pools/<model>/list_easy_fam_M4_J2.jsonl and analysis/families.csv; the
 single-target one holds pools/report/<model>/sst2_fam_M4_J1.jsonl.
 
 Figure 6 (target lengths, Section 4.3) writes
 
-  fig6/head_predictions_llada.json   for the first ten report families of List Functions-Easy at M = 4
-                                     demonstrations and J = 2 targets: the frozen LLaDA-1.5 length head's
-                                     distribution over the lengths 1..256 at both sites, the SHA-256 of the
-                                     compact prompt it read, and the first 64 learned allocations the authors
-                                     drew from it
+  length_allocation/head_predictions_llada.json
+                                              for the first ten report families of List Functions-Easy at M = 4
+                                              demonstrations and J = 2 targets: the frozen LLaDA-1.5 length head's
+                                              distribution over the lengths 1..256 at both sites, the SHA-256 of
+                                              the compact prompt it read, and the first 64 learned allocations the
+                                              authors drew from it
 
 The distributions are the authors' own predictions, copied from the frozen evaluation of the Section 4.3
 run (float32 values, written in their shortest round-trip form). That evaluation is the output of the
@@ -65,7 +66,7 @@ tests/test_lengths.py redraws the allocations with lengths.sample_allocations; t
 the ported head (lengths.LengthHead) on the same canvases and compares the distributions.
 
 Usage:
-    python tools/extract_fixtures.py --fixture fig6_head --src <run directory of the Section 4.3 length project>
+    python tools/extract_fixtures.py --fixture length_allocation_head --src <run directory of the Section 4.3 length project>
 
 The run directory holds data/listbench_report_llada.jsonl (the compact prompts), eval/<run>_listbench_report.npz
 (the predictions) and downstream/report/llada/alloc_learned_<run>_list_easy_fam_J<J>.json (the allocations).
@@ -92,7 +93,7 @@ METRICS = ("A_target", "A_all", "ess", "max_w")
 RUN_METADATA = ("host", "gpu_env", "wall_time")
 
 # One entry per fixture: its file stem, the model name in families.csv, and the pool file in the run.
-FIG5_FIXTURES = [
+MULTI_TARGET_FIXTURES = [
     {"stem": "llada_M4_J2", "model": "llada", "pool": "pools/llada/list_easy_fam_M4_J2.jsonl"},
     {"stem": "nemotron_pt_M4_J2", "model": "nemotron_pt", "pool": "pools/nemotron_pt/list_easy_fam_M4_J2.jsonl"},
     {"stem": "dqwen_M4_J2", "model": "dqwen", "pool": "pools/dqwen/list_easy_fam_M4_J2.jsonl"},
@@ -120,8 +121,8 @@ def first_complete_records(pool_path: Path, n: int, k: int = K) -> list[dict]:
 
 
 # Figure 4: one entry per fixture, as for Figure 5; K = 64 continuations per complete record.
-FIG4_K = 64
-FIG4_FIXTURES = [
+SINGLE_TARGET_K = 64
+SINGLE_TARGET_FIXTURES = [
     {"stem": "nemotron_ar_sst2_M4", "pool": "pools/report/nemotron_ar/sst2_fam_M4_J1.jsonl"},
     {"stem": "qwen_sst2_M4", "pool": "pools/report/qwen/sst2_fam_M4_J1.jsonl"},
 ]
@@ -179,11 +180,11 @@ def authors_numbers(families_csv: Path, model: str, episode_ids: list[str]) -> d
     return numbers
 
 
-def extract_fig5(src: Path, dest: Path) -> None:
-    """Write the Figure 5 pool fixture and its expected numbers for every model in FIG5_FIXTURES."""
-    out_dir = dest / "fig5"
+def extract_multi_target(src: Path, dest: Path) -> None:
+    """Write the Figure 5 pool fixture and its expected numbers for every model in MULTI_TARGET_FIXTURES."""
+    out_dir = dest / "multi_target"
     out_dir.mkdir(parents=True, exist_ok=True)
-    for fixture in FIG5_FIXTURES:
+    for fixture in MULTI_TARGET_FIXTURES:
         records = first_complete_records(src / fixture["pool"], N_FAMILIES)
         episode_ids = [record["episode_id"] for record in records]
         expected = {
@@ -200,11 +201,11 @@ def extract_fig5(src: Path, dest: Path) -> None:
         with (out_dir / f"expected_{fixture['stem']}.json").open("w", encoding="utf-8") as handle:
             json.dump(expected, handle, indent=2)
             handle.write("\n")
-        print(f"fig5/{fixture['stem']}: {len(records)} families {episode_ids}")
+        print(f"multi_target/{fixture['stem']}: {len(records)} families {episode_ids}")
 
 
 # The Figure 6 head fixture: the frozen LLaDA-1.5 head of Section 4.3 on the first report families.
-FIG6_HEAD = {
+LENGTH_ALLOCATION_HEAD = {
     "stem": "head_predictions_llada",
     "run": "fin_llada_m70_100k",
     "backbone": "llada",
@@ -226,9 +227,9 @@ def shortest_float32(value) -> float:
     return float(str(np.float32(value)))
 
 
-def extract_fig6_head(src: Path, dest: Path) -> None:
-    """Write fig6/head_predictions_llada.json from the frozen Section 4.3 evaluation (see the module docstring)."""
-    spec = FIG6_HEAD
+def extract_length_allocation_head(src: Path, dest: Path) -> None:
+    """Write length_allocation/head_predictions_llada.json from the frozen Section 4.3 evaluation (see the module docstring)."""
+    spec = LENGTH_ALLOCATION_HEAD
     run = spec["run"]
     J = spec["J"]
     rows = [json.loads(line) for line in (src / "data" / f"listbench_{spec['bank']}_{spec['backbone']}.jsonl").open()]
@@ -282,20 +283,20 @@ def extract_fig6_head(src: Path, dest: Path) -> None:
         "J": J,
         "canvases": canvases,
     }
-    out_dir = dest / "fig6"
+    out_dir = dest / "length_allocation"
     out_dir.mkdir(parents=True, exist_ok=True)
     with (out_dir / f"{spec['stem']}.json").open("w", encoding="utf-8") as handle:
         json.dump(fixture, handle)
         handle.write("\n")
-    print(f"fig6/{spec['stem']}: {len(canvases)} families {episode_ids[0]} .. {episode_ids[-1]}")
+    print(f"length_allocation/{spec['stem']}: {len(canvases)} families {episode_ids[0]} .. {episode_ids[-1]}")
 
 
-def extract_fig4(src: Path, dest: Path) -> None:
-    """Write the Figure 4 pool fixture of every causal interface in FIG4_FIXTURES."""
-    out_dir = dest / "fig4"
+def extract_single_target(src: Path, dest: Path) -> None:
+    """Write the Figure 4 pool fixture of every causal interface in SINGLE_TARGET_FIXTURES."""
+    out_dir = dest / "single_target"
     out_dir.mkdir(parents=True, exist_ok=True)
-    for fixture in FIG4_FIXTURES:
-        records = first_complete_records(src / fixture["pool"], N_FAMILIES, FIG4_K)
+    for fixture in SINGLE_TARGET_FIXTURES:
+        records = first_complete_records(src / fixture["pool"], N_FAMILIES, SINGLE_TARGET_K)
         missing = [record["episode_id"] for record in records if not record.get("checks")]
         records = [without_benchmark_text(record) for record in records]
         if missing:
@@ -303,7 +304,7 @@ def extract_fig4(src: Path, dest: Path) -> None:
         with (out_dir / f"{fixture['stem']}.jsonl").open("w", encoding="utf-8") as handle:
             for record in records:
                 handle.write(json.dumps(record) + "\n")
-        print(f"fig4/{fixture['stem']}: {len(records)} families {[record['episode_id'] for record in records]}")
+        print(f"single_target/{fixture['stem']}: {len(records)} families {[record['episode_id'] for record in records]}")
 
 
 def main() -> None:
@@ -311,23 +312,23 @@ def main() -> None:
     parser.add_argument(
         "--src",
         type=Path,
-        help="run directory of the Section 4.2 grid (fig5) or of the Section 4.3 length project (fig6_head)",
+        help="run directory of the Section 4.2 grid (multi_target) or of the Section 4.3 length project (length_allocation_head)",
     )
-    parser.add_argument("--fig4-src", type=Path, help="run directory of the single-target sweep (Figure 4 fixtures)")
+    parser.add_argument("--single-target-src", type=Path, help="run directory of the single-target sweep (Figure 4 fixtures)")
     parser.add_argument("--dest", type=Path, default=DEFAULT_DEST, help="default: data/fixtures of this repository")
-    parser.add_argument("--fixture", choices=["fig5", "fig6_head"], default="fig5", help="which fixture to write (default: fig5)")
+    parser.add_argument("--fixture", choices=["multi_target", "length_allocation_head"], default="multi_target", help="which fixture to write (default: multi_target)")
     args = parser.parse_args()
-    if args.fixture == "fig6_head":
+    if args.fixture == "length_allocation_head":
         if args.src is None:
-            parser.error("--fixture fig6_head needs --src")
-        extract_fig6_head(args.src, args.dest)
+            parser.error("--fixture length_allocation_head needs --src")
+        extract_length_allocation_head(args.src, args.dest)
         return
-    if args.src is None and args.fig4_src is None:
-        parser.error("give --src, --fig4-src or both")
+    if args.src is None and args.single_target_src is None:
+        parser.error("give --src, --single-target-src or both")
     if args.src is not None:
-        extract_fig5(args.src, args.dest)
-    if args.fig4_src is not None:
-        extract_fig4(args.fig4_src, args.dest)
+        extract_multi_target(args.src, args.dest)
+    if args.single_target_src is not None:
+        extract_single_target(args.single_target_src, args.dest)
 
 
 if __name__ == "__main__":

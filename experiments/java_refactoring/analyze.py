@@ -39,7 +39,7 @@ Outputs in --out:
 --compare DIR prints the largest |difference| per numeric column against the tables in DIR and, per cell, whether
 the frozen U lies inside the 95 % CI of the pools analysed here (fidelity level 3).
 
-    python experiments/fig7_java/analyze.py --pools artifacts/java/pools --compare data/tables/fig7
+    python experiments/java_refactoring/analyze.py --pools artifacts/java/pools --compare data/tables/java_refactoring
 """
 import argparse
 import collections
@@ -951,7 +951,7 @@ def main():
     parser.add_argument("--zero-demo", default=None, help="the ablation's pools/ and judging/ (default: <pools>/../zero_demo)")
     parser.add_argument("--out", default=str(HERE / "out"))
     parser.add_argument("--nboot", type=int, default=NBOOT)
-    parser.add_argument("--compare", default=None, help="directory of reference tables, e.g. data/tables/fig7")
+    parser.add_argument("--compare", default=None, help="directory of reference tables, e.g. data/tables/java_refactoring")
     args = parser.parse_args()
 
     pools_dir = Path(args.pools)

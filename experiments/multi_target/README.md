@@ -2,12 +2,12 @@
 
 The M × J grid of Section 4.2 and three appendix figures that use the same machinery:
 
-| Paper | Content | Output of `plot.py` | Table in `data/tables/fig5/` |
+| Paper | Content | Output of `plot.py` | Table in `data/tables/multi_target/` |
 |---|---|---|---|
-| Figure 5 (Section 4.2) | ordinary A_all, ordinary A_avg, guidance gain in A_all at β = 0.5 | `fig5.pdf` | `cells.csv` |
-| Mechanism figure (Fig. 8, both builds; Appendix B, Multi-Target Prompting) | gold NLL per token by reveal position, P1 vs P0 (cross-benchmark study, J = 8) | `fig8_mechanism.pdf` | `mechanism.csv` |
-| Cross-benchmark figure (Fig. 9, both builds; Appendix B, Multi-Target Prompting) | cross-benchmark study: ordinary A_all and its gain at β = 0.5 against J | `fig9_crossbench.pdf` | `cells_crossbench.csv` |
-| M × J sharpening figure (Fig. 10 ACL / Fig. 11 arXiv; Appendix B, Likelihood Sharpening) | sharpening control (target P1^{3/2}) vs example guidance | `fig10_sharpening.pdf` | `sharpening.csv` |
+| Figure 5 (Section 4.2) | ordinary A_all, ordinary A_avg, guidance gain in A_all at β = 0.5 | `multi_target.pdf` | `cells.csv` |
+| Mechanism figure (Fig. 8, both builds; Appendix B, Multi-Target Prompting) | gold NLL per token by reveal position, P1 vs P0 (cross-benchmark study, J = 8) | `multi_target_mechanism.pdf` | `mechanism.csv` |
+| Cross-benchmark figure (Fig. 9, both builds; Appendix B, Multi-Target Prompting) | cross-benchmark study: ordinary A_all and its gain at β = 0.5 against J | `crossbench_d4.pdf` | `cells_crossbench.csv` |
+| M × J sharpening figure (Fig. 10 ACL / Fig. 11 arXiv; Appendix B, Likelihood Sharpening) | sharpening control (target P1^{3/2}) vs example guidance | `sharpening.pdf` | `sharpening.csv` |
 
 `gold.csv` and `diagnostics.csv` hold the gold-answer support and the pool diagnostics of every cell
 (coverage, reward spread, effective sample size).
@@ -44,23 +44,23 @@ The M × J grid of Section 4.2 and three appendix figures that use the same mach
 
 ## Commands
 
-    python experiments/fig5_multi_target/analyze.py --pools artifacts/pools/fig5 --compare data/tables/fig5
-    python experiments/fig5_multi_target/plot.py                      # PDFs in experiments/fig5_multi_target/out/
+    python experiments/multi_target/analyze.py --pools artifacts/pools/multi_target --compare data/tables/multi_target
+    python experiments/multi_target/plot.py                      # PDFs in experiments/multi_target/out/
 
 `analyze.py` needs the frozen pools (`python -m fewshot_dlms.fetch pools java`):
 
-    artifacts/pools/fig5/<model>/list_easy_fam_M{M}_J{J}.jsonl            one record per family (the grid)
-    artifacts/pools/fig5/crossbench_gold/<model>/<task>_M4_J8_il.jsonl    reference answers scored (mechanism figure)
+    artifacts/pools/multi_target/<model>/list_easy_fam_M{M}_J{J}.jsonl            one record per family (the grid)
+    artifacts/pools/multi_target/crossbench_gold/<model>/<task>_M4_J8_il.jsonl    reference answers scored (mechanism figure)
 
 It writes `families.csv`, `cells.csv`, `gold.csv`, `diagnostics.csv`, `sharpening.csv`, `mechanism.csv`,
 `candidates.csv.gz` and `coverage.json`, takes about 10 s on a CPU, and with `--compare` prints the largest
 difference per column against the paper's tables and, per cell, whether the paper's A_all lies inside the 95 % CI
-of the pools analysed, at β = 0 and at β = 0.5. `plot.py` needs only `data/tables/fig5/`.
+of the pools analysed, at β = 0 and at β = 0.5. `plot.py` needs only `data/tables/multi_target/`.
 
 GPU, one model per process:
 
-    python experiments/fig5_multi_target/run.py --model llada --M 2,4,8,16 --J 1,2,4,8 --K 16 --out artifacts/reruns/fig5
-    make rerun-fig5        # LLaDA-1.5, cell M = 4, J = 2, first 8 families, then analyze.py --compare
+    python experiments/multi_target/run.py --model llada --M 2,4,8,16 --J 1,2,4,8 --K 16 --out artifacts/reruns/multi_target
+    make rerun-multi-target        # LLaDA-1.5, cell M = 4, J = 2, first 8 families, then analyze.py --compare
 
 `--families N` keeps the first N families. Records are appended to
 `<out>/<model>/list_easy_fam_M{M}_J{J}.jsonl` as families finish. Each carries its cell's `protocol_hash`, which
@@ -99,14 +99,14 @@ Sampling and scoring one cell (64 families, K = 16) took, on one H100 NVL in the
 GPU sampling is statistical in general, so a rerun is judged by whether the frozen mean lies inside the rerun's
 95 % CI, not by equality. One full cell was rerun on a GPU and analysed with `--compare`:
 
-    CUDA_VISIBLE_DEVICES=2 python experiments/fig5_multi_target/run.py --model llada --M 4 --J 2 --K 16 --families 64 --out artifacts/reruns/fig5
-    python experiments/fig5_multi_target/analyze.py --pools artifacts/reruns/fig5 --out artifacts/reruns/fig5/analysis --compare data/tables/fig5
+    CUDA_VISIBLE_DEVICES=2 python experiments/multi_target/run.py --model llada --M 4 --J 2 --K 16 --families 64 --out artifacts/reruns/multi_target
+    python experiments/multi_target/analyze.py --pools artifacts/reruns/multi_target --out artifacts/reruns/multi_target/analysis --compare data/tables/multi_target
 
 - **Cell.** LLaDA-1.5 (`GSAI-ML/LLaDA-1.5` at revision `84346fd91ba60252d260022201ad6fc5a3468fb2`), M = 4, J = 2,
   all 64 report families, K = 16.
 - **Platform and time.** One H100 NVL 96 GB, torch 2.7.1+cu128: 7.4 min wall-clock (444 s, of which 57 s load the
   model).
-- **Numbers.** Frozen mean (`data/tables/fig5/cells.csv`) against the rerun's mean and 95 % CI (`cells.csv` of the
+- **Numbers.** Frozen mean (`data/tables/multi_target/cells.csv`) against the rerun's mean and 95 % CI (`cells.csv` of the
   rerun). `--compare` prints the β = 0 and β = 0.5 A_all verdicts, one line each; the gain row is read from the
   rerun's `gain_all` CI columns.
 

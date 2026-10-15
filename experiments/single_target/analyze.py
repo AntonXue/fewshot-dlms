@@ -45,8 +45,8 @@ Outputs in --out:
 every Section 4.1 cell a resampling verdict (README.md, fidelity level 3): is the frozen ordinary accuracy inside the
 95 % CI of the pools analysed here?
 
-    python experiments/fig4_single_target/analyze.py --pools artifacts/pools/fig4 --crossbench --beta-sweep \\
-        --compare data/tables/fig4 data/tables/fig5
+    python experiments/single_target/analyze.py --pools artifacts/pools/single_target --crossbench --beta-sweep \\
+        --compare data/tables/single_target data/tables/multi_target
 """
 import argparse
 import io
@@ -763,8 +763,8 @@ def sweep_rows(pools, nboot):
 
 
 def frozen_lock_beta(model):
-    """The locked beta of `model` in data/tables/fig4/beta_locks.json (used when the development pools are absent)."""
-    path = ROOT / "data" / "tables" / "fig4" / "beta_locks.json"
+    """The locked beta of `model` in data/tables/single_target/beta_locks.json (used when the development pools are absent)."""
+    path = ROOT / "data" / "tables" / "single_target" / "beta_locks.json"
     return json.loads(path.read_text())["models"][model]["beta"]
 
 
@@ -933,7 +933,7 @@ def main():
     parser.add_argument("--beta-sweep", action="store_true",
                         help="also the guidance-strength sweep figure (arXiv version only)")
     parser.add_argument("--nboot", type=int, default=NBOOT)
-    parser.add_argument("--compare", nargs="+", default=None, help="directories of reference tables, e.g. data/tables/fig4")
+    parser.add_argument("--compare", nargs="+", default=None, help="directories of reference tables, e.g. data/tables/single_target")
     args = parser.parse_args()
 
     pools = Path(args.pools)

@@ -4,10 +4,10 @@ A developer extracted a helper method and rewrote some call sites to use it. LLa
 accepted rewrites (the demonstrations) and must rewrite J other sites of the same file (the targets). The 127
 episodes, their provenance and licenses are in `data/java/`.
 
-| Paper | Content | Output | Table in `data/tables/fig7/` |
+| Paper | Content | Output | Table in `data/tables/java_refactoring/` |
 |---|---|---|---|
-| Figure 7, left | length mass of head C within ±2 tokens of the reference length, vs the training-label prior | `plot.py` → `fig7.pdf` | `length_fidelity_by_bin.csv` |
-| Figure 7, right; Table 1 (Appendix C) | joint judged success per cell, oracle and learned lengths, β = 0 and 0.5 | `plot.py` → `fig7.pdf` | `summary_by_cell.csv`, `paired_intervals.csv` |
+| Figure 7, left | length mass of head C within ±2 tokens of the reference length, vs the training-label prior | `plot.py` → `java_refactoring.pdf` | `length_fidelity_by_bin.csv` |
+| Figure 7, right; Table 1 (Appendix C) | joint judged success per cell, oracle and learned lengths, β = 0 and 0.5 | `plot.py` → `java_refactoring.pdf` | `summary_by_cell.csv`, `paired_intervals.csv` |
 | Appendix C | strata (development exposure, reference visible, literal copy, test code, …) | | `strata.csv` |
 | Appendix C | guidance strength β ∈ {0, 0.1, 0.25, 0.5, 1} | | `beta_sensitivity.csv` |
 | Appendix C | length fidelity over all 80 sites, head C and two comparator heads | | `length_fidelity.csv` |
@@ -76,8 +76,8 @@ call is not a Claude Code sub-agent, and an LLM's verdicts vary between calls. I
 packet with the rubric is several thousand input tokens). A reply that is not a valid verdict, or a declined
 request, leaves its packet unjudged for the next run; any other API error stops the run, which resumes from `--out`.
 
-    python experiments/fig7_java/judge.py --calibrate --limit 5          # first 5 calibration controls vs expected and the paper's judge
-    python experiments/fig7_java/judge.py --pools artifacts/reruns/fig7/pools   # every new packet of a rerun
+    python experiments/java_refactoring/judge.py --calibrate --limit 5          # first 5 calibration controls vs expected and the paper's judge
+    python experiments/java_refactoring/judge.py --pools artifacts/reruns/java_refactoring/pools   # every new packet of a rerun
 
 A packet's key is the first 20 hex digits of SHA-256(`<rubric sha16>|<episode>|<demo sites>|<texts as sorted JSON>`),
 so a rerun that draws texts the paper already judged is graded with the paper's verdicts (`analyze.py --verdicts`).
@@ -87,8 +87,8 @@ run it on purpose with `make test-api` (or `pytest -m api`), with `ANTHROPIC_API
 
 ## Commands
 
-    python experiments/fig7_java/analyze.py --pools artifacts/java/pools --compare data/tables/fig7
-    python experiments/fig7_java/plot.py                      # fig7.pdf in experiments/fig7_java/out/
+    python experiments/java_refactoring/analyze.py --pools artifacts/java/pools --compare data/tables/java_refactoring
+    python experiments/java_refactoring/plot.py                      # java_refactoring.pdf in experiments/java_refactoring/out/
 
 `analyze.py` needs the frozen artifacts (`python -m fewshot_dlms.fetch pools java`), next to each other:
 
@@ -101,14 +101,14 @@ run it on purpose with `make test-api` (or `pytest -m api`), with `ANTHROPIC_API
 
 It writes every table above plus `metrics_by_episode.csv` in about 10 s on a CPU; `--compare` prints the largest
 difference per column against the paper's tables and, per cell, whether the paper's value lies inside the 95 % CI
-of the pools analysed. `plot.py` needs only `data/tables/fig7/`.
+of the pools analysed. `plot.py` needs only `data/tables/java_refactoring/`.
 
 GPU (LLaDA-1.5, about 16 GiB):
 
-    python experiments/fig7_java/run.py --regime oracle  --M 1,2 --J 1,2 --K 16 --out artifacts/reruns/fig7/pools
-    python experiments/fig7_java/run.py --regime learned --head artifacts/heads/java_head_C.pt --out artifacts/reruns/fig7/pools
-    python experiments/fig7_java/run.py --study zero_demo --M 0,1,2 --J 1,2 --out artifacts/reruns/fig7/zero_demo/pools
-    make rerun-fig7        # oracle regime, first 8 episodes, then analyze.py with the paper's verdicts and --compare
+    python experiments/java_refactoring/run.py --regime oracle  --M 1,2 --J 1,2 --K 16 --out artifacts/reruns/java_refactoring/pools
+    python experiments/java_refactoring/run.py --regime learned --head artifacts/heads/java_head_C.pt --out artifacts/reruns/java_refactoring/pools
+    python experiments/java_refactoring/run.py --study zero_demo --M 0,1,2 --J 1,2 --out artifacts/reruns/java_refactoring/zero_demo/pools
+    make rerun-java        # oracle regime, first 8 episodes, then analyze.py with the paper's verdicts and --compare
 
 `--families N` keeps the first N episodes (anchors). `--head-probs artifacts/java/length/s5hc_C_s5final_G4.npz` draws
 the learned lengths from the stored predictions instead of running head C. The two learned runs hash different
@@ -136,7 +136,7 @@ agreement repeats); its records do not give the number of calls.
   intervals included) and `checkstyle_case.json` (`make test-parity`). The parity tests also rebuild the 2,089
   report, 698 ablation and 46 calibration judge packets byte for byte, redraw all 2,032 learned allocations from
   the stored head-C predictions, and recompute the ablation's 207 units and seeds.
-- **Figure.** Rendered with `pdftoppm -r 150` (and 300), `fig7.pdf` is pixel-identical to the paper's figure.
+- **Figure.** Rendered with `pdftoppm -r 150` (and 300), `java_refactoring.pdf` is pixel-identical to the paper's figure.
 - **Reruns.** On an H100 NVL with torch 2.7.1+cu128, `run.py --K 16` reproduces the frozen records bit for bit
   (tokens, texts, logp1, logp0, every record field): oracle and learned regimes (head C evaluated live) on the first
   two episodes, and the ablation's arms M = 0, 1, 2 of the first two anchors. `make test-gpu` replays two stored
@@ -148,8 +148,8 @@ agreement repeats); its records do not give the number of calls.
 GPU sampling is statistical in general, so a rerun is judged by whether the frozen mean lies inside the rerun's
 95 % CI, not by equality. One full cell was rerun on a GPU:
 
-    CUDA_VISIBLE_DEVICES=2 python experiments/fig7_java/run.py --regime oracle --M 1 --J 1 --K 16 --out artifacts/reruns/fig7/pools
-    python experiments/fig7_java/analyze.py --pools artifacts/reruns/fig7/pools --out artifacts/reruns/fig7/analysis
+    CUDA_VISIBLE_DEVICES=2 python experiments/java_refactoring/run.py --regime oracle --M 1 --J 1 --K 16 --out artifacts/reruns/java_refactoring/pools
+    python experiments/java_refactoring/analyze.py --pools artifacts/reruns/java_refactoring/pools --out artifacts/reruns/java_refactoring/analysis
 
 - **Cell.** LLaDA-1.5 (`GSAI-ML/LLaDA-1.5` at revision `84346fd91ba60252d260022201ad6fc5a3468fb2`), oracle lengths,
   (M, J) = (1, 1): all 52 episodes of the cell (50 commits), K = 16.
@@ -175,8 +175,8 @@ GPU sampling is statistical in general, so a rerun is judged by whether the froz
   logp1 and logp0 of all 52 × 16 draws, every episode's statistic above identical), so the shipped verdicts grade every
   draw through the packet key (0 of 832 draws unjudged), and the CI verdict can be taken:
 
-      python experiments/fig7_java/analyze.py --pools artifacts/reruns/fig7/pools --verdicts artifacts/java/judging/verdicts.jsonl \
-          --out artifacts/reruns/fig7/analysis_paper_verdicts --compare data/tables/fig7
+      python experiments/java_refactoring/analyze.py --pools artifacts/reruns/java_refactoring/pools --verdicts artifacts/java/judging/verdicts.jsonl \
+          --out artifacts/reruns/java_refactoring/analysis_paper_verdicts --compare data/tables/java_refactoring
 
   | rule | U, frozen | U, rerun [95 % CI] | verdict |
   |---|---|---|---|

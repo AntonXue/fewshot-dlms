@@ -4,11 +4,11 @@ A masked target holds exactly as many tokens as it has masks, so every target ne
 it. Section 4.3 compares the reference length L* (the oracle setting of Sections 4.1 and 4.2) with lengths drawn from
 a learned length head, and measures how much accuracy a forced offset L = L* + Δ costs.
 
-| Paper | Content | Output of `plot.py` | Table in `data/tables/fig6/` |
+| Paper | Content | Output of `plot.py` | Table in `data/tables/length_allocation/` |
 |---|---|---|---|
-| Figure 6 (Section 4.3), top row | A_avg with sampled learned lengths vs oracle lengths, against J | `fig6.pdf` | `sec43_downstream.csv` |
-| Figure 6 (Section 4.3), bottom row | A_avg with L = L* + Δ at every target, J = 1, 2 | `fig6.pdf` | `sec43_length_perturbation.csv` |
-| Appendix B, Length Allocation, fidelity row | the head's mass on the exact length and within 1 and 2 tokens | `fidelity_row.pdf` | `sec43_length_metrics.csv` |
+| Figure 6 (Section 4.3), top row | A_avg with sampled learned lengths vs oracle lengths, against J | `length_allocation.pdf` | `sec43_downstream.csv` |
+| Figure 6 (Section 4.3), bottom row | A_avg with L = L* + Δ at every target, J = 1, 2 | `length_allocation.pdf` | `sec43_length_perturbation.csv` |
+| Appendix B, Length Allocation, fidelity row | the head's mass on the exact length and within 1 and 2 tokens | `length_fidelity.pdf` | `sec43_length_metrics.csv` |
 
 A_avg is the per-target accuracy (`A_target` in the tables). `sec43_length_metrics.csv` also holds the
 visible-demonstration prior (the empirical distribution of the M demonstration output lengths), the reference the head
@@ -56,18 +56,18 @@ is compared with.
 
 ## Commands
 
-    python experiments/fig6_lengths/analyze.py --pools artifacts/pools/fig6 --compare data/tables/fig6
-    python experiments/fig6_lengths/plot.py                      # PDFs in experiments/fig6_lengths/out/
+    python experiments/length_allocation/analyze.py --pools artifacts/pools/length_allocation --compare data/tables/length_allocation
+    python experiments/length_allocation/plot.py                      # PDFs in experiments/length_allocation/out/
 
 `analyze.py` needs the frozen pools (`python -m fewshot_dlms.fetch pools java`):
 
-    artifacts/pools/fig6/<model>/list_easy_fam_M4_J{J}_oracle.jsonl     oracle lengths, K = 64, J = 1, 2, 4, 8
-    artifacts/pools/fig6/<model>/list_easy_fam_M4_J{J}_learned.jsonl    sampled learned lengths, K = 64 / J
-    artifacts/pools/fig6/<model>/list_easy_fam_M4_J{J}_delta{Δ}.jsonl   Δ = -2, -1, +1, +2 (and 0 for dqwen), J = 1, 2
-    artifacts/pools/fig6/<model>/length_head_report.npz                 the frozen head's distributions at every target
+    artifacts/pools/length_allocation/<model>/list_easy_fam_M4_J{J}_oracle.jsonl     oracle lengths, K = 64, J = 1, 2, 4, 8
+    artifacts/pools/length_allocation/<model>/list_easy_fam_M4_J{J}_learned.jsonl    sampled learned lengths, K = 64 / J
+    artifacts/pools/length_allocation/<model>/list_easy_fam_M4_J{J}_delta{Δ}.jsonl   Δ = -2, -1, +1, +2 (and 0 for dqwen), J = 1, 2
+    artifacts/pools/length_allocation/<model>/length_head_report.npz                 the frozen head's distributions at every target
                                                                         site of the report prompts (P [960, 256] float32,
                                                                         ids "<family>|<J>|<j>", y = L*)
-    artifacts/pools/fig6/<model>/length_head_report.jsonl               per (family, J): oracle lengths, demonstration
+    artifacts/pools/length_allocation/<model>/length_head_report.jsonl               per (family, J): oracle lengths, demonstration
                                                                         lengths demo_L, and the compact prompt
 
 `run.py --mode learned` and `train_head.py` also use (`python -m fewshot_dlms.fetch heads head_training`):
@@ -85,14 +85,14 @@ of the length project) and, for the oracle arm, their Section 4.1/4.2 pools; the
 `analyze.py` writes `sec43_downstream.csv`, `sec43_length_perturbation.csv`, `sec43_length_metrics.csv`,
 `families.csv` and `coverage.json` in about 5 s on a CPU, and with `--compare` prints the largest difference per column
 against the paper's tables and, per downstream cell, whether the paper's A_avg lies inside the 95 % CI of the pools
-analysed. `plot.py` needs only `data/tables/fig6/`.
+analysed. `plot.py` needs only `data/tables/length_allocation/`.
 
 GPU, one model per process (`--delta` takes a list, written with `=` because it starts with a minus sign):
 
-    python experiments/fig6_lengths/run.py --model llada --mode learned --J 1,2,4,8 --out artifacts/reruns/fig6
-    python experiments/fig6_lengths/run.py --model llada --mode offset --delta=-2,-1,1,2 --J 1,2 --out artifacts/reruns/fig6
-    python experiments/fig6_lengths/run.py --model llada --mode oracle --J 1,2,4,8 --K 64 --out artifacts/reruns/fig6
-    make rerun-fig6        # LLaDA-1.5, J = 1, first 8 families, oracle and learned, then analyze.py --compare
+    python experiments/length_allocation/run.py --model llada --mode learned --J 1,2,4,8 --out artifacts/reruns/length_allocation
+    python experiments/length_allocation/run.py --model llada --mode offset --delta=-2,-1,1,2 --J 1,2 --out artifacts/reruns/length_allocation
+    python experiments/length_allocation/run.py --model llada --mode oracle --J 1,2,4,8 --K 64 --out artifacts/reruns/length_allocation
+    make rerun-length-allocation        # LLaDA-1.5, J = 1, first 8 families, oracle and learned, then analyze.py --compare
 
 `--K N` replaces K = 64 / J at every J; `--families N` keeps the first N families. The learned mode loads the head
 from `artifacts/heads/<backbone>.pt` (`llada`, `nemotron`, `dqwen`; `--head` to override); without the file it stops
@@ -106,7 +106,7 @@ Records are appended to `<out>/<model>/list_easy_fam_M4_J{J}_<condition>.jsonl` 
 carries the `protocol_hash` of its pool (model, revision, condition, J, K, chunk, head and rules): a rerun with the same
 protocol skips the families already there, so an interrupted run resumes, and a file holding records of another
 protocol (say K = 4 smoke records before a K = 64 run) is refused with exit status 2 and the file's name. A family that
-fails is retried on the next run, and the run exits with status 1, which stops `make rerun-fig6` before `analyze.py`.
+fails is retried on the next run, and the run exits with status 1, which stops `make rerun-length-allocation` before `analyze.py`.
 `<out>/<model>/manifest_<hash>.json` holds the configuration, the hash of every pool, every seed, and the library and
 GPU versions.
 
@@ -122,8 +122,8 @@ dQwen3.5 took 0.5 to 1.4 times as long per cell. Distinct allocations rarely sha
   `sec43_length_metrics.csv`, 9.7e-17 in `sec43_downstream.csv` and 1.1e-13 in `sec43_length_perturbation.csv`
   (`make test-parity`; the authors' table step re-read its inputs from CSV, which moves the last digit). Every offset
   pool holds exactly the families `run.py` keeps.
-- **Figures.** Rendered with `pdftoppm -r 150` (and `-r 300`), `fig6.pdf` is pixel-identical to the paper's Figure 6 and
-  `fidelity_row.pdf` to the authors' fidelity row.
+- **Figures.** Rendered with `pdftoppm -r 150` (and `-r 300`), `length_allocation.pdf` is pixel-identical to the paper's Figure 6 and
+  `length_fidelity.pdf` to the authors' fidelity row.
 - **Reruns.** On an H100 NVL with torch 2.7.1+cu128, `run.py` at the paper's K reproduces the frozen LLaDA-1.5 records
   bit for bit: allocations, tokens, texts and ell1 of every candidate (checked on the first two families of learned
   J = 1, offset +1 at J = 2, and oracle J = 2 at K = 64). The ported heads give the frozen distributions to about 1e-6 in
@@ -137,8 +137,8 @@ dQwen3.5 took 0.5 to 1.4 times as long per cell. Distinct allocations rarely sha
 GPU sampling is statistical in general, so a rerun is judged by whether the frozen mean lies inside the rerun's
 95 % CI, not by equality. One full learned-length cell was rerun on a GPU and analysed with `--compare`:
 
-    CUDA_VISIBLE_DEVICES=2 python experiments/fig6_lengths/run.py --model llada --mode learned --J 2 --out artifacts/reruns/fig6
-    python experiments/fig6_lengths/analyze.py --pools artifacts/reruns/fig6 --out artifacts/reruns/fig6/analysis --compare data/tables/fig6
+    CUDA_VISIBLE_DEVICES=2 python experiments/length_allocation/run.py --model llada --mode learned --J 2 --out artifacts/reruns/length_allocation
+    python experiments/length_allocation/analyze.py --pools artifacts/reruns/length_allocation --out artifacts/reruns/length_allocation/analysis --compare data/tables/length_allocation
 
 - **Cell.** LLaDA-1.5 (`GSAI-ML/LLaDA-1.5` at revision `84346fd91ba60252d260022201ad6fc5a3468fb2`) with its frozen
   length head (`artifacts/heads/llada.pt`, SHA-256 `0de13a8ac6b881493e368d281531326b84fe7f5d2c50b1dccba6491dd1dec1d8`),
@@ -146,7 +146,7 @@ GPU sampling is statistical in general, so a rerun is judged by whether the froz
 - **Platform and time.** One H100 NVL 96 GB, torch 2.7.1+cu128: 15.3 min wall-clock (920 s, of which 54 s load the
   model).
 - **Numbers.** Section 4.3 uses ordinary sampling only (β = 0), so there is no guided row. Frozen mean
-  (`data/tables/fig6/sec43_downstream.csv`) against the rerun's mean and 95 % CI:
+  (`data/tables/length_allocation/sec43_downstream.csv`) against the rerun's mean and 95 % CI:
 
   | β | quantity | frozen | rerun [95 % CI] | verdict |
   |---|---|---|---|---|
@@ -194,12 +194,12 @@ The rendered training files ship with the artifacts (`artifacts/head_training/`,
 structured few-shot prompts built from MIT Movie and ATIS (33,501 of the 100,000; those corpora keep their own terms):
 the shipped set holds the 66,499 List Functions and SALT prompts, row for row the authors' own.
 
-    python experiments/fig6_lengths/train_head.py --backbone llada --data artifacts/head_training --out runs/llada_head
+    python experiments/length_allocation/train_head.py --backbone llada --data artifacts/head_training --out runs/llada_head
 
 `--steps N` stops after N updates of the same schedule. `--check-render N` re-renders the first N structured few-shot
 episodes from `fsp_logical_train.jsonl` and compares them with the shipped prompts token for token. The checkpoint
 (`final.pt`) loads with `lengths.LengthHead.load`; for LLaDA-1.5 the script ends by comparing the new head's
-exact-length mass with the frozen head's on the ten fixture canvases of `data/fixtures/fig6/`.
+exact-length mass with the frozen head's on the ten fixture canvases of `data/fixtures/length_allocation/`.
 
 **Retraining check** (LLaDA-1.5, H100 NVL, on the authors' full set of 100,000 structured few-shot prompts).
 `train_head.py` follows the authors' run update for update: the same source, learning rate and epoch counters at every

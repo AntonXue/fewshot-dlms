@@ -1,24 +1,24 @@
 # ported from editdiff/experiments/paper_integration/figure_redesign/fig_finalize.py @ 51db142 (Figure 5, with the A_avg label) and experiments/sec4_diag/sd_three_row.py (mechanism), experiments/paper_integration/arxiv_curation/appB/appB_crosstask_figure.py, experiments/paper_integration/agent_c/c_figures.py (appA_mj_power) @ d276fa6
 """Figure 5 (Section 4.2) and three appendix figures (mechanism, cross-benchmark, M x J sharpening) from the tables
-in data/tables/fig5 (CPU only). Appendix figure numbers differ between the paper's builds; the PDF names do not
+in data/tables/multi_target (CPU only). Appendix figure numbers differ between the paper's builds; the PDF names do not
 follow them.
 
-    fig5.pdf              Figure 5. List Functions-Easy, columns J in {1, 2, 4, 8}, x = M in {2, 4, 8, 16}, three
+    multi_target.pdf      Figure 5. List Functions-Easy, columns J in {1, 2, 4, 8}, x = M in {2, 4, 8, 16}, three
                           diffusion models: ordinary A_all, ordinary A_avg (= A_target) and the paired gain in
                           A_all from example guidance at beta = 0.5 (cells.csv). Means only, as in the paper.
-    fig8_mechanism.pdf    Mechanism figure (Fig. 8, both builds; Appendix B, Multi-Target Prompting). Gold NLL per
+    multi_target_mechanism.pdf  Mechanism figure (Fig. 8, both builds; Appendix B, Multi-Target Prompting). Gold NLL per
                           target token under P1 (solid) and P0 (dashed) by position in the reveal order;
                           cross-benchmark study, M = 4, J = 8 (mechanism.csv).
-    fig9_crossbench.pdf   Cross-benchmark figure (Fig. 9, both builds; Appendix B, Multi-Target Prompting). M = 4,
+    crossbench_d4.pdf     Cross-benchmark figure (Fig. 9, both builds; Appendix B, Multi-Target Prompting). M = 4,
                           K = 64: ordinary A_all and its paired gain at beta = 0.5 against J, with 95 %
                           family-bootstrap bands (cells_crossbench.csv).
-    fig10_sharpening.pdf  M x J sharpening figure (Fig. 10 ACL / Fig. 11 arXiv; Appendix B, Likelihood Sharpening).
+    sharpening.pdf        M x J sharpening figure (Fig. 10 ACL / Fig. 11 arXiv; Appendix B, Likelihood Sharpening).
                           The M x J grid: gain in A_all of the sharpening control (target P1^{3/2}) and guidance
                           (beta = 0.5) minus sharpening, with bands (sharpening.csv).
 
 Rendered at 150 dpi, each PDF is pixel-identical to the paper's figure when TeX Gyre Pagella is used.
 
-    python experiments/fig5_multi_target/plot.py [--tables data/tables/fig5] [--out experiments/fig5_multi_target/out]
+    python experiments/multi_target/plot.py [--tables data/tables/multi_target] [--out experiments/multi_target/out]
 """
 import argparse
 from pathlib import Path
@@ -116,15 +116,15 @@ def save(fig, path):
 # Figure 5: three rows, no bands, row tags placed clear of the J = 1 markers
 # ---------------------------------------------------------------------------------------------
 
-FIG5_ROWS = [
+MULTI_ROWS = [
     # (cells.csv column, beta, y limits, y ticks, row tag, tag corner, y label)
     ("A_all", 0.0, (0, 100), [0, 25, 50, 75, 100], "All targets correct", "top", "ordinary\n$A_{\\mathrm{all}}$ (%)"),
     ("A_target", 0.0, (0, 100), [0, 25, 50, 75, 100], "Per-target accuracy", "bottom", "ordinary\n$A_{\\mathrm{avg}}$ (%)"),
     ("gain_all", 0.5, (-10, 25), [-10, 0, 10, 20], r"Guidance gain, $\beta = 0.5$", "bottom", "$\\Delta A_{\\mathrm{all}}$ over\nordinary (pp)"),
 ]
-FIG5_OFFSET = {"llada": -0.08, "nemotron_pt": 0.0, "dqwen": 0.08}
-FIG5_PANEL_H = 0.88  # inches per row
-FIG5_FURNITURE = 0.99  # titles, x label and the one-row legend, inches
+MULTI_OFFSET = {"llada": -0.08, "nemotron_pt": 0.0, "dqwen": 0.08}
+MULTI_PANEL_H = 0.88  # inches per row
+MULTI_FURNITURE = 0.99  # titles, x label and the one-row legend, inches
 MARKER_HALF_WIDTH = 0.06  # x extent of a marker in data units, for the tag placement
 TAG_TRIES = {"top": [(0.93, 0.6), (0.97, 0.4)], "bottom": [(0.07, 0.6), (0.03, 0.4)]}
 
@@ -164,31 +164,31 @@ def place_row_tag(fig, ax, text, where, boxes):
         tag.remove()
 
 
-def figure5(cells, path):
+def multi_target_figure(cells, path):
     """Figure 5 of Section 4.2 from cells.csv (64 families per cell, K = 16, oracle lengths)."""
-    fig, axes = F.grid(len(FIG5_ROWS), len(J_GRID), height=len(FIG5_ROWS) * FIG5_PANEL_H + FIG5_FURNITURE)
+    fig, axes = F.grid(len(MULTI_ROWS), len(J_GRID), height=len(MULTI_ROWS) * MULTI_PANEL_H + MULTI_FURNITURE)
     boxes = {}
     for j, J in enumerate(J_GRID):
-        for r, (column, beta, ylim, yticks, _, _, ylabel) in enumerate(FIG5_ROWS):
+        for r, (column, beta, ylim, yticks, _, _, ylabel) in enumerate(MULTI_ROWS):
             ax = axes[r, j]
             boxes[(r, j)] = []
             half_height = 0.03 * (ylim[1] - ylim[0])  # vertical extent of a marker
             for model, _ in MODELS:
                 rows = cells[(cells.model == model) & (cells.J == J) & (cells.beta == beta)].set_index("M").loc[M_GRID]
                 values = 100.0 * rows[column].values
-                curve(ax, range(len(M_GRID)), values, F.MODEL_STYLE[model], FIG5_OFFSET[model])
+                curve(ax, range(len(M_GRID)), values, F.MODEL_STYLE[model], MULTI_OFFSET[model])
                 for i, value in enumerate(values):
-                    x = i + FIG5_OFFSET[model]
+                    x = i + MULTI_OFFSET[model]
                     boxes[(r, j)].append((x - MARKER_HALF_WIDTH, value - half_height, x + MARKER_HALF_WIDTH, value + half_height))
             if column == "gain_all":
                 ax.axhline(0, color=F.NEUTRAL, lw=1.0, zorder=2)
-            tidy(ax, f"$J = {J}$" if r == 0 else None, [str(M) for M in M_GRID], ylim, yticks, j == 0, r == len(FIG5_ROWS) - 1)
+            tidy(ax, f"$J = {J}$" if r == 0 else None, [str(M) for M in M_GRID], ylim, yticks, j == 0, r == len(MULTI_ROWS) - 1)
             if j == 0:
                 ax.set_ylabel(ylabel)
     items = [model_key(model, label) for model, label in MODELS] + [(Line2D([], [], color=F.NEUTRAL, lw=1.0), "no gain (0 pp)")]
     shared_legend(fig, items, ncol=len(items), rows=1, base=0.08)
     F.row_xlabel(fig, axes[-1], "demonstrations $M$ (List Functions–Easy, $K = 16$)")
-    for r, (_, _, _, _, text, where, _) in enumerate(FIG5_ROWS):
+    for r, (_, _, _, _, text, where, _) in enumerate(MULTI_ROWS):
         place_row_tag(fig, axes[r, 0], text, where, boxes[(r, 0)])
     save(fig, path)
 
@@ -198,10 +198,10 @@ def figure5(cells, path):
 # ---------------------------------------------------------------------------------------------
 
 TASKS = [("sst2_fam", "SST-2"), ("list_easy_fam", "List Functions"), ("salt_rep_fam", "SALT"), ("movie_dir_fam", "Movie Director")]
-FIG8_OFFSET = {"llada": -0.12, "nemotron_pt": -0.04, "dqwen": 0.04}
+MECHANISM_OFFSET = {"llada": -0.12, "nemotron_pt": -0.04, "dqwen": 0.04}
 
 
-def figure8(mechanism, path):
+def mechanism_figure(mechanism, path):
     """The mechanism figure (Fig. 8, both builds) from mechanism.csv: P0 (dashed, hollow) and P1 (solid) gold NLL per
     token."""
     rows = mechanism[mechanism.J == 8]
@@ -215,8 +215,8 @@ def figure8(mechanism, path):
                 continue
             positions = list(e.position - 1)
             style = F.MODEL_STYLE[model]
-            curve(ax, positions, e.gold_nll0_per_token.values, style, FIG8_OFFSET[model], dashed=True, hollow=True)
-            curve(ax, positions, e.gold_nll1_per_token.values, style, FIG8_OFFSET[model])
+            curve(ax, positions, e.gold_nll0_per_token.values, style, MECHANISM_OFFSET[model], dashed=True, hollow=True)
+            curve(ax, positions, e.gold_nll1_per_token.values, style, MECHANISM_OFFSET[model])
         tidy(ax, label, [str(k) for k in range(1, 9)], (0, top), list(np.arange(0, top + 1, 2)), j == 0, True)
     axes[0, 0].set_ylabel("gold NLL / target token")
     p1 = Line2D([], [], color="0.3", marker="o", markersize=3.2, lw=1.1)
@@ -233,10 +233,10 @@ def figure8(mechanism, path):
 # ---------------------------------------------------------------------------------------------
 
 CROSSBENCH_TITLES = {"sst2_fam": "SST-2", "list_easy_fam": "List Functions–Easy", "salt_rep_fam": "SALT", "movie_dir_fam": "Movie Director"}
-FIG9_OFFSET = {"llada": -0.08, "nemotron_pt": 0.0, "dqwen": 0.08}
+CROSSBENCH_OFFSET = {"llada": -0.08, "nemotron_pt": 0.0, "dqwen": 0.08}
 
 
-def figure9(crossbench, path):
+def crossbench_figure(crossbench, path):
     """The cross-benchmark figure (Fig. 9) from cells_crossbench.csv: ordinary A_all (beta = 0) and its gain at
     beta = 0.5."""
     report = crossbench[crossbench.bank == "report"]
@@ -257,7 +257,7 @@ def figure9(crossbench, path):
                 else:
                     e = guided[(guided.model == model) & (guided.source == task)].set_index("J").loc[J_GRID]
                     values, lo, hi = e.paired_gain.values, e.paired_gain_lo.values, e.paired_gain_hi.values
-                curve(ax, range(len(J_GRID)), 100 * values, F.MODEL_STYLE[model], FIG9_OFFSET[model], lo=100 * lo, hi=100 * hi)
+                curve(ax, range(len(J_GRID)), 100 * values, F.MODEL_STYLE[model], CROSSBENCH_OFFSET[model], lo=100 * lo, hi=100 * hi)
             if row == 1:
                 ax.axhline(0, color=F.NEUTRAL, lw=1.0, zorder=2)
             if row == 0:
@@ -278,30 +278,30 @@ def figure9(crossbench, path):
 # M x J sharpening figure (Fig. 10 ACL / Fig. 11 arXiv): sharpening control in the M x J grid
 # ---------------------------------------------------------------------------------------------
 
-FIG10_ROWS = [
+SHARPENING_ROWS = [
     # (sharpening.csv column, y label, y limits, y ticks)
     ("gain_A_all_power_matched", "$A_{\\mathrm{all}}$ gain of\nsharpening (pp)", (-5, 30), (0, 10, 20, 30)),
     ("tilt_minus_power_A_all", "guidance $(\\beta=0.5)$\nminus sharpening (pp)", (-34, 8), (-30, -20, -10, 0)),
 ]
-FIG10_OFFSET = {"llada": -0.12, "nemotron_pt": -0.04, "dqwen": 0.04}
+SHARPENING_OFFSET = {"llada": -0.12, "nemotron_pt": -0.04, "dqwen": 0.04}
 
 
-def figure10(sharpening, path):
+def sharpening_figure(sharpening, path):
     """The M x J sharpening figure (Fig. 10 ACL / Fig. 11 arXiv) from sharpening.csv (64 families per cell, K = 16).
 
     Bands are 95 % family-bootstrap intervals.
     """
-    fig, axes = F.grid(len(FIG10_ROWS), len(J_GRID), height=len(FIG10_ROWS) * 1.0 + 1.35)
-    for row, (column, ylabel, ylim, yticks) in enumerate(FIG10_ROWS):
+    fig, axes = F.grid(len(SHARPENING_ROWS), len(J_GRID), height=len(SHARPENING_ROWS) * 1.0 + 1.35)
+    for row, (column, ylabel, ylim, yticks) in enumerate(SHARPENING_ROWS):
         for j, J in enumerate(J_GRID):
             ax = axes[row, j]
             for model, _ in MODELS:
                 e = sharpening[(sharpening.model == model) & (sharpening.J == J)].set_index("M").loc[M_GRID]
                 lo = 100 * e[column + "_lo"].values
                 hi = 100 * e[column + "_hi"].values
-                curve(ax, list(range(len(M_GRID))), 100 * e[column].values, F.MODEL_STYLE[model], FIG10_OFFSET[model], lo=lo, hi=hi)
+                curve(ax, list(range(len(M_GRID))), 100 * e[column].values, F.MODEL_STYLE[model], SHARPENING_OFFSET[model], lo=lo, hi=hi)
             ax.axhline(0.0, color=F.NEUTRAL, lw=1.0, zorder=2)
-            tidy(ax, f"$J={J}$" if row == 0 else None, [str(M) for M in M_GRID], ylim, yticks, j == 0, row == len(FIG10_ROWS) - 1)
+            tidy(ax, f"$J={J}$" if row == 0 else None, [str(M) for M in M_GRID], ylim, yticks, j == 0, row == len(SHARPENING_ROWS) - 1)
         axes[row, 0].set_ylabel(ylabel)
     items = [model_key(model, label) for model, label in MODELS]
     items += [(Line2D([], [], color=F.NEUTRAL, lw=1.0), "zero"), (BAND, "95 % family bootstrap")]
@@ -312,17 +312,17 @@ def figure10(sharpening, path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--tables", default=str(ROOT / "data" / "tables" / "fig5"))
+    parser.add_argument("--tables", default=str(ROOT / "data" / "tables" / "multi_target"))
     parser.add_argument("--out", default=str(HERE / "out"))
     args = parser.parse_args()
     tables = Path(args.tables)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     F.use_font()
-    figure5(pd.read_csv(tables / "cells.csv"), out / "fig5.pdf")
-    figure8(pd.read_csv(tables / "mechanism.csv"), out / "fig8_mechanism.pdf")
-    figure9(pd.read_csv(tables / "cells_crossbench.csv"), out / "fig9_crossbench.pdf")
-    figure10(pd.read_csv(tables / "sharpening.csv"), out / "fig10_sharpening.pdf")
+    multi_target_figure(pd.read_csv(tables / "cells.csv"), out / "multi_target.pdf")
+    mechanism_figure(pd.read_csv(tables / "mechanism.csv"), out / "multi_target_mechanism.pdf")
+    crossbench_figure(pd.read_csv(tables / "cells_crossbench.csv"), out / "crossbench_d4.pdf")
+    sharpening_figure(pd.read_csv(tables / "sharpening.csv"), out / "sharpening.pdf")
 
 
 if __name__ == "__main__":

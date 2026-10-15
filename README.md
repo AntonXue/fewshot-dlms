@@ -52,14 +52,14 @@ so it cancels from R. Code: `lengths.py`.
 
 | Paper | Content | Directory |
 |---|---|---|
-| Section 4.1, Figure 4 | one target, M demonstrations, four model interfaces | [`experiments/fig4_single_target`](experiments/fig4_single_target/README.md) |
-| Section 4.2, Figure 5 | M × J grid of demonstrations and targets | [`experiments/fig5_multi_target`](experiments/fig5_multi_target/README.md) |
-| Section 4.3, Figure 6; Appendix B, Length Allocation | oracle, learned and offset lengths; the length head and its trainer | [`experiments/fig6_lengths`](experiments/fig6_lengths/README.md) |
-| Section 5, Figure 7; Appendix C, Table 1 | Java helper refactoring, LLM-judged; strata, zero-demonstration ablation | [`experiments/fig7_java`](experiments/fig7_java/README.md) |
-| Appendix B, Experimental Setup (Guidance selection); Single-Target Prompting | model interfaces, development-only β; gold reward row | `fig4_single_target` |
-| Appendix B, Multi-Target Prompting | mechanism figure (Fig. 8, both builds); cross-benchmark figure (Fig. 9, both builds) | `fig5_multi_target` |
-| Appendix B, Likelihood Sharpening | M × J sharpening figure (Fig. 10 ACL / Fig. 11 arXiv); matched-power residuals | `fig5_multi_target`; `fig4_single_target` |
-| Appendix B, Guidance-Strength Sensitivity (arXiv only) | guidance-strength sweep figure (Fig. 10 arXiv) | `fig4_single_target/analyze.py --beta-sweep` |
+| Section 4.1, Figure 4 | one target, M demonstrations, four model interfaces | [`experiments/single_target`](experiments/single_target/README.md) |
+| Section 4.2, Figure 5 | M × J grid of demonstrations and targets | [`experiments/multi_target`](experiments/multi_target/README.md) |
+| Section 4.3, Figure 6; Appendix B, Length Allocation | oracle, learned and offset lengths; the length head and its trainer | [`experiments/length_allocation`](experiments/length_allocation/README.md) |
+| Section 5, Figure 7; Appendix C, Table 1 | Java helper refactoring, LLM-judged; strata, zero-demonstration ablation | [`experiments/java_refactoring`](experiments/java_refactoring/README.md) |
+| Appendix B, Experimental Setup (Guidance selection); Single-Target Prompting | model interfaces, development-only β; gold reward row | `single_target` |
+| Appendix B, Multi-Target Prompting | mechanism figure (Fig. 8, both builds); cross-benchmark figure (Fig. 9, both builds) | `multi_target` |
+| Appendix B, Likelihood Sharpening | M × J sharpening figure (Fig. 10 ACL / Fig. 11 arXiv); matched-power residuals | `multi_target`; `single_target` |
+| Appendix B, Guidance-Strength Sensitivity (arXiv only) | guidance-strength sweep figure (Fig. 10 arXiv) | `single_target/analyze.py --beta-sweep` |
 
 Appendix material is named by topic: its numbers differ between the ACL and arXiv builds. The *ACL version* is the
 submitted manuscript; the *arXiv version* is the longer build with the guidance-strength appendix.
@@ -67,12 +67,12 @@ submitted manuscript; the *arXiv version* is the longer build with the guidance-
 
 | `make figures` output | paper figure |
 |---|---|
-| `fig4_single_target/out/fig4.pdf` | Fig. 4 (Section 4.1) |
-| `fig5_multi_target/out/fig5.pdf` | Fig. 5 (Section 4.2) |
-| `fig6_lengths/out/fig6.pdf` | Fig. 6 (Section 4.3) |
-| `fig7_java/out/fig7.pdf` | Fig. 7 (Section 5) |
-| `fig5_multi_target/out/fig8_mechanism.pdf`, `fig9_crossbench.pdf`, `fig10_sharpening.pdf` | Appendix B: mechanism (Fig. 8, both builds), cross-benchmark (Fig. 9, both builds), M × J sharpening (Fig. 10 ACL / Fig. 11 arXiv) |
-| `fig4_single_target/out/gold_reward_row.pdf`, `fig11_beta_sweep.pdf`; `fig6_lengths/out/fidelity_row.pdf` | Appendix B: gold-reward row (Single-Target Prompting), guidance-strength sweep (arXiv version only, Fig. 10 there), length-head fidelity row (Length Allocation) |
+| `single_target/out/single_target.pdf` | Fig. 4 (Section 4.1) |
+| `multi_target/out/multi_target.pdf` | Fig. 5 (Section 4.2) |
+| `length_allocation/out/length_allocation.pdf` | Fig. 6 (Section 4.3) |
+| `java_refactoring/out/java_refactoring.pdf` | Fig. 7 (Section 5) |
+| `multi_target/out/multi_target_mechanism.pdf`, `crossbench_d4.pdf`, `sharpening.pdf` | Appendix B: mechanism (Fig. 8, both builds), cross-benchmark (Fig. 9, both builds), M × J sharpening (Fig. 10 ACL / Fig. 11 arXiv) |
+| `single_target/out/reference_reward_row.pdf`, `guidance_strength.pdf`; `length_allocation/out/length_fidelity.pdf` | Appendix B: gold-reward row (Single-Target Prompting), guidance-strength sweep (arXiv version only, Fig. 10 there), length-head fidelity row (Length Allocation) |
 
 `python examples/walkthrough.py --cached` walks one pool from the canvas to ℓ1, ℓ0, R, weights and picks.
 
@@ -85,7 +85,7 @@ submitted manuscript; the *arXiv version* is the longer build with the guidance-
   the tables are pixel-identical to the paper's at 150 dpi (`make test-parity`, `make reproduce`).
 - **Resampling (GPU).** On that stack `run.py` at the paper's K reproduces the frozen records of LLaDA-1.5, Nemotron
   and Qwen3-8B bit for bit. Elsewhere, with another K, or for dQwen3.5 a rerun passes when the paper's mean lies in
-  its 95 % CI (`analyze.py --compare`; `make rerun-fig4` … `rerun-fig7`; each README's "Resampling check").
+  its 95 % CI (`analyze.py --compare`; `make rerun-single-target` … `rerun-java`; each README's "Resampling check").
 
 ## Requirements
 
@@ -100,12 +100,12 @@ process. The adapters load these checkpoints in bf16 from the Hugging Face cache
 | `qwen` | `Qwen/Qwen3-8B` | `b968826d9c46dd6066d109eabc6255188de91218` |
 
 dQwen3.5 needs `pip install -e '.[gpu]'`, LLaDA-1.5's length heads flash-attn (install:
-[`experiments/fig6_lengths/README.md`](experiments/fig6_lengths/README.md)).
+[`experiments/length_allocation/README.md`](experiments/length_allocation/README.md)).
 
 ## The Java judge
 
 Figure 7's verdicts come from an LLM judge, Claude Sonnet 5.5 running as Claude Code sub-agents with the rubric
-`experiments/fig7_java/rubric_r1.md`. They ship with the artifacts, so Figure 7 needs no API access; `judge.py`
+`experiments/java_refactoring/rubric_r1.md`. They ship with the artifacts, so Figure 7 needs no API access; `judge.py`
 re-judges through the Anthropic API, approximately and at a cost.
 
 ## Layout and size

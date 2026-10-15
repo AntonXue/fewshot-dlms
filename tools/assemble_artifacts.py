@@ -5,18 +5,19 @@ the tree under artifacts/. The script copies the authors' pools, length heads an
 private run directories (tools/sources.local.json, not in the repository) into one upload directory with
 exactly that layout:
 
-  pools/fig4/{report,dev}/<model>/<task>_M{M}_J1.jsonl         Section 4.1 pools (llada, nemotron_ar, dqwen, qwen)
-  pools/fig4/{report,dev}/<model>/<task>_M4_J{J}_il.jsonl      cross-benchmark pools (llada, nemotron_pt, dqwen)
-  pools/fig4/gold/<model>/<task>_M{M}_J1.jsonl                 reference answers scored under P1 and P0
-  pools/fig5/<model>/list_easy_fam_M{M}_J{J}.jsonl             the M x J grid
-  pools/fig5/crossbench_gold/<model>/<task>_M4_J8_il.jsonl     reference answers of the J = 8 cross-benchmark cells
-  pools/fig6/<model>/list_easy_fam_M4_J{J}_<condition>.jsonl   oracle, learned and offset lengths; length_head_report.*
-  java/{pools,judging,length,zero_demo}/                      Section 5: pools, verdicts, head predictions, ablation
-  heads/{llada,nemotron,dqwen,java_head_C}.pt                 the four length heads
-  head_training/                                              the rendered training prompts of the three benchmark
-                                                              heads, the heads' configs, head C's corpus manifests
-  README.md                                                   the data card (artifacts_upload/README.md, copied)
-  SHA256SUMS                                                  "<sha256>  <path>" of every other file, sorted by path
+  pools/single_target/{report,dev}/<model>/<task>_M{M}_J1.jsonl            Section 4.1 pools (llada, nemotron_ar, dqwen, qwen)
+  pools/single_target/{report,dev}/<model>/<task>_M4_J{J}_il.jsonl         cross-benchmark pools (llada, nemotron_pt, dqwen)
+  pools/single_target/gold/<model>/<task>_M{M}_J1.jsonl                    reference answers scored under P1 and P0
+  pools/multi_target/<model>/list_easy_fam_M{M}_J{J}.jsonl                 the M x J grid
+  pools/multi_target/crossbench_gold/<model>/<task>_M4_J8_il.jsonl         reference answers of the J = 8 cross-benchmark cells
+  pools/length_allocation/<model>/list_easy_fam_M4_J{J}_<condition>.jsonl  oracle, learned and offset lengths;
+                                                                           length_head_report.*
+  java/{pools,judging,length,zero_demo}/                                   Section 5: pools, verdicts, head predictions, ablation
+  heads/{llada,nemotron,dqwen,java_head_C}.pt                              the four length heads
+  head_training/                                                           the rendered training prompts of the three benchmark
+                                                                           heads, the heads' configs, head C's corpus manifests
+  README.md                                                                the data card (artifacts_upload/README.md, copied)
+  SHA256SUMS                                                               "<sha256>  <path>" of every other file, sorted by path
 
 What changes on the way; everything else is copied byte for byte:
   - JSONL records lose the keys in RUN_METADATA (the machine, the moment and the private paths of a run). A line
@@ -117,7 +118,7 @@ FSP_PREFIX = "head_training/fsp_"  # the logical FSP episodes and their three re
 # Text that must not reach the tree: the generic machine paths and metadata keys of fewshot_dlms.leakcheck, and
 # (this site's own) the vocabulary of internal working notes. No names.
 LOCAL_PRIVATE = re.compile(r"hand-off|\.claude")
-GROUPS = ("pools/fig4", "pools/fig5", "pools/fig6", "java", "heads", "head_training", "README.md")
+GROUPS = ("pools/single_target", "pools/multi_target", "pools/length_allocation", "java", "heads", "head_training", "README.md")
 TOP_LEVEL = ("pools", "java", "heads", "head_training", "SHA256SUMS")
 MAX_BYTES = 12 * 10 ** 9
 
@@ -159,27 +160,27 @@ def plan(sources):
             for task in TASKS:
                 for M in DEMO_COUNTS:
                     name = f"{bank}/{model}/{task}_M{M}_J1.jsonl"
-                    files.append((f"pools/fig4/{name}", final_sweeps / name, "jsonl"))
+                    files.append((f"pools/single_target/{name}", final_sweeps / name, "jsonl"))
         for model in CANVAS_MODELS:
             for task in TASKS:
                 for J in TARGET_COUNTS:
                     name = f"{bank}/{model}/{task}_M4_J{J}_il.jsonl"
-                    files.append((f"pools/fig4/{name}", final_sweeps / name, "jsonl"))
+                    files.append((f"pools/single_target/{name}", final_sweeps / name, "jsonl"))
     for model in SECTION41_MODELS:
         for task in TASKS:
             for M in DEMO_COUNTS:
                 name = f"{model}/{task}_M{M}_J1.jsonl"
-                files.append((f"pools/fig4/gold/{name}", gold_probe / name, "jsonl"))
+                files.append((f"pools/single_target/gold/{name}", gold_probe / name, "jsonl"))
     for model in CANVAS_MODELS:
         for M in GRID_DEMO_COUNTS:
             for J in TARGET_COUNTS:
                 name = f"{model}/list_easy_fam_M{M}_J{J}.jsonl"
-                files.append((f"pools/fig5/{name}", mj_grid / name, "jsonl"))
+                files.append((f"pools/multi_target/{name}", mj_grid / name, "jsonl"))
         for task in TASKS:
             name = f"{model}/{task}_M4_J8_il.jsonl"
-            files.append((f"pools/fig5/crossbench_gold/{name}", gold_probe / name, "jsonl"))
+            files.append((f"pools/multi_target/crossbench_gold/{name}", gold_probe / name, "jsonl"))
     for model, (backbone, run) in HEAD_RUNS.items():
-        dest = f"pools/fig6/{model}"
+        dest = f"pools/length_allocation/{model}"
         ds_run = length_project / "ds_run" / "pools" / "report" / model
         for J in TARGET_COUNTS:
             files.append((f"{dest}/list_easy_fam_M4_J{J}_oracle.jsonl", final_sweeps / "report" / model / f"list_easy_fam_M4_J{J}_il.jsonl", "jsonl"))

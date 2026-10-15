@@ -16,7 +16,7 @@ from fewshot_dlms.data import TEXT_FREE_BENCHMARKS
 from fewshot_dlms.data import load_families
 from fewshot_dlms.leakcheck import find_private
 
-FIXTURE_DIRS = ("fig4",)  # fixture directories cut from SST-2 / MIT Movie pools
+FIXTURE_DIRS = ("single_target",)  # fixture directories cut from SST-2 / MIT Movie pools
 
 # This site's patterns (lower-cased text), next to leakcheck's generic ones (machine paths, run metadata that names a
 # machine): the vocabulary of the authors' internal notes.
@@ -79,10 +79,10 @@ def test_fixtures_hold_no_benchmark_sentences(root):
 
 
 def test_no_fixture_holds_private_strings(root):
-    """Every file under data/fixtures (fig4, fig5, fig6, the walkthrough pool and any later fixture directory)."""
+    """Every file under data/fixtures (single_target, multi_target, length_allocation, the walkthrough pool and any later fixture directory)."""
     paths = sorted(path for path in (root / "data" / "fixtures").rglob("*") if path.is_file())
     names = {path.relative_to(root / "data" / "fixtures").as_posix() for path in paths}
-    assert {"walkthrough.jsonl", "fig6/head_predictions_llada.json"} <= names
+    assert {"walkthrough.jsonl", "length_allocation/head_predictions_llada.json"} <= names
     for path in paths:
         text = path.read_bytes().decode("utf-8", errors="replace").lower()
         assert not find_private(text), f"{find_private(text)} in {path.name}"

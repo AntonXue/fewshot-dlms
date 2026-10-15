@@ -34,7 +34,7 @@ Outputs in --out:
 every cell a resampling verdict (README.md, fidelity level 3): is the frozen A_all inside the 95 % CI of
 the pools analysed here?
 
-    python experiments/fig5_multi_target/analyze.py --pools artifacts/pools/fig5 --compare data/tables/fig5
+    python experiments/multi_target/analyze.py --pools artifacts/pools/multi_target --compare data/tables/multi_target
 """
 import argparse
 import collections
@@ -606,7 +606,7 @@ def main():
     parser.add_argument("--models", default=",".join(MODELS))
     parser.add_argument("--nboot", type=int, default=NBOOT)
     parser.add_argument("--gold-pools", default=None, help="cross-benchmark gold records (default: <pools>/crossbench_gold)")
-    parser.add_argument("--compare", default=None, help="directory of reference tables, e.g. data/tables/fig5")
+    parser.add_argument("--compare", default=None, help="directory of reference tables, e.g. data/tables/multi_target")
     args = parser.parse_args()
 
     pools = Path(args.pools)

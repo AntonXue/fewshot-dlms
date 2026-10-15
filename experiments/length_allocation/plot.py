@@ -1,19 +1,19 @@
 # ported from editdiff/experiments/paper_integration/figure_redesign/fig_finalize.py::{fig6, fig6_fidelity_row} (the production Figure 6) and experiments/length_project/lpx_figs43d.py @ d276fa6
 """Figure 6 (Section 4.3) and the appendix fidelity row (Appendix B, Length Allocation) from the tables in
-data/tables/fig6 (CPU only).
+data/tables/length_allocation (CPU only).
 
-    fig6.pdf          Figure 6. Three panels per row, one per diffusion model, M = 4, beta = 0, List Functions-Easy.
+    length_allocation.pdf  Figure 6. Three panels per row, one per diffusion model, M = 4, beta = 0, List Functions-Easy.
                       Top row: per-target accuracy A_avg (A_target) with sampled learned lengths vs oracle lengths,
                       against the number of targets J (sec43_downstream.csv; oracle K = 64, learned K = 64 / J).
                       Bottom row: A_avg with forced offsets L = L* + Delta at every target, J = 1 and 2, on the
                       families valid at every Delta (sec43_length_perturbation.csv, "common to all deltas").
                       Means only, as in the paper.
-    fidelity_row.pdf  Appendix: the learned head's probability mass on the exact length and within 1 and 2 tokens,
+    length_fidelity.pdf    Appendix: the learned head's probability mass on the exact length and within 1 and 2 tokens,
                       against J, with 95 % family-bootstrap bands (sec43_length_metrics.csv).
 
 Rendered at 150 dpi, each PDF is pixel-identical to the paper's figure when TeX Gyre Pagella is used.
 
-    python experiments/fig6_lengths/plot.py [--tables data/tables/fig6] [--out experiments/fig6_lengths/out]
+    python experiments/length_allocation/plot.py [--tables data/tables/length_allocation] [--out experiments/length_allocation/out]
 """
 import argparse
 from pathlib import Path
@@ -56,7 +56,7 @@ OFFSET_YLIM = (-3, 80)  # whitespace below 0 so that the markers at Delta = +-2 
 FIDELITY_YLIM = (0, 70)
 FIDELITY_YTICKS = [0, 20, 40, 60]
 PANEL_HEIGHT = 1.02  # inches per row
-FIG6_FURNITURE = 1.20  # titles, the two x titles and the two one-line legends, inches
+ALLOCATION_FURNITURE = 1.20  # titles, the two x titles and the two one-line legends, inches
 FIDELITY_FURNITURE = 0.9
 
 
@@ -141,10 +141,10 @@ def save(fig, path):
     print(f"wrote {path} ({fig.get_figwidth() * 72:.1f} x {fig.get_figheight() * 72:.1f} pt)")
 
 
-def figure6(downstream, perturbation, path):
+def length_allocation_figure(downstream, perturbation, path):
     """Figure 6 of Section 4.3: downstream accuracy with learned vs oracle lengths (top), forced offsets (bottom)."""
     common = perturbation[perturbation.family_set == "common to all deltas"]
-    fig, axes = F.grid(2, len(BACKBONES), height=2 * PANEL_HEIGHT + FIG6_FURNITURE)
+    fig, axes = F.grid(2, len(BACKBONES), height=2 * PANEL_HEIGHT + ALLOCATION_FURNITURE)
     for j, (backbone, name) in enumerate(BACKBONES):
         ax = axes[0, j]
         for condition, dx in (("oracle", -0.06), ("learned", 0.06)):
@@ -170,7 +170,7 @@ def figure6(downstream, perturbation, path):
     save(fig, path)
 
 
-def fidelity_row(metrics, path):
+def length_fidelity_row(metrics, path):
     """The appendix fidelity row: the learned head's mass within 0, 1 and 2 tokens of L*, with family-bootstrap bands."""
     fig, axes = F.grid(1, len(BACKBONES), height=PANEL_HEIGHT + FIDELITY_FURNITURE)
     for j, (backbone, name) in enumerate(BACKBONES):
@@ -190,7 +190,7 @@ def fidelity_row(metrics, path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--tables", default=str(ROOT / "data" / "tables" / "fig6"))
+    parser.add_argument("--tables", default=str(ROOT / "data" / "tables" / "length_allocation"))
     parser.add_argument("--out", default=str(HERE / "out"))
     args = parser.parse_args()
     tables = Path(args.tables)
@@ -200,8 +200,8 @@ def main():
     downstream = pd.read_csv(tables / "sec43_downstream.csv")
     perturbation = pd.read_csv(tables / "sec43_length_perturbation.csv")
     metrics = pd.read_csv(tables / "sec43_length_metrics.csv")
-    figure6(downstream, perturbation, out / "fig6.pdf")
-    fidelity_row(metrics, out / "fidelity_row.pdf")
+    length_allocation_figure(downstream, perturbation, out / "length_allocation.pdf")
+    length_fidelity_row(metrics, out / "length_fidelity.pdf")
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ candidate infills from LLaDA-1.5. The script prints
 
 --cached reads data/fixtures/walkthrough.jsonl (--fixture names another stored pool), the pool that the live
 command wrote, and prints the same table; a live run prints the table first, then --save-fixture writes the
-record. The live run is Figure 5's own sampling and scoring (experiments/fig5_multi_target/run.py::run_canvas)
+record. The live run is Figure 5's own sampling and scoring (experiments/multi_target/run.py::run_canvas)
 for one family and one cell, so its record is a Figure 5 pool record.
 
 "Ordinary" is what scoring.family_metrics calls beta = 0: the K candidates are draws from P1 and carry equal
@@ -43,7 +43,7 @@ from fewshot_dlms.scoring import pool_weights
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "data" / "fixtures" / "walkthrough.jsonl"
-FIG5_RUN = ROOT / "experiments" / "fig5_multi_target" / "run.py"
+MULTI_TARGET_RUN = ROOT / "experiments" / "multi_target" / "run.py"
 
 MODEL = "llada"
 BANK = "report"
@@ -60,9 +60,9 @@ PICK_SEED = 0  # the uniform random number shared by the two picks
 # ---------------------------------------------------------------------------------------------
 
 
-def load_fig5_run():
-    """The module experiments/fig5_multi_target/run.py (it is a script, not a package)."""
-    spec = importlib.util.spec_from_file_location("fig5_run", FIG5_RUN)
+def load_multi_target_run():
+    """The module experiments/multi_target/run.py (it is a script, not a package)."""
+    spec = importlib.util.spec_from_file_location("multi_target_run", MULTI_TARGET_RUN)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -93,7 +93,7 @@ def device_name(device):
 
 def pool_protocol_hash(run, adapter):
     """The protocol_hash of the walkthrough's pool: Figure 5's hash of the cell (M, J) at K candidates
-    (run.pool_config), as experiments/fig5_multi_target/run.py writes it. `adapter` needs only name, model_id and
+    (run.pool_config), as experiments/multi_target/run.py writes it. `adapter` needs only name, model_id and
     revision."""
     settings = SimpleNamespace(bank=BANK, M=[M], J=[J], K=K, chunk=run.CHUNK)
     return run.protocol_hash(run.pool_config(run.config_of(settings, adapter), M, J))
@@ -107,7 +107,7 @@ def live_record(device):
     from fewshot_dlms.adapters import load
     from fewshot_dlms.canvas import build_canvas
 
-    run = load_fig5_run()
+    run = load_multi_target_run()
     family = load_families(run.TASK, BANK)[FAMILY]
     adapter = load(MODEL, device)
     print(f"loaded {adapter.model_id} @ {adapter.revision[:8]}; sampling {K} candidates ...", file=sys.stderr)

@@ -1,6 +1,6 @@
 """Reproduce two frozen Figure 5 families with this repository's own code.
 
-data/fixtures/fig5/llada_M4_J2.jsonl holds the first two report families of the authors' LLaDA-1.5 run
+data/fixtures/multi_target/llada_M4_J2.jsonl holds the first two report families of the authors' LLaDA-1.5 run
 at M = 4 demonstrations and J = 2 targets: K = 16 candidate infills each, with token ids, texts, and
 the log-likelihoods ell1 (demonstration outputs visible) and ell0 (masked).
 expected_llada_M4_J2.json holds the authors' own numbers for these families. The tests recompute them
@@ -26,11 +26,11 @@ MODELS = ["llada", "nemotron_pt", "dqwen"]
 
 
 def records_of(root, model):
-    return read_jsonl(root / "data" / "fixtures" / "fig5" / f"{model}_M4_J2.jsonl")
+    return read_jsonl(root / "data" / "fixtures" / "multi_target" / f"{model}_M4_J2.jsonl")
 
 
 def expected_of(root, model):
-    path = root / "data" / "fixtures" / "fig5" / f"expected_{model}_M4_J2.json"
+    path = root / "data" / "fixtures" / "multi_target" / f"expected_{model}_M4_J2.json"
     return json.loads(path.read_text(encoding="utf-8"))
 
 

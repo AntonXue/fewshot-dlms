@@ -9,13 +9,13 @@ from fewshot_dlms.bootstrap import boot_sd
 from fewshot_dlms.bootstrap import cell_indices
 from fewshot_dlms.bootstrap import ci
 
-FIG4_SEED = "mtfsp-20261003-bootstrap-v1"
-FIG5_SEED = "mtfsp-20261011-mj-bootstrap-v1"
+SINGLE_TARGET_SEED = "mtfsp-20261003-bootstrap-v1"
+MULTI_TARGET_SEED = "mtfsp-20261011-mj-bootstrap-v1"
 
 
 def test_indices_are_deterministic_and_shaped():
-    a = cell_indices(FIG5_SEED, "llada|4|2", 64, 10000)
-    b = cell_indices(FIG5_SEED, "llada|4|2", 64, 10000)
+    a = cell_indices(MULTI_TARGET_SEED, "llada|4|2", 64, 10000)
+    b = cell_indices(MULTI_TARGET_SEED, "llada|4|2", 64, 10000)
     assert a.shape == (10000, 64)
     assert (a == b).all()
     assert a.max() < 64
@@ -56,23 +56,23 @@ def test_paired_gain_interval_is_the_difference_of_resampled_means():
     assert np.isclose(hi, np.percentile(resampled, 97.5))
 
 
-def test_fig4_seed_derivation_golden():
-    idx = cell_indices(FIG4_SEED, "llada|sst2_fam", 64)
+def test_single_target_seed_derivation_golden():
+    idx = cell_indices(SINGLE_TARGET_SEED, "llada|sst2_fam", 64)
     assert idx.shape == (10000, 64)
     assert int(idx.sum()) == 20142854
     assert idx[0, :8].tolist() == [46, 55, 52, 34, 43, 50, 20, 1]
     assert idx[-1, -8:].tolist() == [63, 24, 41, 62, 34, 61, 35, 59]
 
 
-def test_fig5_seed_derivation_golden():
-    idx = cell_indices(FIG5_SEED, "llada|4|2", 64)
+def test_multi_target_seed_derivation_golden():
+    idx = cell_indices(MULTI_TARGET_SEED, "llada|4|2", 64)
     assert int(idx.sum()) == 20158883
     assert idx[0, :8].tolist() == [36, 35, 9, 4, 56, 17, 57, 1]
     assert idx[-1, -8:].tolist() == [47, 37, 63, 52, 10, 8, 18, 55]
 
 
 def test_ci_golden():
-    idx = cell_indices(FIG4_SEED, "llada|sst2_fam", 64)
+    idx = cell_indices(SINGLE_TARGET_SEED, "llada|sst2_fam", 64)
     m, lo, hi = ci(np.arange(64) / 63.0, idx)
     assert m == 0.5
     assert lo == 0.4283234126984127

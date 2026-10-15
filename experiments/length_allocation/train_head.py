@@ -37,8 +37,8 @@ Every --eval-every updates and at the end, the head is evaluated on the two deve
 Outputs in --out: final.pt (the checkpoint format of lengths.LengthHead.load), config.json, log.jsonl (every 20 updates),
 evals.jsonl, probs_<devset>.npz and summary.json.
 
-    python experiments/fig6_lengths/train_head.py --backbone llada --data artifacts/head_training --out runs/llada_head
-    python experiments/fig6_lengths/train_head.py --backbone llada --steps 200 --data artifacts/head_training --out /tmp/head_smoke
+    python experiments/length_allocation/train_head.py --backbone llada --data artifacts/head_training --out runs/llada_head
+    python experiments/length_allocation/train_head.py --backbone llada --steps 200 --data artifacts/head_training --out /tmp/head_smoke
 """
 import argparse
 import hashlib
@@ -63,7 +63,7 @@ from fewshot_dlms.lengths import site_metrics
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 FROZEN_CONFIG = HERE / "frozen_config.json"
-FIXTURE = ROOT / "data" / "fixtures" / "fig6" / "head_predictions_llada.json"
+FIXTURE = ROOT / "data" / "fixtures" / "length_allocation" / "head_predictions_llada.json"
 ADAPTER_OF_BACKBONE = {backbone: adapter for adapter, backbone in BACKBONE_OF_ADAPTER.items()}
 MAX_CONTEXT = 2048  # longest training prompt, in tokens (lpx_common.MAX_CONTEXT)
 LOG_EVERY = 20
@@ -254,7 +254,7 @@ def evaluate(head, devsets, args, out=None):
 
 def fixture_check(head):
     """Exact-length mass P_0 of the trained head and of the frozen LLaDA-1.5 head on the 10 report canvases of the
-    fixture data/fixtures/fig6/head_predictions_llada.json (M = 4, J = 2): a sanity check of a retrain, not parity."""
+    fixture data/fixtures/length_allocation/head_predictions_llada.json (M = 4, J = 2): a sanity check of a retrain, not parity."""
     if head.backbone != "llada" or not FIXTURE.exists():
         return None
     fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))

@@ -45,7 +45,7 @@ sec43_length_metrics.csv (appendix fidelity row), families.csv (per-family value
 downstream cell a resampling verdict (README.md, fidelity level 3): is the frozen A_avg inside the 95 % CI of the
 pools analysed here?
 
-    python experiments/fig6_lengths/analyze.py --pools artifacts/pools/fig6 --compare data/tables/fig6
+    python experiments/length_allocation/analyze.py --pools artifacts/pools/length_allocation --compare data/tables/length_allocation
 """
 import argparse
 import hashlib
@@ -524,7 +524,7 @@ def main():
     parser.add_argument("--pools", required=True, help="directory with <model>/list_easy_fam_M4_J{J}_<condition>.jsonl")
     parser.add_argument("--out", default=str(HERE / "out"))
     parser.add_argument("--models", default=",".join(model for model, _ in MODELS))
-    parser.add_argument("--compare", default=None, help="directory of reference tables, e.g. data/tables/fig6")
+    parser.add_argument("--compare", default=None, help="directory of reference tables, e.g. data/tables/length_allocation")
     args = parser.parse_args()
 
     pools = Path(args.pools)

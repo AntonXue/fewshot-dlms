@@ -1,7 +1,7 @@
 """Analysis parity (fidelity level 2 of README.md) for Figure 7 (Section 5) and its Appendix C tables.
 
-experiments/fig7_java/analyze.py recomputes the paper's Java tables from the frozen pools, the judge's verdicts
-and the length head's predictions, and must reproduce data/tables/fig7/ to 1e-9 in every numeric column (and
+experiments/java_refactoring/analyze.py recomputes the paper's Java tables from the frozen pools, the judge's verdicts
+and the length head's predictions, and must reproduce data/tables/java_refactoring/ to 1e-9 in every numeric column (and
 exactly in every other column):
 
   summary_by_cell.csv          Figure 7 (right) and Table 1 (Appendix C): joint judged success per cell, regime, rule
@@ -36,7 +36,7 @@ import pytest
 from fewshot_dlms.data import load_java_episodes
 from fewshot_dlms.data import read_jsonl
 
-ANALYZE = "experiments/fig7_java/analyze.py"
+ANALYZE = "experiments/java_refactoring/analyze.py"
 TOLERANCE = 1e-9
 JSON_TOLERANCE = 1e-6
 KEYS = {
@@ -54,10 +54,10 @@ TEXT_COLUMNS = {"commit10": str}  # commit ids such as 08174e2019 must not be re
 
 
 def load_script(root, name):
-    """An experiment script of experiments/fig7_java as a module (they are scripts, not a package)."""
-    path = root / "experiments" / "fig7_java" / f"{name}.py"
+    """An experiment script of experiments/java_refactoring as a module (they are scripts, not a package)."""
+    path = root / "experiments" / "java_refactoring" / f"{name}.py"
     sys.path.insert(0, str(path.parent))
-    spec = importlib.util.spec_from_file_location(f"fig7_{name}", path)
+    spec = importlib.util.spec_from_file_location(f"java_refactoring_{name}", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -80,8 +80,8 @@ def java(artifact_root):
 @pytest.fixture(scope="module")
 def analysis(root, java, tmp_path_factory):
     """Run analyze.py once on the frozen artifacts; returns its output directory."""
-    out = tmp_path_factory.mktemp("fig7")
-    result = run_analyze(root, java / "pools", out, "--compare", str(root / "data" / "tables" / "fig7"))
+    out = tmp_path_factory.mktemp("java_refactoring")
+    result = run_analyze(root, java / "pools", out, "--compare", str(root / "data" / "tables" / "java_refactoring"))
     assert result.returncode == 0, result.stderr
     return out
 
@@ -135,14 +135,14 @@ def assert_json_close(ours, paper, where="checkstyle_case"):
 @pytest.mark.parametrize("name", list(KEYS))
 def test_table_matches_paper(root, analysis, name):
     ours = read_table(analysis / f"{name}.csv")
-    paper = read_table(root / "data" / "tables" / "fig7" / f"{name}.csv")
+    paper = read_table(root / "data" / "tables" / "java_refactoring" / f"{name}.csv")
     assert max_abs_diff(ours, paper, KEYS[name]) < TOLERANCE, name
 
 
 @pytest.mark.parity
 def test_checkstyle_case_matches_paper(root, analysis):
     ours = json.loads((analysis / "checkstyle_case.json").read_text())
-    paper = json.loads((root / "data" / "tables" / "fig7" / "checkstyle_case.json").read_text())
+    paper = json.loads((root / "data" / "tables" / "java_refactoring" / "checkstyle_case.json").read_text())
     assert_json_close(ours, paper)
 
 
@@ -263,10 +263,10 @@ def test_missing_pools_name_the_fetch_command(root, tmp_path):
 
 def test_plot_writes_figure_7(root, tmp_path):
     """plot.py draws Figure 7 from the committed tables alone (no pools, no GPU)."""
-    command = [sys.executable, str(root / "experiments/fig7_java/plot.py"), "--out", str(tmp_path)]
+    command = [sys.executable, str(root / "experiments/java_refactoring/plot.py"), "--out", str(tmp_path)]
     result = subprocess.run(command, capture_output=True, text=True, cwd=root)
     assert result.returncode == 0, result.stderr
-    assert (tmp_path / "fig7.pdf").stat().st_size > 10_000
+    assert (tmp_path / "java_refactoring.pdf").stat().st_size > 10_000
 
 
 def test_verdict_parsing_follows_the_paper(root):
@@ -334,7 +334,7 @@ def run_judge(root, *arguments, without_key=True):
     if without_key:
         environment.pop("ANTHROPIC_API_KEY", None)
         environment.pop("ANTHROPIC_AUTH_TOKEN", None)
-    command = [sys.executable, str(root / "experiments/fig7_java/judge.py"), *arguments]
+    command = [sys.executable, str(root / "experiments/java_refactoring/judge.py"), *arguments]
     return subprocess.run(command, capture_output=True, text=True, cwd=root, env=environment)
 
 
@@ -448,7 +448,7 @@ def test_run_refuses_a_pool_of_another_configuration(root, tmp_path, study, pool
     configuration (here a record as the frozen pools hold them, without config_hash)."""
     path = tmp_path / pool
     path.write_text(json.dumps({"episode_id": "E", "unit_id": "E|M0", "protocol_hash": "0e1d3c9040b09598"}) + "\n")
-    command = [sys.executable, str(root / "experiments/fig7_java/run.py"), "--study", study, "--K", "4"]
+    command = [sys.executable, str(root / "experiments/java_refactoring/run.py"), "--study", study, "--K", "4"]
     command += ["--families", "2", "--out", str(tmp_path), "--device", "cpu"]
     result = subprocess.run(command, capture_output=True, text=True, cwd=root)
     assert result.returncode == 2, result.stderr
@@ -505,7 +505,7 @@ def test_run_counts_a_failed_unit_and_exits_non_zero(root, tmp_path, monkeypatch
 def test_learned_run_without_its_head_names_the_fetch_command(root, tmp_path, option, group):
     """run.py --regime learned exits with status 2 and the fetch command, before it loads a model, when the head
     checkpoint (or the stored predictions) is missing."""
-    command = [sys.executable, str(root / "experiments/fig7_java/run.py"), "--regime", "learned"]
+    command = [sys.executable, str(root / "experiments/java_refactoring/run.py"), "--regime", "learned"]
     command += [option, str(tmp_path / "missing"), "--families", "1", "--out", str(tmp_path), "--device", "cpu"]
     result = subprocess.run(command, capture_output=True, text=True, cwd=root)
     assert result.returncode == 2, result.stderr

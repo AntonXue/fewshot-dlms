@@ -28,7 +28,7 @@ refused login or an unreachable Hub ends the fetch with one line naming the caus
 | dataset | `UT-IFML/fewshot-dlms` (repo type `dataset`) |
 | pinned revision | `f65650d34e80892b94a69083371fd939ed64edcc` (also in `data/artifacts_revision.txt`) |
 | file list | [`SHA256SUMS`](SHA256SUMS): `<sha256>  <path>` for each of the 500 files, the format of `sha256sum` |
-| SHA-256 of `SHA256SUMS` | `c22f4e3f3609ab684b50c073816a9984684f8adf685b927426a67ad79317cd49` |
+| SHA-256 of `SHA256SUMS` | `752eeb64450508902125753bc3476dffe3f3164df84c8f95ad734fac2d573680` |
 | built by | `tools/assemble_artifacts.py` (data card: `artifacts_upload/README.md`) |
 
 The dataset holds `SHA256SUMS` too; the copy here is the one the fetcher trusts. To check a download by hand:
@@ -39,17 +39,17 @@ The dataset holds `SHA256SUMS` too; the copy here is the one the fetcher trusts.
 
 | group | files | bytes | what reads it |
 |---|---|---|---|
-| `pools/fig4` | 336 | 260,397,761 | `experiments/fig4_single_target/analyze.py` (also the cross-benchmark and guidance-strength sweep figures) |
-| `pools/fig5` | 60 | 41,915,679 | `experiments/fig5_multi_target/analyze.py` (Figure 5, the mechanism and M × J sharpening figures) |
-| `pools/fig6` | 56 | 73,747,644 | `experiments/fig6_lengths/analyze.py` |
-| `java` | 21 | 10,060,127 | `experiments/fig7_java/analyze.py`, `judge.py` |
-| `heads` | 4 | 3,473,109,316 | `experiments/fig6_lengths/run.py --mode learned`, `experiments/fig7_java/run.py --regime learned`, `make test-gpu` |
-| `head_training` | 22 | 1,025,900,426 | `experiments/fig6_lengths/train_head.py` |
-| `README.md` | 1 | 21,108 | the data card |
-| total | 500 | 4,885,152,061 | |
+| `pools/single_target` | 336 | 260,397,761 | `experiments/single_target/analyze.py` (also the cross-benchmark and guidance-strength sweep figures) |
+| `pools/multi_target` | 60 | 41,915,679 | `experiments/multi_target/analyze.py` (Figure 5, the mechanism and M × J sharpening figures) |
+| `pools/length_allocation` | 56 | 73,747,644 | `experiments/length_allocation/analyze.py` |
+| `java` | 21 | 10,060,127 | `experiments/java_refactoring/analyze.py`, `judge.py` |
+| `heads` | 4 | 3,473,109,316 | `experiments/length_allocation/run.py --mode learned`, `experiments/java_refactoring/run.py --regime learned`, `make test-gpu` |
+| `head_training` | 22 | 1,025,900,426 | `experiments/length_allocation/train_head.py` |
+| `README.md` | 1 | 21,334 | the data card |
+| total | 500 | 4,885,152,287 | |
 
-`pools/fig6/<model>/list_easy_fam_M4_J{J}_oracle.jsonl` are the same bytes as
-`pools/fig4/report/<model>/list_easy_fam_M4_J{J}_il.jsonl`, shipped in both groups.
+`pools/length_allocation/<model>/list_easy_fam_M4_J{J}_oracle.jsonl` are the same bytes as
+`pools/single_target/report/<model>/list_easy_fam_M4_J{J}_il.jsonl`, shipped in both groups.
 
 `head_training/fsp_*` hold 66,499 of the authors' 100,000 structured few-shot training prompts: the 33,501 built
 from MIT Movie and ATIS are not shipped (data card, `head_training`). The frozen heads were trained on all
@@ -62,8 +62,8 @@ in them: `root`, the authors' run directory (no other key changed). The weights 
 checked equal to the original (`torch.equal` and the raw bytes), and each file loads with `torch.load(...,
 weights_only=True)` and `lengths.LengthHead.load`. The re-saved files therefore have new SHA-256s. The stored records
 keep the original values as provenance: `ckpt_sha` in the `npz` predictions, `head_ckpt_sha` in the Java pools, and
-`checkpoint_sha256` in `experiments/fig6_lengths/frozen_config.json` (the freeze record). The fig6 head fixture
-holds both (`checkpoint_sha256`, `trained_checkpoint_sha256`), and `experiments/fig7_java/run.py` accepts both for
+`checkpoint_sha256` in `experiments/length_allocation/frozen_config.json` (the freeze record). The length_allocation head fixture
+holds both (`checkpoint_sha256`, `trained_checkpoint_sha256`), and `experiments/java_refactoring/run.py` accepts both for
 head C.
 
 | file | original SHA-256 (recorded in pools and predictions) | published SHA-256 |

@@ -1,8 +1,8 @@
 """Analysis parity (fidelity level 2 of README.md) for Figure 5 and its appendix mechanism and M x J
 sharpening figures.
 
-experiments/fig5_multi_target/analyze.py recomputes the paper's tables from the frozen pools and must
-reproduce data/tables/fig5/ to 1e-9 in every numeric column (and exactly in every other column):
+experiments/multi_target/analyze.py recomputes the paper's tables from the frozen pools and must
+reproduce data/tables/multi_target/ to 1e-9 in every numeric column (and exactly in every other column):
 
   cells.csv        Figure 5 and Section 4.2: A_all, A_target and the paired gains per (model, M, J, beta)
   gold.csv         gold-answer support per (model, M, J)
@@ -31,7 +31,7 @@ import pytest
 
 from fewshot_dlms.data import read_jsonl
 
-ANALYZE = "experiments/fig5_multi_target/analyze.py"
+ANALYZE = "experiments/multi_target/analyze.py"
 TOLERANCE = 1e-9
 KEYS = {
     "cells": ["model", "M", "J", "beta"],
@@ -57,11 +57,11 @@ def run_analyze(root, pools, out, *extra):
 @pytest.fixture(scope="module")
 def analysis(root, artifacts, tmp_path_factory):
     """Run analyze.py once on the frozen pools; returns (output directory, stdout of --compare)."""
-    pools = artifacts / "pools" / "fig5"
+    pools = artifacts / "pools" / "multi_target"
     if not pools.exists():
         pytest.skip("Figure 5 pools not fetched: run `python -m fewshot_dlms.fetch pools java`")
-    out = tmp_path_factory.mktemp("fig5")
-    result = run_analyze(root, pools, out, "--compare", str(root / "data" / "tables" / "fig5"))
+    out = tmp_path_factory.mktemp("multi_target")
+    result = run_analyze(root, pools, out, "--compare", str(root / "data" / "tables" / "multi_target"))
     assert result.returncode == 0, result.stderr
     return out, result.stdout
 
@@ -95,7 +95,7 @@ def max_abs_diff(ours, paper, keys):
 def test_table_matches_paper(root, analysis, name):
     out, _ = analysis
     ours = pd.read_csv(out / f"{name}.csv", float_precision="round_trip")
-    paper = pd.read_csv(root / "data" / "tables" / "fig5" / f"{name}.csv", float_precision="round_trip")
+    paper = pd.read_csv(root / "data" / "tables" / "multi_target" / f"{name}.csv", float_precision="round_trip")
     assert max_abs_diff(ours, paper, KEYS[name]) < TOLERANCE, name
 
 
@@ -118,11 +118,11 @@ def test_compare_reports_inside_ci(root, tmp_path):
     """
     pools = tmp_path / "pools"
     (pools / "llada").mkdir(parents=True)
-    shutil.copy(root / "data" / "fixtures" / "fig5" / "llada_M4_J2.jsonl", pools / "llada" / "list_easy_fam_M4_J2.jsonl")
-    result = run_analyze(root, pools, tmp_path / "out", "--compare", str(root / "data" / "tables" / "fig5"))
+    shutil.copy(root / "data" / "fixtures" / "multi_target" / "llada_M4_J2.jsonl", pools / "llada" / "list_easy_fam_M4_J2.jsonl")
+    result = run_analyze(root, pools, tmp_path / "out", "--compare", str(root / "data" / "tables" / "multi_target"))
     assert result.returncode == 0, result.stderr
     lines = result.stdout.splitlines()
-    paper = pd.read_csv(root / "data" / "tables" / "fig5" / "cells.csv")
+    paper = pd.read_csv(root / "data" / "tables" / "multi_target" / "cells.csv")
     rerun = pd.read_csv(tmp_path / "out" / "cells.csv")
     for beta, pattern in ((0.0, COMPARE_LINE), (0.5, COMPARE_LINE_GUIDED)):
         matches = [match for match in map(pattern.match, lines) if match]
@@ -150,16 +150,16 @@ def test_missing_pools_name_the_fetch_command(root, tmp_path):
 
 def test_plot_writes_the_four_figures(root, tmp_path):
     """plot.py draws Figure 5 and the three appendix figures from the committed tables alone (no pools, no GPU)."""
-    command = [sys.executable, str(root / "experiments/fig5_multi_target/plot.py"), "--out", str(tmp_path)]
+    command = [sys.executable, str(root / "experiments/multi_target/plot.py"), "--out", str(tmp_path)]
     result = subprocess.run(command, capture_output=True, text=True, cwd=root)
     assert result.returncode == 0, result.stderr
-    for name in ("fig5", "fig8_mechanism", "fig9_crossbench", "fig10_sharpening"):
+    for name in ("multi_target", "multi_target_mechanism", "crossbench_d4", "sharpening"):
         assert (tmp_path / f"{name}.pdf").stat().st_size > 10_000, name
 
 
 def load_run(root):
-    """experiments/fig5_multi_target/run.py as a module (it is a script, not a package module)."""
-    spec = importlib.util.spec_from_file_location("fig5_run", root / "experiments/fig5_multi_target/run.py")
+    """experiments/multi_target/run.py as a module (it is a script, not a package module)."""
+    spec = importlib.util.spec_from_file_location("multi_target_run", root / "experiments/multi_target/run.py")
     run = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(run)
     return run
@@ -169,7 +169,7 @@ def test_run_seed_rule_matches_the_frozen_records(root):
     """run.py's proposal seed of every fixture record is the seed the authors' run stored."""
     run = load_run(root)
     for model in ("llada", "nemotron_pt", "dqwen"):
-        for record in read_jsonl(root / "data" / "fixtures" / "fig5" / f"{model}_M4_J2.jsonl"):
+        for record in read_jsonl(root / "data" / "fixtures" / "multi_target" / f"{model}_M4_J2.jsonl"):
             assert run.proposal_seed(model, record["episode_id"], record["M"], record["J"]) == record["seed"]
 
 
@@ -213,7 +213,7 @@ def test_run_refuses_a_pool_of_another_protocol(root, tmp_path):
     pool = tmp_path / "llada" / "list_easy_fam_M4_J2.jsonl"
     pool.parent.mkdir(parents=True)
     pool.write_text(json.dumps({"episode_id": "list_easy_fam:report:000", "protocol_hash": "0123456789abcdef"}) + "\n")
-    command = [sys.executable, str(root / "experiments/fig5_multi_target/run.py"), "--model", "llada"]
+    command = [sys.executable, str(root / "experiments/multi_target/run.py"), "--model", "llada"]
     command += ["--M", "4", "--J", "1,2", "--K", "4", "--families", "2", "--out", str(tmp_path), "--device", "cpu"]
     result = subprocess.run(command, capture_output=True, text=True, cwd=root)
     assert result.returncode == 2, result.stderr

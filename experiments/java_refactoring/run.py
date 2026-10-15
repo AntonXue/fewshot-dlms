@@ -33,9 +33,9 @@ configurations as one pool. A unit that raises is reported and counted, the othe
 RUN_FAILED and exit status 1; the next run samples only the failed units. <out>/manifest_<hash>.json records the
 run's configuration and hash, the pool's hash, every seed and the library versions.
 
-    python experiments/fig7_java/run.py --regime oracle --M 1,2 --J 1,2 --K 16 --out artifacts/reruns/fig7/pools
-    python experiments/fig7_java/run.py --regime learned --head artifacts/heads/java_head_C.pt --out artifacts/reruns/fig7/pools
-    python experiments/fig7_java/run.py --study zero_demo --M 0,1,2 --J 1,2 --out artifacts/reruns/fig7/zero_demo/pools
+    python experiments/java_refactoring/run.py --regime oracle --M 1,2 --J 1,2 --K 16 --out artifacts/reruns/java_refactoring/pools
+    python experiments/java_refactoring/run.py --regime learned --head artifacts/heads/java_head_C.pt --out artifacts/reruns/java_refactoring/pools
+    python experiments/java_refactoring/run.py --study zero_demo --M 0,1,2 --J 1,2 --out artifacts/reruns/java_refactoring/zero_demo/pools
 """
 import argparse
 import collections
@@ -580,7 +580,7 @@ def main():
     parser.add_argument("--families", type=int, default=None, help="only the first N episodes (anchors) in data/java order")
     parser.add_argument("--head", default="artifacts/heads/java_head_C.pt", help="length head C (learned regime)")
     parser.add_argument("--head-probs", default=None, help="stored head predictions (.npz) instead of running the head")
-    parser.add_argument("--out", default=None, help="pool directory (default artifacts/reruns/fig7/pools, or .../zero_demo/pools)")
+    parser.add_argument("--out", default=None, help="pool directory (default artifacts/reruns/java_refactoring/pools, or .../zero_demo/pools)")
     parser.add_argument("--tag", default="rerun")
     parser.add_argument("--chunk", type=int, default=CHUNK)
     parser.add_argument("--device", default="cuda")
@@ -591,7 +591,7 @@ def main():
         parser.error("the main run has cells with M in {1, 2}; M = 0 is the zero_demo study")
     if args.study == "zero_demo" and not set(args.M) <= {0, 1, 2}:
         parser.error("the zero-demonstration ablation has arms M in {0, 1, 2}")
-    default_out = "artifacts/reruns/fig7/pools" if args.study == "main" else "artifacts/reruns/fig7/zero_demo/pools"
+    default_out = "artifacts/reruns/java_refactoring/pools" if args.study == "main" else "artifacts/reruns/java_refactoring/zero_demo/pools"
     out = Path(args.out or default_out)
 
     # The pool this run appends to, checked before the model is loaded: resume a pool of the same configuration only.
@@ -608,7 +608,7 @@ def main():
 
     started = time.time()
     adapter = load(MODEL, args.device)
-    print(f"[fig7] {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
+    print(f"[java_refactoring] {adapter.model_id} @ {adapter.revision} loaded in {time.time() - started:.0f}s", flush=True)
     out.mkdir(parents=True, exist_ok=True)
     if args.study == "main":
         failed = run_main(args, adapter, episodes, out, config, done, head_sha)
